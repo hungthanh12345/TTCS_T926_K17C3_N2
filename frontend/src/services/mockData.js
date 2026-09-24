@@ -45,7 +45,7 @@ const INITIAL_MENTORS = [
     email: 'tung.nk@gmail.com',
     phone: '0912345678',
     department: 'Kỹ thuật phần mềm',
-    specialization: 'Full-stack Web & Cloud Native',
+    specialization: 'Full-stack Web và Cloud Native',
     activeMentees: 10,
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     createdAt: '2026-08-15T08:00:00Z'
@@ -60,7 +60,7 @@ const INITIAL_STUDENTS = [
     email: 'hung.nt@gmail.com',
     phone: '0987654321',
     phoneNumber: '0987654321',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -68,13 +68,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-10T10:00:00Z'
   },
@@ -85,7 +85,7 @@ const INITIAL_STUDENTS = [
     email: 'hung.dm@gmail.com',
     phone: '0987654322',
     phoneNumber: '0987654322',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -93,13 +93,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-11T11:20:00Z'
   },
@@ -110,7 +110,7 @@ const INITIAL_STUDENTS = [
     email: 'hung.ht@gmail.com',
     phone: '0987654323',
     phoneNumber: '0987654323',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -118,13 +118,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-12T13:45:00Z'
   },
@@ -135,7 +135,7 @@ const INITIAL_STUDENTS = [
     email: 'giang.td@gmail.com',
     phone: '0987654324',
     phoneNumber: '0987654324',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -143,13 +143,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-14T09:15:00Z'
   },
@@ -160,7 +160,7 @@ const INITIAL_STUDENTS = [
     email: 'duong.dh@gmail.com',
     phone: '0987654325',
     phoneNumber: '0987654325',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -168,13 +168,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-16T15:30:00Z'
   },
@@ -185,7 +185,7 @@ const INITIAL_STUDENTS = [
     email: 'han.dd@gmail.com',
     phone: '0987654326',
     phoneNumber: '0987654326',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -193,13 +193,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-18T10:00:00Z'
   },
@@ -210,7 +210,7 @@ const INITIAL_STUDENTS = [
     email: 'huan.bn@gmail.com',
     phone: '0987654327',
     phoneNumber: '0987654327',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -218,13 +218,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-19T10:00:00Z'
   },
@@ -235,7 +235,7 @@ const INITIAL_STUDENTS = [
     email: 'hai.nh@gmail.com',
     phone: '0987654328',
     phoneNumber: '0987654328',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -243,13 +243,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-20T10:00:00Z'
   },
@@ -260,7 +260,7 @@ const INITIAL_STUDENTS = [
     email: 'huong.ph@gmail.com',
     phone: '0987654329',
     phoneNumber: '0987654329',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -268,13 +268,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-21T10:00:00Z'
   },
@@ -285,7 +285,7 @@ const INITIAL_STUDENTS = [
     email: 'giang.nt@gmail.com',
     phone: '0987654330',
     phoneNumber: '0987654330',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     status: 'ACTIVE',
     mentorId: 1,
@@ -293,13 +293,13 @@ const INITIAL_STUDENTS = [
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     mentor: {
       id: 1,
       fullName: 'Nguyễn Khánh Tùng',
       department: 'Kỹ thuật phần mềm',
-      specialization: 'Full-stack Web & Cloud Native'
+      specialization: 'Full-stack Web và Cloud Native'
     },
     createdAt: '2026-09-22T10:00:00Z'
   }

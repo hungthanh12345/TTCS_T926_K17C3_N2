@@ -52,7 +52,7 @@ export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
       return [
         { label: 'Hệ Thống', path: '/admin/users' },
         { label: 'Quản Trị', path: '/admin/users' },
-        { label: 'Tài Khoản & Quyền Hạn' },
+        { label: 'Tài Khoản và Quyền Hạn' },
       ];
     }
     if (path.includes('/hr/students')) {

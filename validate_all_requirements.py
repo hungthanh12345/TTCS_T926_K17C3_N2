@@ -66,10 +66,10 @@ def test_requirements():
     m0 = mentors[0]
     print(f"   Mentor Full Name: '{m0['fullName']}' (Expected: 'Nguyễn Khánh Tùng')")
     print(f"   Department: '{m0['department']}' (Expected: 'Kỹ thuật phần mềm')")
-    print(f"   Specialization: '{m0['specialization']}' (Expected: 'Full-stack Web & Cloud Native')")
+    print(f"   Specialization: '{m0['specialization']}' (Expected: 'Full-stack Web và Cloud Native')")
     assert m0["fullName"] == "Nguyễn Khánh Tùng", "Mentor name mismatch"
     assert m0["department"] == "Kỹ thuật phần mềm", "Mentor department mismatch"
-    assert m0["specialization"] == "Full-stack Web & Cloud Native", "Mentor specialization mismatch"
+    assert m0["specialization"] == "Full-stack Web và Cloud Native", "Mentor specialization mismatch"
     print("[PASS] Mentor seed data correctly restructured to strictly 1 mentor.")
 
     # Query Students
@@ -96,7 +96,7 @@ def test_requirements():
         elif not s.get("mentor"):
             unassigned_count += 1
 
-        assert s['university'] == 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', f"University mismatch: {s['university']}"
+        assert s['university'] == 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', f"University mismatch: {s['university']}"
         assert s['major'] == 'Kỹ thuật Phần mềm', f"Major mismatch: {s['major']}"
 
     print(f"[CHECK] Vietnamese diacritics integrity: {'PASS (No ? marks found)' if not has_question_marks else 'FAIL'}")

@@ -432,7 +432,7 @@ export const StudentManagementView = () => {
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     <th className="py-3.5 px-6">Mã SV</th>
-                    <th className="py-3.5 px-6">Họ Tên & Liên Hệ</th>
+                    <th className="py-3.5 px-6">Họ Tên và Liên Hệ</th>
                     <th className="py-3.5 px-6">Trường Đại Học</th>
                     <th className="py-3.5 px-6">Chuyên Ngành</th>
                     <th className="py-3.5 px-6">Mentor Phụ Trách</th>

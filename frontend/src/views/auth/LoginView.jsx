@@ -40,7 +40,7 @@ export const LoginView = () => {
     {
       role: 'ROLE_ADMIN',
       title: 'Quản trị viên',
-      desc: 'Quản lý tài khoản & phân quyền',
+      desc: 'Quản lý tài khoản và phân quyền',
       email: 'hung.nt.admin@gmail.com',
       password: 'Admin@123',
       icon: Shield,
@@ -49,7 +49,7 @@ export const LoginView = () => {
     {
       role: 'ROLE_HR',
       title: 'Quản lý Nhân sự (HR)',
-      desc: 'Hồ sơ thực tập sinh & phân công mentor',
+      desc: 'Hồ sơ thực tập sinh và phân công mentor',
       email: 'customer.hr@company.com',
       password: 'Admin@123',
       icon: Briefcase,
@@ -58,7 +58,7 @@ export const LoginView = () => {
     {
       role: 'ROLE_MENTOR',
       title: 'Mentor Hướng dẫn',
-      desc: 'Hướng dẫn & đánh giá thực tập sinh',
+      desc: 'Hướng dẫn và đánh giá thực tập sinh',
       email: 'tung.nk@gmail.com',
       password: 'Admin@123',
       icon: Users,
@@ -67,7 +67,7 @@ export const LoginView = () => {
     {
       role: 'ROLE_STUDENT',
       title: 'Thực tập sinh',
-      desc: 'Hồ sơ cá nhân & thông tin mentor',
+      desc: 'Hồ sơ cá nhân và thông tin mentor',
       email: 'hung.dm@gmail.com',
       password: 'Admin@123',
       icon: GraduationCap,
@@ -182,7 +182,7 @@ export const LoginView = () => {
               Hệ Thống Quản Lý Thực Tập Sinh
             </h2>
             <p className="text-xs text-indigo-300 font-medium tracking-wide">
-              Cổng thông tin đào tạo & thực tập sinh
+              Cổng thông tin đào tạo và thực tập sinh
             </p>
           </div>
         </div>
@@ -190,7 +190,7 @@ export const LoginView = () => {
         {/* Nội dung trung tâm */}
         <div className="relative z-10 max-w-xl space-y-6 my-auto pt-6">
           <h1 className="text-4xl xl:text-5xl font-extrabold tracking-tight leading-[1.2] text-white">
-            Nền Tảng Quản Lý & Đào Tạo Thực Tập Sinh Toàn Diện
+            Nền Tảng Quản Lý và Đào Tạo Thực Tập Sinh Toàn Diện
           </h1>
 
           <p className="text-slate-300 text-base leading-relaxed">
@@ -206,15 +206,15 @@ export const LoginView = () => {
               },
               {
                 title: 'Phân công Mentor Trực quan',
-                desc: 'Theo dõi tải hướng dẫn & chuyên môn thực tập',
+                desc: 'Theo dõi tải hướng dẫn và chuyên môn thực tập',
               },
               {
-                title: 'Tra cứu & Lọc Nhanh Real-time',
+                title: 'Tra cứu và Lọc Nhanh Real-time',
                 desc: 'Theo Trường, Chuyên ngành, Mã SV',
               },
               {
                 title: 'Kiến trúc API Chuẩn Hóa',
-                desc: 'Tích hợp JWT Bearer & Axios Interceptor',
+                desc: 'Tích hợp JWT Bearer và Axios Interceptor',
               },
             ].map((item, idx) => (
               <div
@@ -236,9 +236,9 @@ export const LoginView = () => {
         {/* Chân trang thông tin */}
         <div className="relative z-10 flex items-center justify-between text-xs text-slate-500 pt-6 border-t border-slate-800/80">
           <span className="font-medium text-slate-400">
-            Trường Đại học Công nghệ Thông tin & Truyền thông — ĐHTN
+            Trường Đại học Công nghệ Thông tin và Truyền thông — ĐHTN
           </span>
-          <span>© 2026 Hệ Thống Quản Lý Thực Tập Sinh — Trường Đại học Công nghệ Thông tin & Truyền thông (ICTU)</span>
+          <span>© 2026 Hệ Thống Quản Lý Thực Tập Sinh — Trường Đại học Công nghệ Thông tin và Truyền thông (ICTU)</span>
         </div>
       </div>
 
@@ -252,7 +252,7 @@ export const LoginView = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-white tracking-tight">Hệ Thống Quản Lý Thực Tập Sinh</h2>
-              <p className="text-xs text-slate-400">Cổng thông tin đào tạo & thực tập sinh</p>
+              <p className="text-xs text-slate-400">Cổng thông tin đào tạo và thực tập sinh</p>
             </div>
           </div>
 
@@ -405,7 +405,7 @@ export const LoginView = () => {
 
             <p className="text-center text-[11px] text-slate-500 mt-4 flex items-center justify-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              Bảo mật tiêu chuẩn JWT Token & RBAC Route Guarding
+              Bảo mật tiêu chuẩn JWT Token và RBAC Route Guarding
             </p>
           </div>
         </div>

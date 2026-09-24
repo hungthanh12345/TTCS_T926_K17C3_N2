@@ -55,7 +55,7 @@ DELETE FROM `users` WHERE `id` NOT IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
 
 -- Insert / Update exactly 1 mentor: Nguyễn Khánh Tùng
 INSERT INTO `mentors` (`id`, `user_id`, `full_name`, `phone_number`, `department`, `specialization`) VALUES
-(1, 3, N'Nguyễn Khánh Tùng', '0912345678', N'Kỹ thuật phần mềm', N'Full-stack Web & Cloud Native')
+(1, 3, N'Nguyễn Khánh Tùng', '0912345678', N'Kỹ thuật phần mềm', N'Full-stack Web và Cloud Native')
 ON DUPLICATE KEY UPDATE 
     `user_id` = VALUES(`user_id`),
     `full_name` = VALUES(`full_name`), 
@@ -66,19 +66,19 @@ ON DUPLICATE KEY UPDATE
 -- ========================================================
 -- 4. INSERT STUDENTS (Clean Vietnamese Diacritics)
 -- All 10 students assigned to Mentor 1 (Nguyễn Khánh Tùng)
--- All 10 students: Đại học Công nghệ Thông tin & Truyền thông — ĐHTN | Kỹ thuật Phần mềm
+-- All 10 students: Đại học Công nghệ Thông tin và Truyền thông — ĐHTN | Kỹ thuật Phần mềm
 -- ========================================================
 INSERT INTO `students` (`id`, `user_id`, `student_code`, `full_name`, `phone_number`, `university`, `major`, `mentor_id`) VALUES
-(1, 4, 'SV2026001', N'Nguyễn Thành Hưng', '0987654321', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(2, 5, 'SV2026002', N'Dương Minh Hưng', '0987654322', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(3, 6, 'SV2026003', N'Hoàng Thanh Hùng', '0987654323', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(4, 7, 'SV2026004', N'Trương Đình Giang', '0987654324', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(5, 8, 'SV2026005', N'Dương Hải Dương', '0987654325', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(6, 9, 'SV2026006', N'Diệp Đình Hân', '0987654326', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(7, 10, 'SV2026007', N'Bùi Ngọc Huân', '0987654327', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(8, 11, 'SV2026008', N'Nguyễn Hồng Hải', '0987654328', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(9, 12, 'SV2026009', N'Phạm Hải Hướng', '0987654329', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
-(10, 13, 'SV2026010', N'Nguyễn Thị Giang', '0987654330', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1)
+(1, 4, 'SV2026001', N'Nguyễn Thành Hưng', '0987654321', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(2, 5, 'SV2026002', N'Dương Minh Hưng', '0987654322', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(3, 6, 'SV2026003', N'Hoàng Thanh Hùng', '0987654323', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(4, 7, 'SV2026004', N'Trương Đình Giang', '0987654324', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(5, 8, 'SV2026005', N'Dương Hải Dương', '0987654325', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(6, 9, 'SV2026006', N'Diệp Đình Hân', '0987654326', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(7, 10, 'SV2026007', N'Bùi Ngọc Huân', '0987654327', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(8, 11, 'SV2026008', N'Nguyễn Hồng Hải', '0987654328', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(9, 12, 'SV2026009', N'Phạm Hải Hướng', '0987654329', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(10, 13, 'SV2026010', N'Nguyễn Thị Giang', '0987654330', N'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1)
 ON DUPLICATE KEY UPDATE 
     `user_id` = VALUES(`user_id`),
     `full_name` = VALUES(`full_name`),

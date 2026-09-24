@@ -10,7 +10,7 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     fullName: '',
     phone: '',
     email: '',
-    university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     major: 'Kỹ thuật Phần mềm',
     internshipPeriod: 'Kỳ Thu 2026 (09/2026 - 12/2026)',
   });
@@ -18,7 +18,7 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const universities = [
-    'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     'Đại học Bách Khoa Hà Nội (HUST)',
     'Đại học Công nghệ — ĐHQGHN (VNU-UET)',
     'Đại học FPT Hà Nội',
@@ -30,9 +30,9 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     'Kỹ thuật Phần mềm',
     'Khoa học Máy tính',
     'Hệ thống Thông tin Quản lý',
-    'An toàn Thông tin & An ninh Mạng',
-    'Trí tuệ Nhân tạo & Khoa học Dữ liệu',
-    'Mạng Máy tính & Truyền thông Dữ liệu',
+    'An toàn Thông tin và An ninh Mạng',
+    'Trí tuệ Nhân tạo và Khoa học Dữ liệu',
+    'Mạng Máy tính và Truyền thông Dữ liệu',
   ];
 
   const validate = () => {
@@ -78,7 +78,7 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
         fullName: '',
         phone: '',
         email: '',
-        university: 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+        university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
         major: 'Kỹ thuật Phần mềm',
         internshipPeriod: 'Kỳ Thu 2026 (09/2026 - 12/2026)',
       });

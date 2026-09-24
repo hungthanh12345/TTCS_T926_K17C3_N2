@@ -87,7 +87,7 @@ export const MentorManagementView = () => {
 
   return (
     <DashboardLayout
-      title="Danh Bạ Mentor & Phân Bổ Hướng Dẫn"
+      title="Danh Bạ Mentor và Phân Bổ Hướng Dẫn"
       subtitle="Sprint 1 - Story 4: Quản lý danh sách chuyên gia hướng dẫn, theo dõi tải giám sát và lĩnh vực công nghệ"
     >
       <div className="space-y-6">
@@ -278,7 +278,7 @@ export const MentorManagementView = () => {
                   <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 mb-1">
                       <Award className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>Chuyên Môn & Công Nghệ Thành Thạo</span>
+                      <span>Chuyên Môn và Công Nghệ Thành Thạo</span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed font-normal">
                       {mentor.specialization}

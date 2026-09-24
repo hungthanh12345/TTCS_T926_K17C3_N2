@@ -87,7 +87,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-white tracking-tight">Quản Lý Thực Tập Sinh</span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">Cổng thông tin đào tạo & thực tập</p>
+              <p className="text-[11px] text-slate-400 font-medium">Cổng thông tin đào tạo và thực tập</p>
             </div>
           </div>
         </div>

@@ -24,7 +24,7 @@ export const EditStudentModal = ({ isOpen, onClose, student, onSuccess }) => {
         fullName: student.fullName || '',
         phone: student.phone || student.phoneNumber || '',
         email: student.email || student.user?.email || '',
-        university: student.university || 'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+        university: student.university || 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
         major: student.major || 'Kỹ thuật Phần mềm',
         internshipPeriod: student.internshipPeriod || 'Kỳ Thu 2026',
       });
@@ -33,7 +33,7 @@ export const EditStudentModal = ({ isOpen, onClose, student, onSuccess }) => {
   }, [student]);
 
   const universities = [
-    'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN',
+    'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
     'Đại học Bách Khoa Hà Nội (HUST)',
     'Đại học Công nghệ — ĐHQGHN (VNU-UET)',
     'Đại học FPT Hà Nội',
@@ -45,9 +45,9 @@ export const EditStudentModal = ({ isOpen, onClose, student, onSuccess }) => {
     'Kỹ thuật Phần mềm',
     'Khoa học Máy tính',
     'Hệ thống Thông tin Quản lý',
-    'An toàn Thông tin & An ninh Mạng',
-    'Trí tuệ Nhân tạo & Khoa học Dữ liệu',
-    'Mạng Máy tính & Truyền thông Dữ liệu',
+    'An toàn Thông tin và An ninh Mạng',
+    'Trí tuệ Nhân tạo và Khoa học Dữ liệu',
+    'Mạng Máy tính và Truyền thông Dữ liệu',
   ];
 
   const validate = () => {
