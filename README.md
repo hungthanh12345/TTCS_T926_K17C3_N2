@@ -302,23 +302,41 @@ All API errors conform to a unified JSON contract:
 
 ### 1. Prerequisites
 - .NET 8.0 SDK or higher
+- Node.js (v18+) & npm
 - MySQL Server 8.0 running on `localhost:3306` with database `internship_management`
 
-### 2. Run the Application
+### 2. Database Initialization
+```powershell
+mysql -u root -p123456 -e "CREATE DATABASE IF NOT EXISTS internship_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql --default-character-set=utf8mb4 -u root -p123456 -e "source schema.sql"
+mysql --default-character-set=utf8mb4 -u root -p123456 -e "source seed_data.sql"
+```
+
+### 3. Run Backend API
 ```powershell
 dotnet run --launch-profile http
 ```
 The server will start listening at:
 - **API Base:** `http://localhost:5000`
-- **Swagger UI:** `http://localhost:5000/`
+- **Swagger Documentation:** `http://localhost:5000/swagger`
 
-### 3. Run Automated Integration Tests
-The repository includes an end-to-end Python test suite testing all endpoints, RBAC enforcement, and error scenarios:
+### 4. Run Frontend Web
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+Web client will start at:
+- **Web App:** `http://localhost:5173/`
+
+### 5. Automated Tests
 ```powershell
 python test_suite.py
+python validate_all_requirements.py
 ```
 
-### 4. Default Seed Test Credentials
+### 6. Default Seed Test Credentials (All Roles: Admin@123)
 - **Admin Account:** `hung.nt.admin@gmail.com` / `Admin@123`
-- **HR Account:** `customer.hr@company.com` / `Hr@123456`
-- **Mentor Account:** `tung.nk@gmail.com` / `Mentor@123456`
+- **HR Account:** `customer.hr@company.com` / `Admin@123`
+- **Mentor Account:** `tung.nk@gmail.com` / `Admin@123`
+- **Student Account:** `hung.dm@gmail.com` / `Admin@123`

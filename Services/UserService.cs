@@ -9,6 +9,7 @@ namespace InternshipManagementApi.Services
     {
         Task<UserResponseDto> CreateUserAsync(CreateUserRequestDto request);
         Task<IEnumerable<UserResponseDto>> GetAllUsersAsync();
+        Task DeleteUserAsync(int id);
     }
 
     public class UserService : IUserService
@@ -97,6 +98,17 @@ namespace InternshipManagementApi.Services
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt
             });
+        }
+
+        public async Task DeleteUserAsync(int id)
+        {
+            var user = await _userRepository.GetByIdAsync(id);
+            if (user == null)
+            {
+                throw new NotFoundException($"User with ID {id} not found.");
+            }
+
+            await _userRepository.DeleteAsync(user);
         }
     }
 }

@@ -27,6 +27,28 @@ namespace InternshipManagementApi.Controllers
         // ==========================================
 
         /// <summary>
+        /// Retrieve or search students with pagination and filtering.
+        /// GET /api/hr/students or GET /api/hr/students/search
+        /// Requires ROLE_HR or ROLE_ADMIN.
+        /// </summary>
+        [HttpGet("students")]
+        [HttpGet("students/search")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResult<StudentResponseDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetStudents([FromQuery] StudentSearchFilterDto filter)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse.Fail("Validation failed.", ModelState));
+            }
+
+            var result = await _studentService.SearchStudentsAsync(filter);
+            return Ok(ApiResponse<PagedResult<StudentResponseDto>>.Ok(result, "Students retrieved successfully."));
+        }
+
+        /// <summary>
         /// Add a new student profile to the students table.
         /// Requires ROLE_HR or ROLE_ADMIN.
         /// </summary>
@@ -93,25 +115,18 @@ namespace InternshipManagementApi.Controllers
         }
 
         /// <summary>
-        /// Filter and search students by university, major, or full name with pagination.
+        /// Delete an existing student profile.
         /// Requires ROLE_HR or ROLE_ADMIN.
         /// </summary>
-        /// <param name="filter">Search filter criteria and pagination options</param>
-        /// <returns>Paginated list of students</returns>
-        [HttpGet("students/search")]
-        [ProducesResponseType(typeof(ApiResponse<PagedResult<StudentResponseDto>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+        [HttpDelete("students/{id:int}")]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> SearchStudents([FromQuery] StudentSearchFilterDto filter)
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteStudent([FromRoute] int id)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ApiResponse.Fail("Validation failed.", ModelState));
-            }
-
-            var result = await _studentService.SearchStudentsAsync(filter);
-            return Ok(ApiResponse<PagedResult<StudentResponseDto>>.Ok(result, "Filtered students retrieved successfully."));
+            await _studentService.DeleteStudentAsync(id);
+            return Ok(ApiResponse.Ok("Student profile deleted successfully."));
         }
 
         /// <summary>
@@ -168,7 +183,7 @@ namespace InternshipManagementApi.Controllers
         }
 
         /// <summary>
-        /// Retrieve all mentor profiles.
+        /// Retrieve all mentor profiles with assigned mentee counts.
         /// Requires ROLE_HR or ROLE_ADMIN.
         /// </summary>
         /// <returns>List of all mentor profiles</returns>
@@ -180,6 +195,21 @@ namespace InternshipManagementApi.Controllers
         {
             var mentors = await _mentorService.GetAllMentorsAsync();
             return Ok(ApiResponse<IEnumerable<MentorResponseDto>>.Ok(mentors, "Mentor profiles retrieved successfully."));
+        }
+
+        /// <summary>
+        /// Delete an existing mentor profile.
+        /// Requires ROLE_HR or ROLE_ADMIN.
+        /// </summary>
+        [HttpDelete("mentors/{id:int}")]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteMentor([FromRoute] int id)
+        {
+            await _mentorService.DeleteMentorAsync(id);
+            return Ok(ApiResponse.Ok("Mentor profile deleted successfully."));
         }
     }
 }

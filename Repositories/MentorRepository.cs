@@ -13,6 +13,7 @@ namespace InternshipManagementApi.Repositories
         Task<IEnumerable<Mentor>> GetAllWithDetailsAsync();
         Task<Mentor> AddAsync(Mentor mentor);
         Task UpdateAsync(Mentor mentor);
+        Task DeleteAsync(Mentor mentor);
     }
 
     public class MentorRepository : IMentorRepository
@@ -74,6 +75,12 @@ namespace InternshipManagementApi.Repositories
         public async Task UpdateAsync(Mentor mentor)
         {
             _context.Mentors.Update(mentor);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(Mentor mentor)
+        {
+            _context.Mentors.Remove(mentor);
             await _context.SaveChangesAsync();
         }
     }

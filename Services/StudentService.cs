@@ -14,6 +14,7 @@ namespace InternshipManagementApi.Services
         Task<StudentResponseDto> UpdateStudentAsync(int id, UpdateStudentRequestDto request);
         Task<PagedResult<StudentResponseDto>> SearchStudentsAsync(StudentSearchFilterDto filter);
         Task<StudentResponseDto> AssignMentorAsync(int studentId, AssignMentorRequestDto request);
+        Task DeleteStudentAsync(int id);
     }
 
     public class StudentService : IStudentService
@@ -86,7 +87,6 @@ namespace InternshipManagementApi.Services
 
             await _studentRepository.AddAsync(student);
 
-            // Fetch complete model with relationships
             var createdStudent = await _studentRepository.GetByIdWithDetailsAsync(student.Id);
             return MapToResponseDto(createdStudent ?? student);
         }
@@ -145,10 +145,6 @@ namespace InternshipManagementApi.Services
 
                 student.UserId = request.UserId.Value;
             }
-            else if (!request.UserId.HasValue)
-            {
-                student.UserId = null;
-            }
 
             if (request.MentorId.HasValue && request.MentorId.Value != student.MentorId)
             {
@@ -159,13 +155,10 @@ namespace InternshipManagementApi.Services
                 }
                 student.MentorId = request.MentorId.Value;
             }
-            else if (!request.MentorId.HasValue)
-            {
-                student.MentorId = null;
-            }
 
             student.FullName = request.FullName.Trim();
-            student.PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+            var phone = !string.IsNullOrWhiteSpace(request.PhoneNumber) ? request.PhoneNumber : request.Phone;
+            student.PhoneNumber = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
             student.University = request.University.Trim();
             student.Major = request.Major.Trim();
 
@@ -197,7 +190,7 @@ namespace InternshipManagementApi.Services
                 throw new NotFoundException($"Student with ID {studentId} not found.");
             }
 
-            if (request.MentorId.HasValue)
+            if (request.MentorId.HasValue && request.MentorId.Value > 0)
             {
                 var mentor = await _mentorRepository.GetByIdAsync(request.MentorId.Value);
                 if (mentor == null)
@@ -216,6 +209,17 @@ namespace InternshipManagementApi.Services
 
             var updatedStudent = await _studentRepository.GetByIdWithDetailsAsync(student.Id);
             return MapToResponseDto(updatedStudent ?? student);
+        }
+
+        public async Task DeleteStudentAsync(int id)
+        {
+            var student = await _studentRepository.GetByIdAsync(id);
+            if (student == null)
+            {
+                throw new NotFoundException($"Student with ID {id} not found.");
+            }
+
+            await _studentRepository.DeleteAsync(student);
         }
 
         private static StudentResponseDto MapToResponseDto(Student student)

@@ -110,11 +110,12 @@ builder.Services.AddControllers()
 // 5. Configure CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("CorsPolicy", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+              .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowCredentials();
     });
 });
 
@@ -168,7 +169,7 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty; // Serve Swagger UI at application root (http://localhost:5000/)
 });
 
-app.UseCors("AllowAll");
+app.UseCors("CorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();

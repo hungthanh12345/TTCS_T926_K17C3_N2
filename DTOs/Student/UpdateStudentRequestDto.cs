@@ -12,6 +12,8 @@ namespace InternshipManagementApi.DTOs.Student
         [RegularExpression(@"^[0-9+\-\s()]*$", ErrorMessage = "Invalid phone number format.")]
         public string? PhoneNumber { get; set; }
 
+        public string? Phone { get; set; }
+
         [Required(ErrorMessage = "University is required.")]
         [MaxLength(150, ErrorMessage = "University cannot exceed 150 characters.")]
         public string University { get; set; } = string.Empty;

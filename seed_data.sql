@@ -1,53 +1,89 @@
 USE `internship_management`;
 
--- 1. Insert System Roles
-INSERT INTO `roles` (`id`, `role_name`) VALUES
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
+-- ========================================================
+-- 1. INSERT SYSTEM ROLES
+-- ========================================================
+INSERT INTO `roles` (`id`, `name`) VALUES
 (1, 'ROLE_ADMIN'),
 (2, 'ROLE_HR'),
 (3, 'ROLE_MENTOR'),
 (4, 'ROLE_STUDENT')
-ON DUPLICATE KEY UPDATE `role_name` = VALUES(`role_name`);
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
--- 2. Insert Default Users (Password: Admin@123 hashed via Bcrypt for testing)
+-- ========================================================
+-- 2. INSERT SYSTEM USERS (Password: Admin@123)
+-- BCrypt Hash: $2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.
+-- ========================================================
 INSERT INTO `users` (`id`, `email`, `password_hash`, `role_id`, `status`) VALUES
--- Admin / HR Account
-(1, 'admin@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 1, 'ACTIVE'),
+-- Quản trị viên (Admin)
+(1, 'hung.nt.admin@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 1, 'ACTIVE'),
 
--- Mentor Account (Product Owner)
-(2, 'tung.nk@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 3, 'ACTIVE'),
+-- Quản lý Nhân sự (HR)
+(2, 'customer.hr@company.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 2, 'ACTIVE'),
 
--- Student Accounts ( Exactly 10 Group Members)
-(3, 'hung.nt@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(4, 'hung.dm@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(5, 'hung.ht@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(6, 'giang.td@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(7, 'duong.dh@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(8, 'han.dd@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(9, 'huan.bn@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(10, 'hai.nh@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(11, 'huong.ph@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE'),
-(12, 'giang.nt@gmail.com', '$2a$10$e8pA70W0p8V5Qn7zI7K3A.e2U8vJz.9G3E7x.xY4zY6y8w7x9v1e', 4, 'ACTIVE')
-ON DUPLICATE KEY UPDATE `email` = VALUES(`email`), `role_id` = VALUES(`role_id`);
+-- Mentor Doanh nghiệp Duy nhất (Nguyễn Khánh Tùng)
+(3, 'tung.nk@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 3, 'ACTIVE'),
 
--- 3. Insert Mentor Profiles
-INSERT INTO `mentors` (`id`, `user_id`, `full_name`, `phone_number`, `department`, `specialization`) VALUES
-(1, 2, 'Nguyễn Khánh Tùng', '0912345678', 'Product Management', 'Product Owner & Agile Coach')
-ON DUPLICATE KEY UPDATE `full_name` = VALUES(`full_name`), `department` = VALUES(`department`);
-
--- 4. Insert Student Profiles (Exactly 10 Group Members)
-INSERT INTO `students` (`id`, `user_id`, `student_code`, `full_name`, `phone_number`, `university`, `major`, `mentor_id`) VALUES
-(1, 3, 'SV2026001', 'Nguyễn Thành Hưng', '0987654321', 'ICTU', 'Software Engineering', 1),
-(2, 4, 'SV2026002', 'Dương Minh Hưng', '0987654322', 'ICTU', 'Software Engineering', 1),
-(3, 5, 'SV2026003', 'Hoàng Thanh Hùng', '0987654323', 'ICTU', 'Software Engineering', 1),
-(4, 6, 'SV2026004', 'Trương Đình Giang', '0987654324', 'ICTU', 'Software Engineering', 1),
-(5, 7, 'SV2026005', 'Dương Hải Dương', '0987654325', 'ICTU', 'Software Engineering', 1),
-(6, 8, 'SV2026006', 'Diệp Đình Hân', '0987654326', 'ICTU', 'Software Engineering', 1),
-(7, 9, 'SV2026007', 'Bùi Ngọc Huan', '0987654327', 'ICTU', 'Software Engineering', 1),
-(8, 10, 'SV2026008', 'Nguyễn Hồng Hải', '0987654328', 'ICTU', 'Software Engineering', 1),
-(9, 11, 'SV2026009', 'Phạm Hải Hướng', '0987654329', 'ICTU', 'Software Engineering', 1),
-(10, 12, 'SV2026010', 'Nguyễn Thị Giang', '0987654330', 'ICTU', 'Software Engineering', 1)
+-- Sinh viên Thực tập (10 Thành viên sinh viên)
+(4, 'hung.nt@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(5, 'hung.dm@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(6, 'hung.ht@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(7, 'giang.td@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(8, 'duong.dh@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(9, 'han.dd@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(10, 'huan.bn@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(11, 'hai.nh@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(12, 'huong.ph@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE'),
+(13, 'giang.nt@gmail.com', '$2b$10$hTMC70vv1GUJ/jKIj66Rye300BycH167s1dBMG7ijn2v2BI.dJlZ.', 4, 'ACTIVE')
 ON DUPLICATE KEY UPDATE 
+    `email` = VALUES(`email`),
+    `password_hash` = VALUES(`password_hash`), 
+    `role_id` = VALUES(`role_id`),
+    `status` = VALUES(`status`);
+
+-- ========================================================
+-- 3. CLEAN UP & ENSURE EXACTLY ONE CORPORATE MENTOR
+-- ========================================================
+-- First update students referring to other mentors
+UPDATE `students` SET `mentor_id` = NULL WHERE `mentor_id` != 1;
+DELETE FROM `students` WHERE `id` > 10;
+DELETE FROM `mentors` WHERE `id` != 1;
+DELETE FROM `users` WHERE `id` NOT IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+
+-- Insert / Update exactly 1 mentor: Nguyễn Khánh Tùng
+INSERT INTO `mentors` (`id`, `user_id`, `full_name`, `phone_number`, `department`, `specialization`) VALUES
+(1, 3, N'Nguyễn Khánh Tùng', '0912345678', N'Kỹ thuật phần mềm', N'Full-stack Web & Cloud Native')
+ON DUPLICATE KEY UPDATE 
+    `user_id` = VALUES(`user_id`),
+    `full_name` = VALUES(`full_name`), 
+    `phone_number` = VALUES(`phone_number`),
+    `department` = VALUES(`department`),
+    `specialization` = VALUES(`specialization`);
+
+-- ========================================================
+-- 4. INSERT STUDENTS (Clean Vietnamese Diacritics)
+-- All 10 students assigned to Mentor 1 (Nguyễn Khánh Tùng)
+-- All 10 students: Đại học Công nghệ Thông tin & Truyền thông — ĐHTN | Kỹ thuật Phần mềm
+-- ========================================================
+INSERT INTO `students` (`id`, `user_id`, `student_code`, `full_name`, `phone_number`, `university`, `major`, `mentor_id`) VALUES
+(1, 4, 'SV2026001', N'Nguyễn Thành Hưng', '0987654321', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(2, 5, 'SV2026002', N'Dương Minh Hưng', '0987654322', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(3, 6, 'SV2026003', N'Hoàng Thanh Hùng', '0987654323', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(4, 7, 'SV2026004', N'Trương Đình Giang', '0987654324', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(5, 8, 'SV2026005', N'Dương Hải Dương', '0987654325', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(6, 9, 'SV2026006', N'Diệp Đình Hân', '0987654326', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(7, 10, 'SV2026007', N'Bùi Ngọc Huân', '0987654327', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(8, 11, 'SV2026008', N'Nguyễn Hồng Hải', '0987654328', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(9, 12, 'SV2026009', N'Phạm Hải Hướng', '0987654329', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1),
+(10, 13, 'SV2026010', N'Nguyễn Thị Giang', '0987654330', N'Đại học Công nghệ Thông tin & Truyền thông — ĐHTN', N'Kỹ thuật Phần mềm', 1)
+ON DUPLICATE KEY UPDATE 
+    `user_id` = VALUES(`user_id`),
     `full_name` = VALUES(`full_name`),
     `student_code` = VALUES(`student_code`),
+    `phone_number` = VALUES(`phone_number`),
     `university` = VALUES(`university`),
-    `major` = VALUES(`major`);
+    `major` = VALUES(`major`),
+    `mentor_id` = VALUES(`mentor_id`);

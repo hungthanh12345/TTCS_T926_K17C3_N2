@@ -57,5 +57,22 @@ namespace InternshipManagementApi.Controllers
             var users = await _userService.GetAllUsersAsync();
             return Ok(ApiResponse<IEnumerable<UserResponseDto>>.Ok(users, "System users retrieved successfully."));
         }
+
+        /// <summary>
+        /// Delete an existing user account by ID.
+        /// Requires ROLE_ADMIN.
+        /// </summary>
+        /// <param name="id">User ID</param>
+        /// <returns>Deletion result</returns>
+        [HttpDelete("users/{id:int}")]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteUser([FromRoute] int id)
+        {
+            await _userService.DeleteUserAsync(id);
+            return Ok(ApiResponse.Ok("User account deleted successfully."));
+        }
     }
 }

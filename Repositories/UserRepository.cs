@@ -13,6 +13,7 @@ namespace InternshipManagementApi.Repositories
         Task<IEnumerable<User>> GetAllWithRolesAsync();
         Task<User> AddAsync(User user);
         Task UpdateAsync(User user);
+        Task DeleteAsync(User user);
     }
 
     public class UserRepository : IUserRepository
@@ -72,6 +73,12 @@ namespace InternshipManagementApi.Repositories
         public async Task UpdateAsync(User user)
         {
             _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(User user)
+        {
+            _context.Users.Remove(user);
             await _context.SaveChangesAsync();
         }
     }

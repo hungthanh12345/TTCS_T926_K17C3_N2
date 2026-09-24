@@ -25,18 +25,23 @@ namespace InternshipManagementApi.Services
             var jwtKey = _configuration["Jwt:Key"] ?? "YourSuperSecretKeyForInternshipManagementSystem2026SecureKey!";
             var issuer = _configuration["Jwt:Issuer"] ?? "InternshipManagementApi";
             var audience = _configuration["Jwt:Audience"] ?? "InternshipManagementClient";
-            var expiryHoursStr = _configuration["Jwt:ExpiryInHours"] ?? "8";
-            
-            if (!double.TryParse(expiryHoursStr, out var expiryHours))
+            var expiryMinutesStr = _configuration["Jwt:ExpiryMinutes"];
+            double expiryMinutes;
+            if (!string.IsNullOrEmpty(expiryMinutesStr) && double.TryParse(expiryMinutesStr, out var mins))
             {
-                expiryHours = 8;
+                expiryMinutes = mins;
+            }
+            else
+            {
+                var expiryHoursStr = _configuration["Jwt:ExpiryInHours"] ?? "8";
+                expiryMinutes = double.TryParse(expiryHoursStr, out var hrs) ? hrs * 60 : 480;
             }
 
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var now = DateTime.UtcNow;
-            var expiresAt = now.AddHours(expiryHours);
+            var expiresAt = now.AddMinutes(expiryMinutes);
             var expiresInSeconds = (long)(expiresAt - now).TotalSeconds;
 
             var roleName = user.Role?.Name ?? string.Empty;

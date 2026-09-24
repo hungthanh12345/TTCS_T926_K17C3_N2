@@ -16,6 +16,7 @@ namespace InternshipManagementApi.Repositories
         Task<PagedResult<Student>> SearchAsync(StudentSearchFilterDto filter);
         Task<Student> AddAsync(Student student);
         Task UpdateAsync(Student student);
+        Task DeleteAsync(Student student);
     }
 
     public class StudentRepository : IStudentRepository
@@ -76,13 +77,13 @@ namespace InternshipManagementApi.Repositories
                 .AsNoTracking()
                 .AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(filter.University))
+            if (!string.IsNullOrWhiteSpace(filter.University) && !string.Equals(filter.University, "ALL", StringComparison.OrdinalIgnoreCase))
             {
                 var uni = filter.University.Trim().ToLower();
                 query = query.Where(s => s.University.ToLower().Contains(uni));
             }
 
-            if (!string.IsNullOrWhiteSpace(filter.Major))
+            if (!string.IsNullOrWhiteSpace(filter.Major) && !string.Equals(filter.Major, "ALL", StringComparison.OrdinalIgnoreCase))
             {
                 var major = filter.Major.Trim().ToLower();
                 query = query.Where(s => s.Major.ToLower().Contains(major));
@@ -127,6 +128,12 @@ namespace InternshipManagementApi.Repositories
         public async Task UpdateAsync(Student student)
         {
             _context.Students.Update(student);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(Student student)
+        {
+            _context.Students.Remove(student);
             await _context.SaveChangesAsync();
         }
     }
