@@ -1,0 +1,118 @@
+@HostAddress = http://localhost:5000
+
+### 1. Authenticate (Admin Login)
+# @name adminLogin
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "hung.nt.admin@gmail.com",
+  "password": "Admin@123"
+}
+
+### Store token
+@adminToken = {{adminLogin.response.body.data.token}}
+
+### 2. Fetch All Users (Admin)
+GET {{HostAddress}}/api/admin/users
+Authorization: Bearer {{adminToken}}
+
+### 3. Create a New HR User (Admin)
+# @name createHrUser
+POST {{HostAddress}}/api/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "sample.hr@company.com",
+  "password": "Password@123",
+  "roleName": "ROLE_HR",
+  "status": 0
+}
+
+### 4. Create a New Mentor User (Admin)
+# @name createMentorUser
+POST {{HostAddress}}/api/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "sample.mentor@company.com",
+  "password": "Password@123",
+  "roleName": "ROLE_MENTOR",
+  "status": 0
+}
+
+### 5. HR Login
+# @name hrLogin
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "customer.hr@company.com",
+  "password": "Hr@123456"
+}
+
+### Store HR token
+@hrToken = {{hrLogin.response.body.data.token}}
+
+### 6. Create Mentor Profile (HR)
+POST {{HostAddress}}/api/hr/mentors
+Authorization: Bearer {{hrToken}}
+Content-Type: application/json
+
+{
+  "userId": 3,
+  "fullName": "Nguyễn Khánh Tùng",
+  "phoneNumber": "0912345678",
+  "department": "Engineering",
+  "specialization": "Backend Cloud Architecture"
+}
+
+### 7. Retrieve All Mentors (HR)
+GET {{HostAddress}}/api/hr/mentors
+Authorization: Bearer {{hrToken}}
+
+### 8. Create Student Profile (HR)
+# @name createStudent
+POST {{HostAddress}}/api/hr/students
+Authorization: Bearer {{hrToken}}
+Content-Type: application/json
+
+{
+  "studentCode": "SV2026101",
+  "fullName": "Trần Thị Mai",
+  "phoneNumber": "0987654399",
+  "university": "Đại học Bách Khoa",
+  "major": "Khoa học Máy tính"
+}
+
+### 9. Get Student Profile by ID (HR)
+GET {{HostAddress}}/api/hr/students/2
+Authorization: Bearer {{hrToken}}
+
+### 10. Update Student Profile (HR)
+PUT {{HostAddress}}/api/hr/students/2
+Authorization: Bearer {{hrToken}}
+Content-Type: application/json
+
+{
+  "studentCode": "SV2026002",
+  "fullName": "Dương Minh Hưng",
+  "phoneNumber": "0987654322",
+  "university": "ICTU",
+  "major": "Software Engineering & Cloud Computing"
+}
+
+### 11. Search Students with Pagination (HR)
+GET {{HostAddress}}/api/hr/students/search?university=ICTU&page=1&pageSize=5
+Authorization: Bearer {{hrToken}}
+
+### 12. Assign Mentor to Student (HR)
+PUT {{HostAddress}}/api/hr/students/2/assign-mentor
+Authorization: Bearer {{hrToken}}
+Content-Type: application/json
+
+{
+  "mentorId": 1
+}
