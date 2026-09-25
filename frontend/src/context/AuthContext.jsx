@@ -79,25 +79,6 @@ export const AuthProvider = ({ children }) => {
     return user.role === allowedRoles;
   };
 
-  /**
-   * Helper to switch role on the fly for demo evaluation
-   */
-  const switchRole = (newRole) => {
-    if (!user) return;
-    const roleNames = {
-      ROLE_ADMIN: 'Quản trị viên (Admin)',
-      ROLE_HR: 'Quản lý Nhân sự (HR)',
-      ROLE_MENTOR: 'Mentor Doanh nghiệp',
-      ROLE_STUDENT: 'Sinh viên Thực tập',
-    };
-    const updated = { ...user, role: newRole };
-    setUser(updated);
-    localStorage.setItem('user', JSON.stringify(updated));
-    toast.success(`Đã chuyển sang vai trò: ${roleNames[newRole] || newRole}`, {
-      icon: '🛡️',
-    });
-  };
-
   const value = {
     user,
     token,
@@ -107,7 +88,6 @@ export const AuthProvider = ({ children }) => {
     logout,
     resetSession,
     hasRole,
-    switchRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

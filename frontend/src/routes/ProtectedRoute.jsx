@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ShieldAlert, ArrowLeft, LogOut } from 'lucide-react';
 
@@ -9,6 +9,7 @@ import { ShieldAlert, ArrowLeft, LogOut } from 'lucide-react';
 export const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -34,14 +35,19 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
       let homePath = '/login';
       if (user?.role === 'ROLE_ADMIN') homePath = '/admin/users';
       else if (user?.role === 'ROLE_HR') homePath = '/hr/students';
-      else if (user?.role === 'ROLE_MENTOR') homePath = '/mentor/dashboard';
-      else if (user?.role === 'ROLE_STUDENT') homePath = '/student/dashboard';
+      else if (user?.role === 'ROLE_MENTOR') homePath = '/mentor/students';
+      else if (user?.role === 'ROLE_STUDENT') homePath = '/student/profile';
 
       const roleLabels = {
         ROLE_ADMIN: 'Quản trị viên (Admin)',
         ROLE_HR: 'Quản lý Nhân sự (HR)',
         ROLE_MENTOR: 'Mentor Doanh nghiệp',
         ROLE_STUDENT: 'Sinh viên Thực tập',
+      };
+
+      const handleLoginAnother = () => {
+        logout(true);
+        navigate('/login', { replace: true });
       };
 
       return (
@@ -57,16 +63,18 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
             </p>
 
             <div className="flex flex-col gap-3">
-              <a
-                href={homePath}
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30"
+              <button
+                type="button"
+                onClick={() => navigate(homePath, { replace: true })}
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 active:scale-98 transition-all shadow-lg shadow-indigo-600/30 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" /> Về Không Gian Làm Việc Của Tôi
-              </a>
+              </button>
 
               <button
-                onClick={logout}
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all border border-slate-800"
+                type="button"
+                onClick={handleLoginAnother}
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all border border-slate-800 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" /> Đăng Nhập Với Tài Khoản Khác
               </button>

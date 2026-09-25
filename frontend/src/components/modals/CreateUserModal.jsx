@@ -8,11 +8,28 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'ROLE_HR',
+    role_id: 2,
+    role_name: 'ROLE_HR',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const roleMapping = {
+    1: 'ROLE_ADMIN',
+    2: 'ROLE_HR',
+    3: 'ROLE_MENTOR',
+    4: 'ROLE_STUDENT',
+  };
+
+  const handleRoleChange = (e) => {
+    const selectedId = parseInt(e.target.value, 10);
+    setFormData((prev) => ({
+      ...prev,
+      role_id: selectedId,
+      role_name: roleMapping[selectedId] || 'ROLE_HR',
+    }));
+  };
 
   const validate = () => {
     const errs = {};
@@ -28,7 +45,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
       errs.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
 
-    if (!formData.role) {
+    if (!formData.role_id) {
       errs.role = 'Vui lòng chọn vai trò cho tài khoản';
     }
 
@@ -43,23 +60,27 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
     setIsSubmitting(true);
     try {
       await userService.createUser({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
-        role: formData.role,
+        role_id: parseInt(formData.role_id, 10),
+        roleId: parseInt(formData.role_id, 10),
+        role_name: formData.role_name,
+        roleName: formData.role_name,
       });
 
-      toast.success(`Đã tạo thành công tài khoản: ${formData.email}!`);
-      // Đặt lại form
+      toast.success('Khởi tạo tài khoản người dùng thành công!');
+      // Reset form
       setFormData({
         email: '',
         password: '',
-        role: 'ROLE_HR',
+        role_id: 2,
+        role_name: 'ROLE_HR',
       });
       setErrors({});
       onClose();
       if (onSuccess) onSuccess();
     } catch (err) {
-      toast.error(err.message || 'Không thể tạo người dùng');
+      toast.error('Email này đã tồn tại trên hệ thống hoặc thông tin không hợp lệ.');
     } finally {
       setIsSubmitting(false);
     }
@@ -90,7 +111,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                 setFormData({ ...formData, email: e.target.value });
                 if (errors.email) setErrors({ ...errors, email: null });
               }}
-              placeholder="vidu@ictu.edu.vn"
+              placeholder="vidu@company.com"
               className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all ${
                 errors.email
                   ? 'border-rose-300 focus:ring-rose-400 focus:border-rose-400'
@@ -129,7 +150,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -142,20 +163,21 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
         {/* Phân quyền Vai trò */}
         <div>
           <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-            Vai Trò Hệ Thống (RBAC) <span className="text-rose-500">*</span>
+            VAI TRÒ HỆ THỐNG (RBAC) <span className="text-rose-500">*</span>
           </label>
           <div className="relative rounded-xl shadow-xs">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <Shield className="w-4 h-4" />
             </div>
             <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium text-slate-800"
+              value={formData.role_id}
+              onChange={handleRoleChange}
+              className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium text-slate-800 cursor-pointer"
             >
-              <option value="ROLE_HR">ROLE_HR — Quản lý Nhân sự (HR Manager)</option>
-              <option value="ROLE_MENTOR">ROLE_MENTOR — Mentor Doanh nghiệp</option>
-              <option value="ROLE_STUDENT">ROLE_STUDENT — Sinh viên Thực tập</option>
+              <option value={2}>ROLE_HR (Quản lý Nhân sự)</option>
+              <option value={3}>ROLE_MENTOR (Mentor Doanh nghiệp)</option>
+              <option value={4}>ROLE_STUDENT (Sinh viên Thực tập)</option>
+              <option value={1}>ROLE_ADMIN (Quản trị viên)</option>
             </select>
           </div>
           <p className="mt-1 text-[11px] text-slate-500">

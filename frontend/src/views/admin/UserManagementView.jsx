@@ -8,14 +8,14 @@ import {
   Users,
   UserPlus,
   Search,
-  Filter,
   RefreshCw,
   Trash2,
   Shield,
   Clock,
   CheckCircle2,
-  Mail,
   UserCheck,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -26,6 +26,13 @@ export const UserManagementView = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState('ALL');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // State cho Modal Xác nhận Xóa Tài khoản
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    user: null,
+    isDeleting: false,
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -68,15 +75,38 @@ export const UserManagementView = () => {
     }
   };
 
-  const handleDeleteUser = async (id, email) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa tài khoản "${email}" khỏi hệ thống?`)) {
-      try {
-        await userService.deleteUser(id);
-        toast.success(`Đã xóa tài khoản ${email}.`);
-        fetchUsers();
-      } catch (err) {
-        toast.error(err.message || 'Lỗi khi xóa người dùng');
-      }
+  // Mở modal xác nhận xóa
+  const handleOpenDeleteModal = (u) => {
+    setDeleteModal({
+      isOpen: true,
+      user: u,
+      isDeleting: false,
+    });
+  };
+
+  // Đóng modal xác nhận xóa
+  const handleCloseDeleteModal = () => {
+    if (deleteModal.isDeleting) return;
+    setDeleteModal({
+      isOpen: false,
+      user: null,
+      isDeleting: false,
+    });
+  };
+
+  // Thực hiện xóa người dùng
+  const handleConfirmDelete = async () => {
+    if (!deleteModal.user) return;
+    setDeleteModal((prev) => ({ ...prev, isDeleting: true }));
+
+    try {
+      await userService.deleteUser(deleteModal.user.id);
+      toast.success('Đã xóa tài khoản người dùng thành công.');
+      setDeleteModal({ isOpen: false, user: null, isDeleting: false });
+      fetchUsers();
+    } catch (err) {
+      toast.error('Không thể xóa tài khoản. Vui lòng thử lại sau.');
+      setDeleteModal((prev) => ({ ...prev, isDeleting: false }));
     }
   };
 
@@ -303,7 +333,7 @@ export const UserManagementView = () => {
                         {u.role !== 'ROLE_ADMIN' ? (
                           <button
                             type="button"
-                            onClick={() => handleDeleteUser(u.id, u.email)}
+                            onClick={() => handleOpenDeleteModal(u)}
                             className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             title="Xóa tài khoản"
                           >
@@ -324,7 +354,67 @@ export const UserManagementView = () => {
         </div>
       </div>
 
-      {/* Modal Tạo Người Dùng */}
+      {/* Modal Xác Nhận Xóa Người Dùng (Custom Tailwind Confirmation Modal) */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div
+            className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden transform transition-all animate-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-rose-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                    Xác nhận xóa tài khoản
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                    Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa tài khoản{' '}
+                    <strong className="text-slate-900 font-semibold break-all">
+                      {deleteModal.user?.email}
+                    </strong>{' '}
+                    khỏi hệ thống không?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCloseDeleteModal}
+                disabled={deleteModal.isDeleting}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteModal.isDeleting}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 active:scale-98 transition-all shadow-md shadow-rose-200 cursor-pointer disabled:opacity-50"
+              >
+                {deleteModal.isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang xóa...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Xác nhận xóa</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tạo Người Dùng Mới */}
       <CreateUserModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

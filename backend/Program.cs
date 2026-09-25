@@ -222,8 +222,11 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Internship Management API v1");
-    c.RoutePrefix = string.Empty; // Serve Swagger UI at application root
+    c.RoutePrefix = "swagger"; // Serve Swagger UI at /swagger
 });
+
+// Also redirect root "/" to "/swagger" so accessing either / or /swagger opens Swagger Docs
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.UseCors("CorsPolicy");
 

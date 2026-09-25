@@ -23,18 +23,53 @@ export const userService = {
         }
         return users;
       }
-      throw new Error(error.response?.data?.message || 'Failed to fetch users');
+      throw new Error(error.response?.data?.message || 'Không thể tải danh sách tài khoản');
     }
   },
 
   /**
    * Create a new user
    * POST /api/admin/users
-   * Payload: { email, password, role }
+   * Payload: { email, password, roleId, roleName }
    */
   async createUser(userData) {
     try {
-      const response = await api.post('/admin/users', userData);
+      // Normalize role payload to match CreateUserRequestDto exactly
+      const rawRoleId = userData.roleId ?? userData.role_id;
+      const roleId = rawRoleId ? parseInt(rawRoleId, 10) : undefined;
+      const roleName =
+        userData.roleName ??
+        userData.role_name ??
+        (typeof userData.role === 'string' && isNaN(userData.role) ? userData.role : undefined);
+
+      const payload = {
+        email: userData.email.trim(),
+        password: userData.password,
+        roleId:
+          roleId ||
+          (roleName === 'ROLE_ADMIN'
+            ? 1
+            : roleName === 'ROLE_HR'
+            ? 2
+            : roleName === 'ROLE_MENTOR'
+            ? 3
+            : roleName === 'ROLE_STUDENT'
+            ? 4
+            : undefined),
+        roleName:
+          roleName ||
+          (roleId === 1
+            ? 'ROLE_ADMIN'
+            : roleId === 2
+            ? 'ROLE_HR'
+            : roleId === 3
+            ? 'ROLE_MENTOR'
+            : roleId === 4
+            ? 'ROLE_STUDENT'
+            : undefined),
+      };
+
+      const response = await api.post('/admin/users', payload);
       return response.data?.data || response.data;
     } catch (error) {
       if (!error.response) {
@@ -43,13 +78,16 @@ export const userService = {
         
         // Check uniqueness
         if (users.some((u) => u.email.toLowerCase() === userData.email.trim().toLowerCase())) {
-          throw new Error('A user with this email already exists.');
+          throw new Error('Email này đã tồn tại trên hệ thống hoặc thông tin không hợp lệ.');
         }
 
+        const fallbackRole = userData.roleName || userData.role || 'ROLE_HR';
         const newUser = {
           id: `USR-00${users.length + 1}`,
           email: userData.email.trim(),
-          role: userData.role,
+          role: fallbackRole,
+          roleName: fallbackRole,
+          roleId: userData.roleId || (fallbackRole === 'ROLE_ADMIN' ? 1 : fallbackRole === 'ROLE_HR' ? 2 : fallbackRole === 'ROLE_MENTOR' ? 3 : 4),
           status: 'ACTIVE',
           createdAt: new Date().toISOString(),
         };
@@ -58,7 +96,7 @@ export const userService = {
         saveStoredUsers(updatedUsers);
         return newUser;
       }
-      throw new Error(error.response?.data?.message || 'Failed to create user');
+      throw error;
     }
   },
 
@@ -73,11 +111,11 @@ export const userService = {
     } catch (error) {
       if (!error.response) {
         const users = getStoredUsers();
-        const updated = users.filter((u) => u.id !== id);
+        const updated = users.filter((u) => String(u.id) !== String(id));
         saveStoredUsers(updated);
         return { success: true };
       }
-      throw new Error(error.response?.data?.message || 'Failed to delete user');
+      throw error;
     }
   }
 };

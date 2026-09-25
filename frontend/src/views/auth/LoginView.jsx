@@ -11,10 +11,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   Loader2,
-  GraduationCap,
-  Briefcase,
-  Users,
-  Shield,
 } from 'lucide-react';
 
 export const LoginView = () => {
@@ -34,46 +30,6 @@ export const LoginView = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Danh sách tài khoản trải nghiệm nhanh theo cơ sở dữ liệu thực tế
-  const demoAccounts = [
-    {
-      role: 'ROLE_ADMIN',
-      title: 'Quản trị viên',
-      desc: 'Quản lý tài khoản và phân quyền',
-      email: 'hung.nt.admin@gmail.com',
-      password: 'Admin@123',
-      icon: Shield,
-      accent: 'border-rose-200 hover:border-rose-400 bg-rose-50/40 text-rose-900',
-    },
-    {
-      role: 'ROLE_HR',
-      title: 'Quản lý Nhân sự (HR)',
-      desc: 'Hồ sơ thực tập sinh và phân công mentor',
-      email: 'customer.hr@company.com',
-      password: 'Admin@123',
-      icon: Briefcase,
-      accent: 'border-indigo-200 hover:border-indigo-400 bg-indigo-50/40 text-indigo-900',
-    },
-    {
-      role: 'ROLE_MENTOR',
-      title: 'Mentor Hướng dẫn',
-      desc: 'Hướng dẫn và đánh giá thực tập sinh',
-      email: 'tung.nk@gmail.com',
-      password: 'Admin@123',
-      icon: Users,
-      accent: 'border-purple-200 hover:border-purple-400 bg-purple-50/40 text-purple-900',
-    },
-    {
-      role: 'ROLE_STUDENT',
-      title: 'Thực tập sinh',
-      desc: 'Hồ sơ cá nhân và thông tin mentor',
-      email: 'hung.dm@gmail.com',
-      password: 'Admin@123',
-      icon: GraduationCap,
-      accent: 'border-emerald-200 hover:border-emerald-400 bg-emerald-50/40 text-emerald-900',
-    },
-  ];
 
   const executeLogin = async (credentials) => {
     setIsSubmitting(true);
@@ -119,14 +75,6 @@ export const LoginView = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleQuickFill = (acc) => {
-    setFormData({
-      email: acc.email,
-      password: acc.password,
-    });
-    setErrors({});
   };
 
   const validate = () => {
@@ -242,7 +190,7 @@ export const LoginView = () => {
         </div>
       </div>
 
-      {/* Cột phải: Form Đăng nhập & Lựa chọn Demo Account */}
+      {/* Cột phải: Form Đăng nhập */}
       <div className="flex-1 flex flex-col justify-center items-center px-4 sm:px-8 lg:px-12 py-10 bg-slate-900/60 backdrop-blur-xl relative overflow-y-auto">
         <div className="max-w-md w-full my-auto space-y-6">
           {/* Logo di động */}
@@ -262,7 +210,7 @@ export const LoginView = () => {
               Đăng nhập hệ thống
             </h2>
             <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
-              Vui lòng nhập email và mật khẩu hoặc chọn tài khoản mẫu bên dưới để đăng nhập.
+              Vui lòng nhập địa chỉ email và mật khẩu của bạn để tiếp tục.
             </p>
           </div>
 
@@ -365,47 +313,11 @@ export const LoginView = () => {
             </button>
           </form>
 
-          {/* Khối Tài khoản Trải nghiệm Nhanh */}
-          <div className="pt-5 border-t border-slate-800 notranslate" translate="no">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider notranslate" translate="no">
-                TÀI KHOẢN TRẢI NGHIỆM NHANH
-              </span>
-              <span className="text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20 notranslate" translate="no">
-                Nhấp để điền thông tin
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 notranslate" translate="no">
-              {demoAccounts.map((acc) => {
-                const Icon = acc.icon;
-                return (
-                  <button
-                    key={acc.role}
-                    type="button"
-                    translate="no"
-                    onClick={() => handleQuickFill(acc)}
-                    className="p-3 rounded-2xl border border-slate-800 bg-slate-950/70 hover:bg-slate-800/80 hover:border-slate-700 text-left transition-all group flex items-start gap-2.5 cursor-pointer notranslate"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-slate-800 text-indigo-400 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 notranslate" translate="no">
-                      <p className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors truncate notranslate" translate="no">
-                        {acc.title}
-                      </p>
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5 notranslate" translate="no">
-                        {acc.email}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <p className="text-center text-[11px] text-slate-500 mt-4 flex items-center justify-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              Bảo mật tiêu chuẩn JWT Token và RBAC Route Guarding
+          {/* Ghi chú bảo mật hệ thống */}
+          <div className="pt-6 border-t border-slate-800/80">
+            <p className="text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Bảo mật tiêu chuẩn JWT Token và RBAC Route Guarding</span>
             </p>
           </div>
         </div>
