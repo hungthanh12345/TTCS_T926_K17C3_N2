@@ -9,11 +9,9 @@
 -- ----------------------------------------------------------------------------
 -- 1. DATABASE CREATION
 -- ----------------------------------------------------------------------------
-CREATE DATABASE IF NOT EXISTS `internship_management`
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `TTCS_DB` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE `internship_management`;
+USE TTCS_DB;
 
 -- Disable foreign key checks during schema creation/reset
 SET FOREIGN_KEY_CHECKS = 0;
