@@ -1,34 +1,78 @@
-## Build Results
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
+# ==========================================
+# Root .gitignore for TTCS_T926_K17C3_N2
+# Backend: ASP.NET Core (.NET 8)
+# Frontend: React + Vite
+# ==========================================
 
-## Visual Studio / VS Code
-.vscode/
+# Dependencies & Package Managers
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build Outputs & Bundles
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+[Bb]in/
+**/[Bb]in/
+[Oo]bj/
+**/[Oo]bj/
+build/
+**/build/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+*.env.production
+*.env.development
+!.env.example
+!frontend/.env.example
+
+# Visual Studio & VS Code
 .vs/
+**/.vs/
+.vscode/*
+!.vscode/extensions.json
 *.user
 *.userosscache
 *.suo
 *.userprefs
+*.sln.docstates
 
-## Rider / JetBrains
+# Rider / JetBrains
 .idea/
+**/.idea/
 *.DotSettings.user
 
-## OS Generated
+# Operating System Files
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
 
-## Test results
+# Logs & Diagnostics
+logs/
+**/logs/
+*.log
 TestResults/
+**/TestResults/
 
-## Frontend Build & Dependencies
-frontend/node_modules/
-frontend/dist/
-frontend/dist-ssr/
-frontend/*.local
-frontend/logs/
-frontend/*.log
-node_modules/
-dist/
+# Local AI / Agent tooling caches
+.agent/
+**/.agent/
+.agents/
+**/.agents/
+.claude/
+**/.claude/
+.codex/
+**/.codex/
+.gemini/
+**/.gemini/
+.impeccable/
+**/.impeccable/

@@ -13,14 +13,27 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Cloud Environment: Bind dynamic port (e.g., Render, Railway)
+var dynamicPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(dynamicPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{dynamicPort}");
+}
+
 // 1. Configure Database Connection (MySQL via Pomelo EF Core)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not configured.");
+var connectionString = ResolveConnectionString(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    // AutoDetect or fallback to MySQL 8.0
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+    try
+    {
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+    }
+    catch
+    {
+        // Fallback for cloud cold-starts or strict network policies
+        options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)));
+    }
 });
 
 // 2. Configure Dependency Injection (Repositories & Services)
@@ -37,9 +50,15 @@ builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
 
 // 3. Configure JWT Authentication & Authorization
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "InternshipManagementSystem_SuperSecretSecureKey_2026_JWT_Production_Key!";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "InternshipManagementApi";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "InternshipManagementClient";
+var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? builder.Configuration["Jwt:Key"]
+    ?? "InternshipManagementSystem_SuperSecretSecureKey_2026_JWT_Production_Key!";
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+    ?? builder.Configuration["Jwt:Issuer"]
+    ?? "InternshipManagementApi";
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? builder.Configuration["Jwt:Audience"]
+    ?? "InternshipManagementClient";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -107,12 +126,49 @@ builder.Services.AddControllers()
         };
     });
 
-// 5. Configure CORS
+// 5. Configure CORS (Dynamic production origins from CORS_ALLOWED_ORIGINS)
+var allowedOriginsEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")
+    ?? builder.Configuration["CORS_ALLOWED_ORIGINS"];
+
+var allowedOrigins = new List<string>
+{
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174"
+};
+
+if (!string.IsNullOrWhiteSpace(allowedOriginsEnv))
+{
+    var parsedOrigins = allowedOriginsEnv
+        .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    allowedOrigins.AddRange(parsedOrigins);
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+        policy.WithOrigins(allowedOrigins.Distinct().ToArray())
+              .SetIsOriginAllowed(origin =>
+              {
+                  if (string.IsNullOrWhiteSpace(origin)) return false;
+                  if (allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase)) return true;
+
+                  if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                  {
+                      // Allow any *.vercel.app domain for Vercel preview & production deployments
+                      if (uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase))
+                          return true;
+
+                      // Allow localhost on any port for local development
+                      if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                          uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase))
+                          return true;
+                  }
+                  return false;
+              })
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -166,7 +222,7 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Internship Management API v1");
-    c.RoutePrefix = string.Empty; // Serve Swagger UI at application root (http://localhost:5000/)
+    c.RoutePrefix = string.Empty; // Serve Swagger UI at application root
 });
 
 app.UseCors("CorsPolicy");
@@ -174,6 +230,59 @@ app.UseCors("CorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Health Check Endpoint for Render / Railway / Docker
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "Healthy",
+    service = "InternshipManagementApi",
+    timestamp = DateTime.UtcNow
+}));
+
 app.MapControllers();
 
 app.Run();
+
+// Helper: Connection String Resolver supporting ADO.NET and URI formats
+static string ResolveConnectionString(IConfiguration configuration)
+{
+    var rawConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
+        ?? Environment.GetEnvironmentVariable("MYSQL_URL")
+        ?? configuration.GetConnectionString("DefaultConnection");
+
+    if (string.IsNullOrWhiteSpace(rawConnection))
+    {
+        throw new InvalidOperationException("Database connection string is not configured. Set 'ConnectionStrings:DefaultConnection' or 'DATABASE_URL'.");
+    }
+
+    // Handle URI format: mysql://user:pass@host:port/database
+    if (rawConnection.StartsWith("mysql://", StringComparison.OrdinalIgnoreCase) ||
+        rawConnection.StartsWith("mysqls://", StringComparison.OrdinalIgnoreCase))
+    {
+        var uri = new Uri(rawConnection);
+        var userInfo = uri.UserInfo.Split(':');
+        var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
+        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 3306;
+        var database = uri.AbsolutePath.TrimStart('/');
+
+        return $"Server={host};Port={port};Database={database};User={username};Password={password};CharSet=utf8mb4;SslMode=Preferred;AllowPublicKeyRetrieval=True;";
+    }
+
+    // Append cloud-friendly MySQL flags if missing
+    var connBuilder = new StringBuilder(rawConnection.TrimEnd(';'));
+    if (!rawConnection.Contains("CharSet=", StringComparison.OrdinalIgnoreCase))
+    {
+        connBuilder.Append(";CharSet=utf8mb4");
+    }
+    if (!rawConnection.Contains("AllowPublicKeyRetrieval=", StringComparison.OrdinalIgnoreCase))
+    {
+        connBuilder.Append(";AllowPublicKeyRetrieval=True");
+    }
+    if (!rawConnection.Contains("SslMode=", StringComparison.OrdinalIgnoreCase))
+    {
+        connBuilder.Append(";SslMode=Preferred");
+    }
+
+    return connBuilder.ToString();
+}

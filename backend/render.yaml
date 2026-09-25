@@ -1,0 +1,47 @@
+# ==============================================================================
+# Render Blueprint Configuration (render.yaml)
+# Free Cloud Deployment for Internship Management System Web API (.NET 8)
+# Docs: https://render.com/docs/blueprint-spec
+# ==============================================================================
+
+version: "1"
+
+services:
+  - type: web
+    name: internship-management-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore # Closest low-latency region for Vietnam & SE Asia
+    healthCheckPath: /health
+    autoDeploy: true
+
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      - key: PORT
+        value: 8080
+
+      # Dynamic CORS: Comma-separated list of allowed origins.
+      # Wildcard *.vercel.app is also automatically accepted by Program.cs!
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://internship-management-frontend.vercel.app,http://localhost:5173,http://localhost:3000
+
+      # MySQL Connection String:
+      # Obtain from Free Aiven MySQL / TiDB Cloud / Clever Cloud / Railway
+      # Example: Server=mysql-xxx.aivencloud.com;Port=12345;Database=defaultdb;User=avnadmin;Password=secret;CharSet=utf8mb4;SslMode=Preferred;
+      # Or URI format: mysql://avnadmin:secret@mysql-xxx.aivencloud.com:12345/defaultdb
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+
+      # Production JWT Signing Key
+      - key: JWT_SECRET_KEY
+        generateValue: true
+
+      - key: JWT_ISSUER
+        value: InternshipManagementApi
+
+      - key: JWT_AUDIENCE
+        value: InternshipManagementClient
