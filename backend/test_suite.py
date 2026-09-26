@@ -48,11 +48,11 @@ def run_tests():
 
     # 1. AUTHENTICATION TESTS
     # 1.1 Login with wrong password
-    status, res = request("POST", "/api/auth/login", {"email": "hung.nt.admin@gmail.com", "password": "WrongPassword"})
+    status, res = request("POST", "/api/auth/login", {"email": "admin@gmail.com", "password": "WrongPassword"})
     assert_eq("1.1 Login with invalid credentials", status, 401)
 
     # 1.2 Login with valid admin credentials
-    status, res = request("POST", "/api/auth/login", {"email": "hung.nt.admin@gmail.com", "password": "Admin@123"})
+    status, res = request("POST", "/api/auth/login", {"email": "admin@gmail.com", "password": "Admin@123"})
     assert_eq("1.2 Login with valid Admin credentials", status, 200)
     admin_token = res["data"]["token"]
     assert res["data"]["user"]["role"] == "ROLE_ADMIN", "Admin role mismatch"

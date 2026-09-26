@@ -31,10 +31,10 @@ echo.
 echo ===============================================================================
 echo              TAI KHOAN DEMO (Mat khau mac dinh: Admin@123):
 echo ===============================================================================
-echo  * Quan tri vien (Admin):      hung.nt.admin@gmail.com
+echo  * Quan tri vien (Admin):      admin@gmail.com
 echo  * Nhan su (HR):               customer.hr@company.com
 echo  * Mentor Doanh nghiep:        tung.nk@gmail.com
-echo  * Sinh vien Thuc tap:         hung.dm@gmail.com
+echo  * Sinh vien Thuc tap:         hung.nt@gmail.com
 echo ===============================================================================
 echo.
 echo He thong da khoi dong thanh cong. Vui long khong dong cac cua so Backend va Frontend.

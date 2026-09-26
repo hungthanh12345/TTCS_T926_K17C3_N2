@@ -7,18 +7,19 @@ Backend RESTful API hoàn chỉnh phục vụ cho học phần Thực tập cơ 
 ## 📌 1. Thông Tin Nhóm & Phân Vai
 * **Nhóm**: Nhóm 2 - Lớp K17C3
 * **Product Owner / Mentor**: Nguyễn Khánh Tùng (`tung.nk@gmail.com`)
-* **Admin hệ thống**: Nguyễn Thành Hưng (`hung.nt.admin@gmail.com`)
+* **Admin hệ thống**: Quản trị viên (`admin@gmail.com`)
 * **HR Doanh nghiệp**: Khách hàng đại diện (`customer.hr@company.com`)
 * **Thành viên Thực tập sinh (ICTU)**:
-  1. Dương Minh Hưng (`hung.dm@gmail.com` - `SV2026002`)
-  2. Hoàng Thanh Hùng (`hung.ht@gmail.com` - `SV2026003`)
-  3. Trương Đình Giang (`giang.td@gmail.com` - `SV2026004`)
-  4. Dương Hải Dương (`duong.dh@gmail.com` - `SV2026005`)
-  5. Diệp Đình Hân (`han.dd@gmail.com` - `SV2026006`)
-  6. Bùi Ngọc Huân (`huan.bn@gmail.com` - `SV2026007`)
-  7. Nguyễn Hồng Hải (`hai.nh@gmail.com` - `SV2026008`)
-  8. Phạm Hải Hướng (`huong.ph@gmail.com` - `SV2026009`)
-  9. Nguyễn Thị Giang (`giang.nt@gmail.com` - `SV2026010`)
+  1. Nguyễn Thành Hưng (`hung.nt@gmail.com` - `SV2026001`)
+  2. Dương Minh Hưng (`hung.dm@gmail.com` - `SV2026002`)
+  3. Hoàng Thanh Hùng (`hung.ht@gmail.com` - `SV2026003`)
+  4. Trương Đình Giang (`giang.td@gmail.com` - `SV2026004`)
+  5. Dương Hải Dương (`duong.dh@gmail.com` - `SV2026005`)
+  6. Diệp Đình Hân (`han.dd@gmail.com` - `SV2026006`)
+  7. Bùi Ngọc Huân (`huan.bn@gmail.com` - `SV2026007`)
+  8. Nguyễn Hồng Hải (`hai.nh@gmail.com` - `SV2026008`)
+  9. Phạm Hải Hướng (`huong.ph@gmail.com` - `SV2026009`)
+  10. Nguyễn Thị Giang (`giang.nt@gmail.com` - `SV2026010`)
 
 ---
 
@@ -128,7 +129,7 @@ The system directly maps and enforces constraints on the 4 primary MySQL tables 
 - **Request Body:**
   ```json
   {
-    "email": "hung.nt.admin@gmail.com",
+    "email": "admin@gmail.com",
     "password": "Admin@123"
   }
   ```
@@ -144,7 +145,7 @@ The system directly maps and enforces constraints on the 4 primary MySQL tables 
       "expiresAt": "2026-09-24T18:03:46Z",
       "user": {
         "userId": 1,
-        "email": "hung.nt.admin@gmail.com",
+        "email": "admin@gmail.com",
         "role": "ROLE_ADMIN",
         "status": "ACTIVE"
       }
@@ -336,7 +337,7 @@ python validate_all_requirements.py
 ```
 
 ### 6. Default Seed Test Credentials (All Roles: Admin@123)
-- **Admin Account:** `hung.nt.admin@gmail.com` / `Admin@123`
+- **Admin Account:** `admin@gmail.com` / `Admin@123`
 - **HR Account:** `customer.hr@company.com` / `Admin@123`
 - **Mentor Account:** `tung.nk@gmail.com` / `Admin@123`
-- **Student Account:** `hung.dm@gmail.com` / `Admin@123`
+- **Student Account:** `hung.nt@gmail.com` / `Admin@123`

@@ -3,7 +3,7 @@
 const INITIAL_USERS = [
   {
     id: 'USR-001',
-    email: 'hung.nt.admin@gmail.com',
+    email: 'admin@gmail.com',
     role: 'ROLE_ADMIN',
     status: 'ACTIVE',
     createdAt: '2026-09-01T08:00:00Z',

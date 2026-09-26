@@ -45,7 +45,7 @@ def test_requirements():
     # Login as Admin to query API
     login_req = urllib.request.Request(
         "http://localhost:5000/api/auth/login",
-        data=json.dumps({"email": "hung.nt.admin@gmail.com", "password": "Admin@123"}).encode("utf-8"),
+        data=json.dumps({"email": "admin@gmail.com", "password": "Admin@123"}).encode("utf-8"),
         headers={"Content-Type": "application/json"}
     )
     res = urllib.request.urlopen(login_req)
