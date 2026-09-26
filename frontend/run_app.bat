@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
+if exist "..\backend" cd /d "%~dp0.."
 title HE THONG SO HOA & QUAN LY THUC TAP SINH (SPRINT 1)
 cls
 
