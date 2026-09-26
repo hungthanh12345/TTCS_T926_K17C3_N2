@@ -35,6 +35,62 @@ const INITIAL_USERS = [
     role: 'ROLE_STUDENT',
     status: 'ACTIVE',
     createdAt: '2026-09-12T14:20:00Z',
+  },
+  {
+    id: 'USR-006',
+    email: 'hung.ht@gmail.com',
+    role: 'ROLE_STUDENT',
+    status: 'ACTIVE',
+    createdAt: '2026-09-12T14:20:00Z',
+  },
+  {
+    id: 'USR-007',
+    email: 'giang.td@gmail.com',
+    role: 'ROLE_STUDENT',
+    status: 'ACTIVE',
+    createdAt: '2026-09-12T14:20:00Z',
+  },
+  {
+    id: 'USR-008',
+    email: 'duong.dh@gmail.com',
+    role: 'ROLE_STUDENT',
+    status: 'ACTIVE',
+    createdAt: '2026-09-12T14:20:00Z',
+  },
+  {
+    id: 'USR-009',
+    email: 'han.dd@gmail.com',
+    role: 'ROLE_STUDENT',
+    status: 'ACTIVE',
+    createdAt: '2026-09-12T14:20:00Z',
+  },
+  {
+    id: 'USR-010',
+    email: 'huan.bn@gmail.com',
+    role: 'ROLE_STUDENT',
+    status: 'ACTIVE',
+    createdAt: '2026-09-12T14:20:00Z',
+  },
+  {
+    id: 'USR-011',
+    email: 'hai.nh@gmail.com',
+    role: 'ROLE_STUDENT',
+    status: 'ACTIVE',
+    createdAt: '2026-09-12T14:20:00Z',
+  },
+  {
+    id: 'USR-012',
+    email: 'huong.ph@gmail.com',
+    role: 'ROLE_STUDENT',
+    status: 'ACTIVE',
+    createdAt: '2026-09-12T14:20:00Z',
+  },
+  {
+    id: 'USR-013',
+    email: 'giang.nt@gmail.com',
+    role: 'ROLE_STUDENT',
+    status: 'ACTIVE',
+    createdAt: '2026-09-12T14:20:00Z',
   }
 ];
 
@@ -312,7 +368,17 @@ export const getStoredUsers = () => {
     localStorage.setItem('mock_users', JSON.stringify(INITIAL_USERS));
     return INITIAL_USERS;
   }
-  return JSON.parse(data);
+  try {
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed) && parsed.length < INITIAL_USERS.length) {
+      localStorage.setItem('mock_users', JSON.stringify(INITIAL_USERS));
+      return INITIAL_USERS;
+    }
+    return parsed;
+  } catch {
+    localStorage.setItem('mock_users', JSON.stringify(INITIAL_USERS));
+    return INITIAL_USERS;
+  }
 };
 
 export const saveStoredUsers = (users) => {

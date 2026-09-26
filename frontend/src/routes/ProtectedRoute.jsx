@@ -29,14 +29,26 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
 
   // Kiểm tra quyền hạn vai trò (Role)
   if (allowedRoles && allowedRoles.length > 0) {
-    const isAllowed = allowedRoles.includes(user?.role);
+    const rawRole = user?.role || user?.roleName || '';
+    const userRole = typeof rawRole === 'string' ? rawRole.trim().toUpperCase() : '';
+    const isAllowed = allowedRoles.includes(userRole);
+
     if (!isAllowed) {
-      // Xác định trang chủ tương ứng của vai trò hiện tại
-      let homePath = '/login';
-      if (user?.role === 'ROLE_ADMIN') homePath = '/admin/users';
-      else if (user?.role === 'ROLE_HR') homePath = '/hr/students';
-      else if (user?.role === 'ROLE_MENTOR') homePath = '/mentor/students';
-      else if (user?.role === 'ROLE_STUDENT') homePath = '/student/profile';
+      // Dynamic mapping of roles to their dedicated home workspace routes
+      const getRoleHomePath = (role) => {
+        switch (role) {
+          case 'ROLE_STUDENT':
+            return '/student/profile';
+          case 'ROLE_MENTOR':
+            return '/mentor/students';
+          case 'ROLE_HR':
+            return '/hr/students';
+          case 'ROLE_ADMIN':
+            return '/admin/users';
+          default:
+            return '/login';
+        }
+      };
 
       const roleLabels = {
         ROLE_ADMIN: 'Quản trị viên (Admin)',
@@ -45,8 +57,15 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
         ROLE_STUDENT: 'Sinh viên Thực tập',
       };
 
+      const handleGoHome = () => {
+        const homePath = getRoleHomePath(userRole);
+        navigate(homePath, { replace: true });
+      };
+
       const handleLoginAnother = () => {
         logout(true);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         navigate('/login', { replace: true });
       };
 
@@ -59,13 +78,17 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
             
             <h2 className="text-2xl font-bold tracking-tight mb-2">Giới Hạn Quyền Truy Cập</h2>
             <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-              Tài khoản hiện tại của bạn thuộc nhóm vai trò <span className="inline-block font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs">{roleLabels[user?.role] || user?.role}</span> không được phép truy cập vào phân hệ này.
+              Tài khoản hiện tại của bạn thuộc nhóm vai trò{' '}
+              <span className="inline-block font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs">
+                {roleLabels[userRole] || userRole || 'Không xác định'}
+              </span>{' '}
+              không được phép truy cập vào phân hệ này.
             </p>
 
             <div className="flex flex-col gap-3">
               <button
                 type="button"
-                onClick={() => navigate(homePath, { replace: true })}
+                onClick={handleGoHome}
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 active:scale-98 transition-all shadow-lg shadow-indigo-600/30 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" /> Về Không Gian Làm Việc Của Tôi
