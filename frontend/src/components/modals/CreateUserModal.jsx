@@ -16,7 +16,6 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const roleMapping = {
-    1: 'ROLE_ADMIN',
     2: 'ROLE_HR',
     3: 'ROLE_MENTOR',
     4: 'ROLE_STUDENT',
@@ -177,7 +176,6 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
               <option value={2}>ROLE_HR (Quản lý Nhân sự)</option>
               <option value={3}>ROLE_MENTOR (Mentor Doanh nghiệp)</option>
               <option value={4}>ROLE_STUDENT (Sinh viên Thực tập)</option>
-              <option value={1}>ROLE_ADMIN (Quản trị viên)</option>
             </select>
           </div>
           <p className="mt-1 text-[11px] text-slate-500">

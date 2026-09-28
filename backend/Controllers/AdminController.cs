@@ -20,7 +20,7 @@ namespace InternshipManagementApi.Controllers
         }
 
         /// <summary>
-        /// Create a new user account (HR, Mentor, or Student) with BCrypt password hashing.
+        /// Create a new HR, Mentor, or Student account with BCrypt password hashing.
         /// Requires ROLE_ADMIN.
         /// </summary>
         /// <param name="request">User account creation parameters</param>

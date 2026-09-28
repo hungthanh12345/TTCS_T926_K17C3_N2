@@ -16,13 +16,13 @@ namespace InternshipManagementApi.DTOs.Admin
         public string Password { get; set; } = string.Empty;
 
         /// <summary>
-        /// Numeric ID of the role (e.g., 1 for ROLE_ADMIN, 2 for ROLE_HR, 3 for ROLE_MENTOR, 4 for ROLE_STUDENT).
+        /// Numeric ID of the role (2 for ROLE_HR, 3 for ROLE_MENTOR, 4 for ROLE_STUDENT).
         /// If omitted, RoleName must be specified.
         /// </summary>
         public int? RoleId { get; set; }
 
         /// <summary>
-        /// Name of the role (e.g., ROLE_HR, ROLE_MENTOR, ROLE_STUDENT, ROLE_ADMIN).
+        /// Name of the role (ROLE_HR, ROLE_MENTOR, or ROLE_STUDENT).
         /// Optional if RoleId is provided.
         /// </summary>
         public string? RoleName { get; set; }

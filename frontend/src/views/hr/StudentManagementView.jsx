@@ -4,6 +4,7 @@ import TableSkeleton from '../../components/common/TableSkeleton';
 import AddStudentModal from '../../components/modals/AddStudentModal';
 import EditStudentModal from '../../components/modals/EditStudentModal';
 import AssignMentorModal from '../../components/modals/AssignMentorModal';
+import Modal from '../../components/common/Modal';
 import studentService from '../../services/studentService';
 import {
   GraduationCap,
@@ -19,6 +20,7 @@ import {
   BookOpen,
   Phone,
   Trash2,
+  AlertTriangle,
   AlertCircle,
   CheckCircle2,
   X,
@@ -49,6 +51,8 @@ export const StudentManagementView = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentPendingDelete, setStudentPendingDelete] = useState(null);
+  const [isDeletingStudent, setIsDeletingStudent] = useState(false);
 
   useEffect(() => {
     fetchStudents();
@@ -69,14 +73,21 @@ export const StudentManagementView = () => {
   };
 
   const handleDeleteStudent = async (id, name) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa hồ sơ sinh viên "${name}"?`)) {
-      try {
-        await studentService.deleteStudent(id);
-        toast.success(`Đã xóa thành công hồ sơ ${name}.`);
-        fetchStudents();
-      } catch (err) {
-        toast.error(err.message || 'Lỗi khi xóa hồ sơ');
-      }
+    setStudentPendingDelete({ id, name });
+  };
+
+  const confirmDeleteStudent = async () => {
+    if (!studentPendingDelete) return;
+    setIsDeletingStudent(true);
+    try {
+      await studentService.deleteStudent(studentPendingDelete.id);
+      toast.success(`Đã xóa thành công hồ sơ ${studentPendingDelete.name}.`);
+      setStudentPendingDelete(null);
+      await fetchStudents();
+    } catch (err) {
+      toast.error(err.message || 'Lỗi khi xóa hồ sơ');
+    } finally {
+      setIsDeletingStudent(false);
     }
   };
 
@@ -682,6 +693,40 @@ export const StudentManagementView = () => {
         }}
         onSuccess={fetchStudents}
       />
+
+      <Modal
+        isOpen={!!studentPendingDelete}
+        onClose={() => !isDeletingStudent && setStudentPendingDelete(null)}
+        title="Xác nhận xóa sinh viên"
+        subtitle="Hồ sơ sẽ được xóa khỏi danh sách sinh viên."
+        icon={AlertTriangle}
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-5">
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Bạn có chắc chắn muốn xóa hồ sơ của{' '}
+            <span className="font-semibold text-slate-900">{studentPendingDelete?.name}</span>?
+          </p>
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={() => setStudentPendingDelete(null)}
+              disabled={isDeletingStudent}
+              className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteStudent}
+              disabled={isDeletingStudent}
+              className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-colors disabled:opacity-60"
+            >
+              {isDeletingStudent ? 'Đang xóa...' : 'Xóa hồ sơ'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </DashboardLayout>
   );
 };

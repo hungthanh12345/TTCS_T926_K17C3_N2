@@ -1,6 +1,30 @@
 import api from './api';
 import { getStoredUsers } from './mockData';
 
+const saveSession = (token, user) => {
+  sessionStorage.setItem('token', token);
+  sessionStorage.setItem('user', JSON.stringify(user));
+};
+
+// Migrate an existing single-tab session once, then keep credentials tab-local.
+const migrateLegacySession = () => {
+  const hasSession = sessionStorage.getItem('token') && sessionStorage.getItem('user');
+  if (hasSession) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return;
+  }
+
+  const legacyToken = localStorage.getItem('token');
+  const legacyUser = localStorage.getItem('user');
+  if (legacyToken && legacyUser) {
+    sessionStorage.setItem('token', legacyToken);
+    sessionStorage.setItem('user', legacyUser);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  }
+};
+
 export const authService = {
   /**
    * Story 1: Authenticate user against POST /api/auth/login
@@ -21,8 +45,7 @@ export const authService = {
         fullName: rawUser.fullName || rawUser.name || email.split('@')[0],
       };
 
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      saveSession(token, user);
       return { token, user };
     } catch (error) {
       // If network error (backend server offline), check mock users for seamless developer demo
@@ -41,8 +64,7 @@ export const authService = {
             fullName: matched.email.split('@')[0].replace('.', ' ').toUpperCase(),
           };
           const token = `mock_jwt_token_${matched.role}_${Date.now()}`;
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(user));
+          saveSession(token, user);
           return { token, user, isMock: true };
         }
 
@@ -50,26 +72,22 @@ export const authService = {
         if (email.includes('admin')) {
           const user = { userId: 'USR-001', email, role: 'ROLE_ADMIN', fullName: 'Administrator' };
           const token = `mock_jwt_token_ROLE_ADMIN_${Date.now()}`;
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(user));
+          saveSession(token, user);
           return { token, user, isMock: true };
         } else if (email.includes('hr')) {
           const user = { userId: 'USR-002', email, role: 'ROLE_HR', fullName: 'HR Specialist' };
           const token = `mock_jwt_token_ROLE_HR_${Date.now()}`;
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(user));
+          saveSession(token, user);
           return { token, user, isMock: true };
         } else if (email.includes('mentor')) {
           const user = { userId: 'USR-003', email, role: 'ROLE_MENTOR', fullName: 'Lead Mentor' };
           const token = `mock_jwt_token_ROLE_MENTOR_${Date.now()}`;
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(user));
+          saveSession(token, user);
           return { token, user, isMock: true };
         } else if (email.includes('student')) {
           const user = { userId: 'USR-004', email, role: 'ROLE_STUDENT', fullName: 'Sarah Johnson' };
           const token = `mock_jwt_token_ROLE_STUDENT_${Date.now()}`;
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(user));
+          saveSession(token, user);
           return { token, user, isMock: true };
         }
 
@@ -86,11 +104,8 @@ export const authService = {
    * Log out the current user and purge session storage
    */
   logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('mock_students');
-    localStorage.removeItem('mock_mentors');
-    localStorage.removeItem('mock_users');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
   },
 
   /**
@@ -98,7 +113,8 @@ export const authService = {
    */
   getCurrentUser() {
     try {
-      const userStr = localStorage.getItem('user');
+      migrateLegacySession();
+      const userStr = sessionStorage.getItem('user');
       return userStr ? JSON.parse(userStr) : null;
     } catch {
       return null;
@@ -109,14 +125,15 @@ export const authService = {
    * Retrieve current JWT token string
    */
   getToken() {
-    return localStorage.getItem('token');
+    migrateLegacySession();
+    return sessionStorage.getItem('token');
   },
 
   /**
    * Check if user is currently authenticated
    */
   isAuthenticated() {
-    return !!localStorage.getItem('token') && !!this.getCurrentUser();
+    return !!this.getToken() && !!this.getCurrentUser();
   }
 };
 

@@ -64,8 +64,6 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
 
       const handleLoginAnother = () => {
         logout(true);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
         navigate('/login', { replace: true });
       };
 

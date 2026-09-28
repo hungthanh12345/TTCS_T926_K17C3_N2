@@ -57,7 +57,12 @@ namespace InternshipManagementApi.Services
 
             if (role == null)
             {
-                throw new BadRequestException("Invalid role specified. Please provide a valid role ID (1=ROLE_ADMIN, 2=ROLE_HR, 3=ROLE_MENTOR, 4=ROLE_STUDENT) or valid role name.");
+                throw new BadRequestException("Invalid role specified. Please provide a valid role ID (2=ROLE_HR, 3=ROLE_MENTOR, 4=ROLE_STUDENT) or valid role name.");
+            }
+
+            if (string.Equals(role.Name, "ROLE_ADMIN", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException("Creating additional administrator accounts is not allowed.");
             }
 
             var passwordHash = _passwordHasher.Hash(request.Password);

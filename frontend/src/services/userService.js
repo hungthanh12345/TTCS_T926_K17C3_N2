@@ -33,15 +33,20 @@ export const userService = {
    * Payload: { email, password, roleId, roleName }
    */
   async createUser(userData) {
+    // Keep this restriction in the service as well as the form so callers
+    // cannot bypass it by submitting a crafted request from the UI.
+    const rawRoleId = userData.roleId ?? userData.role_id;
+    const roleId = rawRoleId ? parseInt(rawRoleId, 10) : undefined;
+    const roleName =
+      userData.roleName ??
+      userData.role_name ??
+      (typeof userData.role === 'string' && isNaN(userData.role) ? userData.role : undefined);
+    if (roleId === 1 || String(roleName || '').trim().toUpperCase() === 'ROLE_ADMIN') {
+      throw new Error('Không thể tạo thêm tài khoản quản trị viên.');
+    }
+
     try {
       // Normalize role payload to match CreateUserRequestDto exactly
-      const rawRoleId = userData.roleId ?? userData.role_id;
-      const roleId = rawRoleId ? parseInt(rawRoleId, 10) : undefined;
-      const roleName =
-        userData.roleName ??
-        userData.role_name ??
-        (typeof userData.role === 'string' && isNaN(userData.role) ? userData.role : undefined);
-
       const payload = {
         email: userData.email.trim(),
         password: userData.password,

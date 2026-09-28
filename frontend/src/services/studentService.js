@@ -8,9 +8,27 @@ export const studentService = {
    */
   async getStudents(params = {}) {
     try {
-      const response = await api.get('/hr/students', { params });
+      const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 100));
+      const requestedPage = Number(params.page);
+      const shouldLoadAllPages = !Number.isInteger(requestedPage) || requestedPage < 1;
+      const firstPage = shouldLoadAllPages ? 1 : requestedPage;
+      const response = await api.get('/hr/students', {
+        params: { ...params, page: firstPage, pageSize },
+      });
       const payload = response.data?.data || response.data;
-      const rawList = Array.isArray(payload) ? payload : (payload?.items || []);
+      let rawList = Array.isArray(payload) ? payload : (payload?.items || []);
+
+      if (shouldLoadAllPages && !Array.isArray(payload)) {
+        const totalPages = payload?.totalPages || Math.ceil((payload?.totalItems || rawList.length) / pageSize);
+        for (let page = 2; page <= totalPages; page += 1) {
+          const nextResponse = await api.get('/hr/students', {
+            params: { ...params, page, pageSize },
+          });
+          const nextPayload = nextResponse.data?.data || nextResponse.data;
+          rawList = rawList.concat(Array.isArray(nextPayload) ? nextPayload : (nextPayload?.items || []));
+        }
+      }
+
       return rawList.map((s) => ({
         ...s,
         id: s.id,
