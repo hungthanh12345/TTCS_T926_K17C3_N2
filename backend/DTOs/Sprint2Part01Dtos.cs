@@ -31,6 +31,8 @@ namespace InternshipManagementApi.DTOs.Sprint2
         string? Description,
         int DepartmentId,
         string DepartmentName,
+        DateOnly? StartDate,
+        DateOnly? EndDate,
         DateTime CreatedAt,
         DateTime UpdatedAt);
 }

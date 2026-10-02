@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import US11 from '../../services/sprint2/US11';
 import { messageOf } from '../../services/sprint2/common';
+import ProgramDatesEditor from './ProgramDatesEditor';
 
 const emptyProgram = { name: '', description: '', departmentId: '' };
 const fieldClass = 'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100';
@@ -81,6 +82,12 @@ export const InternshipProgramsView = () => {
     }
   };
 
+  const updateProgramDates = (updatedProgram) => {
+    setPrograms((items) => items.map((program) => (
+      program.id === updatedProgram.id ? { ...program, ...updatedProgram } : program
+    )));
+  };
+
   return (
     <DashboardLayout title="Chương trình thực tập" subtitle="Tổ chức chương trình theo phòng ban">
       <div className="space-y-6">
@@ -142,13 +149,14 @@ export const InternshipProgramsView = () => {
           </div>
           {loading ? <p className="px-6 py-10 text-center text-sm text-slate-500">Đang tải...</p> : programs.length === 0 ? <p className="px-6 py-10 text-center text-sm text-slate-500">Chưa có chương trình thực tập.</p> : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[650px] text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-6 py-3">Chương trình</th><th className="px-6 py-3">Phòng ban</th><th className="px-6 py-3">Mô tả</th></tr></thead>
+              <table className="w-full min-w-[900px] text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-6 py-3">Chương trình</th><th className="px-6 py-3">Phòng ban</th><th className="px-6 py-3">Mô tả</th><th className="px-6 py-3">Thời gian</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">{programs.map((program) => (
                   <tr key={program.id} className="hover:bg-slate-50/70">
                     <td className="px-6 py-4 font-semibold text-slate-900">{program.name}</td>
                     <td className="px-6 py-4 text-slate-700">{program.departmentName}</td>
                     <td className="px-6 py-4 text-slate-600">{program.description || '—'}</td>
+                    <td className="px-6 py-4"><ProgramDatesEditor key={`${program.id}-${program.startDate || ''}-${program.endDate || ''}`} program={program} onSaved={updateProgramDates} /></td>
                   </tr>
                 ))}</tbody>
               </table>
