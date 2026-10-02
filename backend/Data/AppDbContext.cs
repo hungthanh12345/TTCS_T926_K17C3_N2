@@ -13,6 +13,8 @@ namespace InternshipManagementApi.Data
         public DbSet<User> Users => Set<User>();
         public DbSet<Mentor> Mentors => Set<Mentor>();
         public DbSet<Student> Students => Set<Student>();
+        public DbSet<Department> Departments => Set<Department>();
+        public DbSet<InternshipProgram> InternshipPrograms => Set<InternshipProgram>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -112,12 +114,41 @@ namespace InternshipManagementApi.Data
                       .HasForeignKey(e => e.MentorId)
                       .OnDelete(DeleteBehavior.SetNull);
             });
+
+            modelBuilder.Entity<Department>(entity =>
+            {
+                entity.ToTable("departments");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            modelBuilder.Entity<InternshipProgram>(entity =>
+            {
+                entity.ToTable("internship_programs");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(1000);
+                entity.Property(e => e.DepartmentId).HasColumnName("department_id").IsRequired();
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
+                entity.HasIndex(e => new { e.DepartmentId, e.Name }).IsUnique();
+                entity.HasOne(e => e.Department)
+                    .WithMany(d => d.Programs)
+                    .HasForeignKey(e => e.DepartmentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             var entries = ChangeTracker.Entries()
-                .Where(e => e.Entity is Role or User or Mentor or Student &&
+                .Where(e => e.Entity is Role or User or Mentor or Student or Department or InternshipProgram &&
                            (e.State == EntityState.Added || e.State == EntityState.Modified));
 
             var now = DateTime.UtcNow;

@@ -33,6 +33,13 @@ export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
   // Dynamic breadcrumb items
   const getBreadcrumbs = () => {
     const path = location.pathname;
+    if (path.startsWith('/hr/programs')) {
+      return [
+        { label: 'Hệ Thống', path: '/hr/programs' },
+        { label: 'Nhân Sự', path: '/hr/programs' },
+        { label: 'Chương Trình Thực Tập' },
+      ];
+    }
     if (path.includes('/admin')) {
       return [
         { label: 'Hệ Thống', path: '/admin/users' },
