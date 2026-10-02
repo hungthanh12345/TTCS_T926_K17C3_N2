@@ -135,6 +135,8 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(150).IsRequired();
                 entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(1000);
                 entity.Property(e => e.DepartmentId).HasColumnName("department_id").IsRequired();
+                entity.Property(e => e.StartDate).HasColumnName("start_date").HasColumnType("date");
+                entity.Property(e => e.EndDate).HasColumnName("end_date").HasColumnType("date");
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
                 entity.HasIndex(e => new { e.DepartmentId, e.Name }).IsUnique();

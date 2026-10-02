@@ -64,6 +64,8 @@ namespace InternshipManagementApi.Controllers
                     program.Description,
                     program.DepartmentId,
                     program.Department.Name,
+                    program.StartDate,
+                    program.EndDate,
                     program.CreatedAt,
                     program.UpdatedAt))
                 .ToListAsync();
@@ -103,11 +105,36 @@ namespace InternshipManagementApi.Controllers
                 program.Description,
                 program.DepartmentId,
                 department.Name,
+                program.StartDate,
+                program.EndDate,
                 program.CreatedAt,
                 program.UpdatedAt);
 
             return StatusCode(StatusCodes.Status201Created,
                 ApiResponse<InternshipProgramResponseDto>.Created(response));
+        }
+
+        [HttpPut("programs/{programId:int}/dates")]
+        public async Task<IActionResult> UpdateProgramDates(
+            int programId,
+            [FromBody] InternshipProgramDatesRequest request)
+        {
+            var program = await _db.InternshipPrograms.FindAsync(programId);
+            if (program == null)
+                return NotFound(ApiResponse.Fail("Internship program was not found."));
+
+            program.StartDate = request.StartDate!.Value;
+            program.EndDate = request.EndDate!.Value;
+            await _db.SaveChangesAsync();
+
+            var response = new InternshipProgramDatesResponseDto(
+                program.Id,
+                program.StartDate,
+                program.EndDate,
+                program.UpdatedAt);
+
+            return Ok(ApiResponse<InternshipProgramDatesResponseDto>.Ok(response,
+                "Internship program dates updated."));
         }
 
         private static string? NormalizeDescription(string? value) =>
