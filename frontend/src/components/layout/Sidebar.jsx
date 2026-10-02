@@ -11,6 +11,7 @@ import {
   ChevronRight,
   UserCheck,
   Shield,
+  CalendarDays,
 } from 'lucide-react';
 import Badge from '../common/Badge';
 
@@ -38,6 +39,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       title: 'Danh Bạ Mentor',
       path: '/hr/mentors',
       icon: Briefcase,
+      roles: ['ROLE_ADMIN', 'ROLE_HR'],
+      badge: null,
+    },
+    {
+      title: 'Chương Trình Thực Tập',
+      path: '/hr/programs',
+      icon: CalendarDays,
       roles: ['ROLE_ADMIN', 'ROLE_HR'],
       badge: null,
     },
