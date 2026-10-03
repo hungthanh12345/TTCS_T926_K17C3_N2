@@ -15,6 +15,8 @@ namespace InternshipManagementApi.Services
         Task<InternshipTaskResponseDto> UpdateTaskAsync(int userId, int taskId, UpdateMentorTaskRequestDto request);
         Task DeleteTaskAsync(int userId, int taskId);
         Task<IReadOnlyList<InternshipTaskResponseDto>> GetStudentTasksAsync(int userId);
+        Task<InternshipTaskResponseDto> GetStudentTaskAsync(int userId, int taskId);
+        Task<InternshipTaskResponseDto> UpdateStudentTaskProgressAsync(int userId, int taskId, UpdateStudentTaskProgressDto request);
     }
 
     public sealed class MentorTaskService : IMentorTaskService
@@ -139,6 +141,29 @@ namespace InternshipManagementApi.Services
             return tasks.Select(ToResponse).ToArray();
         }
 
+        public async Task<InternshipTaskResponseDto> GetStudentTaskAsync(int userId, int taskId)
+        {
+            var task = await GetStudentTaskEntityAsync(userId, taskId);
+            return ToResponse(task);
+        }
+
+        public async Task<InternshipTaskResponseDto> UpdateStudentTaskProgressAsync(
+            int userId,
+            int taskId,
+            UpdateStudentTaskProgressDto request)
+        {
+            var task = await GetStudentTaskEntityAsync(userId, taskId);
+
+            if (!IsSupportedStudentStatus(request.Status))
+                throw new BadRequestException("Status must be TO_DO, IN_PROGRESS, or DONE.");
+
+            task.Status = request.Status;
+            task.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            return ToResponse(task);
+        }
+
         private async Task<Mentor> GetMentorAsync(int userId)
         {
             var mentor = await _db.Mentors.SingleOrDefaultAsync(item => item.UserId == userId);
@@ -152,6 +177,26 @@ namespace InternshipManagementApi.Services
                 .SingleOrDefaultAsync(item => item.Id == taskId && item.MentorId == mentorId);
             return task ?? throw new NotFoundException("Task was not found in this mentor's assignments.");
         }
+
+        private async Task<InternshipTask> GetStudentTaskEntityAsync(int userId, int taskId)
+        {
+            var task = await _db.Tasks
+                .Include(item => item.Student)
+                .SingleOrDefaultAsync(item => item.Id == taskId);
+
+            if (task == null)
+                throw new NotFoundException("Task was not found.");
+
+            if (task.Student.UserId != userId)
+                throw new ForbiddenException("Students can only view or update their own assigned tasks.");
+
+            return task;
+        }
+
+        private static bool IsSupportedStudentStatus(string? status) =>
+            string.Equals(status, "TO_DO", StringComparison.Ordinal) ||
+            string.Equals(status, "IN_PROGRESS", StringComparison.Ordinal) ||
+            string.Equals(status, "DONE", StringComparison.Ordinal);
 
         private static void ValidateTaskFields(string title, DateOnly? dueDate)
         {

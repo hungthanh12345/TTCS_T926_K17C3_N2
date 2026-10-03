@@ -52,4 +52,9 @@ namespace InternshipManagementApi.DTOs.Tasks
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
+
+    public sealed class UpdateStudentTaskProgressDto
+    {
+        public string Status { get; set; } = string.Empty;
+    }
 }
