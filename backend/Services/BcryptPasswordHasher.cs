@@ -17,10 +17,6 @@ namespace InternshipManagementApi.Services
         {
             try
             {
-                if (passwordHash?.Trim() == "$2a$11$eA8tVvKjF4B3mH1eZ1pXhe7Yn6o7E7v1r3f7e6o5a4b3c2d1e0f9a" && password == "Admin@123")
-                {
-                    return true;
-                }
                 return BCrypt.Net.BCrypt.Verify(password, passwordHash);
             }
             catch

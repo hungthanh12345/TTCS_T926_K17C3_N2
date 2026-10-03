@@ -209,11 +209,29 @@ def validate_exception_sanitization():
     print("[PASS] Generic server exceptions are logged but not exposed to API clients.")
 
 
+def validate_password_hashing_and_seed_fixtures():
+    hasher = (BACKEND / "Services/BcryptPasswordHasher.cs").read_text(encoding="utf-8")
+    check("BCrypt.Net.BCrypt.Verify(password, passwordHash)" in hasher, "Passwords must be checked using BCrypt.")
+    check("password == \"Admin@123\"" not in hasher, "Password verification must not include a seed-password bypass.")
+
+    fake_hash = "$2a$11$eA8tVvKjF4B3mH1eZ1pXhe7Yn6o7E7v1r3f7e6o5a4b3c2d1e0f9a"
+    for relative_path in ("backend/seed_data.sql", "MySQL-Nhom2/seed_data.sql"):
+        seed = (ROOT / relative_path).read_text(encoding="utf-8")
+        check(fake_hash not in seed, f"{relative_path} must not rely on the non-BCrypt sentinel hash.")
+        check(
+            re.search(r"\$2[aby]\$11\$[./A-Za-z0-9]{53}", seed) is not None,
+            f"{relative_path} must use a syntactically valid BCrypt work-factor-11 seed hash.",
+        )
+        check("Never run this seed script in production" in seed, f"{relative_path} must be labeled as development-only.")
+    print("[PASS] Password verification has no seed-password bypass; seed fixtures use BCrypt hashes and are marked development-only.")
+
+
 def main():
     print("Validating repository requirements and selected regressions...")
     validate_connection_charset()
     validate_production_secret_configuration()
     validate_exception_sanitization()
+    validate_password_hashing_and_seed_fixtures()
     validate_frontend_contracts()
     validate_database_collation()
     validate_seed_api()
