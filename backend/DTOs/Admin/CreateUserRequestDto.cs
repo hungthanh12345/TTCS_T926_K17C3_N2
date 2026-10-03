@@ -32,6 +32,7 @@ namespace InternshipManagementApi.DTOs.Admin
         /// <summary>
         /// Initial account status (ACTIVE, INACTIVE, LOCKED). Defaults to ACTIVE.
         /// </summary>
+        [EnumDataType(typeof(UserStatus), ErrorMessage = "Status must be a defined user status.")]
         public UserStatus Status { get; set; } = UserStatus.ACTIVE;
     }
 }
