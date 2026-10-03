@@ -31,6 +31,8 @@ ON DUPLICATE KEY UPDATE
 -- Development fixture accounts only. Never run this seed script in production.
 -- The shared development-only fixture password is checked by BCrypt; production
 -- user accounts must be provisioned separately with unique credentials.
+-- This script overwrites seeded account fields and deletes user rows outside its fixture IDs.
+-- Use only against a disposable local development database.
 -- ----------------------------------------------------------------------------
 INSERT INTO `users` (`id`, `email`, `password_hash`, `role_id`, `status`) VALUES
 -- Quản trị viên (Admin) - Role 1

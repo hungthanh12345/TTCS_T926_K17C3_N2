@@ -205,6 +205,17 @@ def validate_cors_origins_are_explicit():
     print("[PASS] CORS is restricted to explicitly configured origins and excludes cookie credentials.")
 
 
+def validate_safe_database_setup():
+    baseline = (BACKEND / "migrations/000_initial_core_schema.sql").read_text(encoding="utf-8")
+    check("CREATE TABLE IF NOT EXISTS `roles`" in baseline, "The initial migration must create the core role table additively.")
+    check("CREATE TABLE IF NOT EXISTS `users`" in baseline, "The initial migration must create the core user table additively.")
+    executable_sql = re.sub(r"(?m)^\s*--.*$", "", baseline)
+    check("DROP TABLE" not in executable_sql.upper(), "The initial migration must not drop existing tables.")
+    deployment = (BACKEND / "DEPLOYMENT.md").read_text(encoding="utf-8")
+    check("Không chạy `schema.sql` hoặc `seed_data.sql` trên cloud" in deployment, "Cloud setup must warn against destructive development scripts.")
+    print("[PASS] Database deployment starts with an additive baseline and avoids destructive local scripts.")
+
+
 def validate_production_secret_configuration():
     settings = json.loads((BACKEND / "appsettings.json").read_text(encoding="utf-8"))
     check("Key" not in settings.get("Jwt", {}), "A JWT signing key must not be committed in appsettings.json.")
@@ -269,6 +280,7 @@ def main():
     validate_frontend_contracts()
     validate_mock_fallback_is_development_only()
     validate_cors_origins_are_explicit()
+    validate_safe_database_setup()
     validate_database_collation()
     validate_seed_api()
     print("Validation complete. Optional external checks are marked SKIP when credentials are not configured.")

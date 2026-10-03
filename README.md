@@ -307,11 +307,23 @@ All API errors conform to a unified JSON contract:
 - MySQL Server 8.0 running on `localhost:3306` with database `internship_management`
 
 ### 2. Database Initialization
-The schema and seed scripts reset/replace development data. Use them only with a disposable local development database; do not run them against production or a database containing data that must be kept. Use your MySQL client's password prompt rather than putting a password in a command.
+Initialize a local database with the additive migrations, in filename order. The older `schema.sql` files drop tables and the seed script overwrites fixture accounts/deletes other user rows; use those only on a disposable local database. Never run them against production or a database containing data that must be kept. Use MySQL's password prompt rather than putting a password in a command.
 ```powershell
 mysql -u YOUR_LOCAL_MYSQL_USER -p -e "CREATE DATABASE IF NOT EXISTS internship_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql --default-character-set=utf8mb4 -u YOUR_LOCAL_MYSQL_USER -p internship_management < backend/schema.sql
-mysql --default-character-set=utf8mb4 -u YOUR_LOCAL_MYSQL_USER -p internship_management < backend/seed_data.sql
+mysql --default-character-set=utf8mb4 -u YOUR_LOCAL_MYSQL_USER -p internship_management
+```
+In the MySQL prompt, apply the baseline and Sprint 2 migrations in this order:
+```sql
+SOURCE backend/migrations/000_initial_core_schema.sql;
+SOURCE backend/migrations/20261002_part01_internship_programs.sql;
+SOURCE backend/migrations/20261002_part02_program_dates.sql;
+SOURCE backend/migrations/20261003_part03_student_documents.sql;
+SOURCE backend/migrations/20261003_part04_student_registration_approval.sql;
+SOURCE backend/migrations/20261003_part05_mentor_task_assignment.sql;
+```
+For a disposable development database only, load the shared fixture accounts and data:
+```sql
+SOURCE backend/seed_data.sql;
 ```
 
 ### 3. Configure and Run Backend API

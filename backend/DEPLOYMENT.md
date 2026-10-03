@@ -43,13 +43,14 @@ Vì gói Free của Render chỉ cung cấp PostgreSQL, bạn có thể lựa ch
    * **Password**: `******`
    * **Database**: `defaultdb`
 6. Kết nối bằng DBeaver hoặc MySQL Workbench hoặc Drizzle Studio bằng Service URI:
-   * Mở file [`schema.sql`](./schema.sql) -> Thực thi toàn bộ lệnh để tạo 6 bảng.
-   * Mở file [`seed_data.sql`](./seed_data.sql) -> Thực thi để nạp dữ liệu mẫu ban đầu (Admin, HR, Mentor, 10 Sinh viên).
+   * Chọn một database mới, trống và riêng cho ứng dụng.
+   * Áp dụng `migrations/000_initial_core_schema.sql`, sau đó các migration Sprint 2 còn lại theo thứ tự tên file.
+   * Không chạy `schema.sql` hoặc `seed_data.sql` trên cloud: đây là script reset/xóa dữ liệu mẫu dành cho database local dùng một lần.
 
 ### Lựa chọn B: TiDB Cloud Serverless (MySQL Compatible - 25GB Free Forever)
 1. Đăng ký tài khoản tại [TiDB Cloud](https://tidbcloud.com/).
 2. Tạo cụm **Serverless Tier** (Miễn phí 25GB, tương thích 100% chuẩn MySQL 8.0).
-3. Lấy chuỗi kết nối và thực thi `schema.sql` cùng `seed_data.sql`.
+3. Lấy chuỗi kết nối, tạo database ứng dụng mới và áp dụng baseline cùng các migration theo thứ tự như trên. Không nạp seed tài khoản mẫu lên cloud.
 
 ### Lựa chọn C: Railway MySQL
 1. Đăng ký tài khoản tại [Railway.app](https://railway.app/).
@@ -111,16 +112,6 @@ Vì gói Free của Render chỉ cung cấp PostgreSQL, bạn có thể lựa ch
 
 ---
 
-## BƯỚC 4: XÁC THỰC VÀ BÀN GIAO TRẢI NGHIỆM
+## BƯỚC 4: KIỂM TRA DỊCH VỤ
 
-Sau khi hoàn tất, hệ thống đã hoạt động trực tuyến 24/7. Bạn có thể gửi đường dẫn Vercel cho bất kỳ ai để đăng nhập và trải nghiệm đầy đủ các tính năng:
-
-### Tài khoản mẫu thử nghiệm (Mật khẩu chung: `Admin@123`):
-| Vai trò | Email đăng nhập | Mật khẩu | Tính năng chính |
-|---|---|---|---|
-| **Quản trị viên (Admin)** | `admin@company.com` | `Admin@123` | Quản lý người dùng, phân quyền hệ thống |
-| **Quản lý Nhân sự (HR)** | `customer.hr@company.com` | `Admin@123` | Quản lý sinh viên thực tập, phân công mentor, thống kê |
-| **Mentor Doanh nghiệp** | `tung.nk@gmail.com` | `Admin@123` | Theo dõi và hướng dẫn sinh viên trực thuộc |
-| **Sinh viên Thực tập** | `hung.dm@gmail.com` | `Admin@123` | Xem thông tin thực tập cá nhân và mentor phụ trách |
-
-> **Mẹo (Quick Login)**: Tại trang Đăng nhập, người dùng chỉ cần click vào các thẻ vai trò ("Quản trị viên", "Quản lý Nhân sự", "Mentor", "Sinh viên") để hệ thống tự động điền thông tin và đăng nhập tức thì!
+Sau khi hoàn tất, kiểm tra `/health` và đăng nhập bằng các tài khoản đã được cấp riêng cho production. Không dùng tài khoản, mật khẩu hoặc dữ liệu mẫu từ seed script trên hệ thống công khai.

@@ -4,6 +4,8 @@
 -- Target DBMS: MySQL 8.0+
 -- Storage Engine: InnoDB
 -- Character Set: utf8mb4 (Collation: utf8mb4_unicode_ci)
+-- DESTRUCTIVE LOCAL RESET: this script drops existing core tables before recreating them.
+-- Use only against a disposable local database. Use migrations for upgrades and deployments.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
