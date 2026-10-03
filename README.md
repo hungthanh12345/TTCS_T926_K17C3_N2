@@ -1,6 +1,6 @@
 # Hệ Thống Quản Lý Thực Tập Sinh (Internship Management System) - Nhóm 2
 
-Backend RESTful API hoàn chỉnh phục vụ cho học phần Thực tập cơ sở (TTCS) - Sprint 1. Xây dựng bằng **ASP.NET Core Web API 8.0 (LTS)**, **Entity Framework Core (Pomelo MySQL Provider)**, **BCrypt password hashing**, và **JWT Authentication with Role-Based Access Control (RBAC)**.
+Hệ thống quản lý thực tập full-stack cho học phần Thực tập cơ sở (TTCS), gồm **React + Vite**, **ASP.NET Core Web API 8.0 (LTS)**, **Entity Framework Core (Pomelo MySQL Provider)**, **MySQL**, **BCrypt password hashing**, và **JWT Authentication with Role-Based Access Control (RBAC)**. `main` hiện có Sprint 1 và Sprint 2 Part 01–06.
 
 ---
 
@@ -32,6 +32,17 @@ Backend RESTful API hoàn chỉnh phục vụ cho học phần Thực tập cơ 
 * **US 29 (HR)**: `POST /api/hr/mentors`, `GET /api/hr/mentors` - HR tạo hồ sơ Mentor liên kết với tài khoản user và xem danh sách Mentor kèm số lượng thực tập sinh hướng dẫn.
 * **US 30 (HR)**: `PUT /api/hr/students/{studentId}/assign-mentor` - HR phân công hoặc đổi Mentor phụ trách thực tập sinh.
 
+### Sprint 2 đã hoàn thành (Part 01–06)
+
+* **Part 01 — US11:** HR quản lý phòng ban và chương trình thực tập.
+* **Part 02 — US13:** HR thiết lập ngày bắt đầu và kết thúc của chương trình.
+* **Part 03 — US04:** Sinh viên tải lên, xem, thay thế, tải xuống và xóa tài liệu của chính mình.
+* **Part 04 — US06:** Sinh viên đăng ký; HR xem xét, duyệt hoặc từ chối hồ sơ.
+* **Part 05 — US15:** Mentor giao và quản lý task cho sinh viên được phân công.
+* **Part 06 — US16:** Sinh viên cập nhật trạng thái tiến độ task.
+
+Các Part 01–06 đã được merge vào `main`. Part 07–09 chưa nằm trong phạm vi đã triển khai ở repository này.
+
 ---
 
 ## ⚙️ 3. Technical Stack & Architecture
@@ -55,7 +66,7 @@ Backend RESTful API hoàn chỉnh phục vụ cho học phần Thực tập cơ 
 
 ## 2. Database Schema & Tables
 
-The system directly maps and enforces constraints on the 4 primary MySQL tables in `internship_management`:
+The four Sprint 1 foundation tables are described below. Sprint 2 adds `departments`, `internship_programs`, `student_documents`, and `internship_tasks`; registration approval extends account status. Apply the additive SQL files in `backend/migrations/` in filename order as described in [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md).
 
 ### `roles`
 | Column | Type | Constraints | Description |
@@ -119,6 +130,18 @@ The system directly maps and enforces constraints on the 4 primary MySQL tables 
 | `/api/hr/students/{id}` | `PUT` | `ROLE_HR`, `ROLE_ADMIN` | Update student profile information |
 | `/api/hr/students/search` | `GET` | `ROLE_HR`, `ROLE_ADMIN` | Search & filter students with pagination |
 | `/api/hr/students/{studentId}/assign-mentor` | `PUT` | `ROLE_HR`, `ROLE_ADMIN` | Assign or reassign mentor to student |
+| `/api/hr/departments`, `/api/hr/programs` | `GET`, `POST` | `ROLE_HR`, `ROLE_ADMIN` | Manage departments and internship programs |
+| `/api/hr/programs/{programId}/dates` | `PUT` | `ROLE_HR`, `ROLE_ADMIN` | Set a program's start and end dates |
+| `/api/hr/student-registrations` | `GET` | `ROLE_HR` | Review pending student registrations |
+| `/api/hr/student-registrations/{studentId}/approve` | `POST` | `ROLE_HR` | Approve a student registration |
+| `/api/hr/student-registrations/{studentId}/reject` | `POST` | `ROLE_HR` | Reject a student registration |
+| `/api/student/profile` | `GET` | `ROLE_STUDENT` | Read only the authenticated student's profile |
+| `/api/student/documents` | `GET`, `POST`, `PUT`, `DELETE` | `ROLE_STUDENT` | Manage documents belonging to the signed-in student |
+| `/api/student/documents/{documentId}/download` | `GET` | `ROLE_STUDENT` | Download a document belonging to the signed-in student |
+| `/api/student/tasks` | `GET` | `ROLE_STUDENT` | List tasks assigned to the signed-in student |
+| `/api/student/tasks/{taskId}/progress` | `PUT` | `ROLE_STUDENT` | Update progress on the signed-in student's task |
+| `/api/mentor/tasks` | `GET`, `POST` | `ROLE_MENTOR` | List tasks or assign one to an assigned student |
+| `/api/mentor/tasks/{taskId}` | `GET`, `PUT`, `DELETE` | `ROLE_MENTOR` | View or manage a task owned by the signed-in mentor |
 
 ---
 
