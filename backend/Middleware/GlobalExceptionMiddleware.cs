@@ -64,7 +64,6 @@ namespace InternshipManagementApi.Middleware
                     // In production, keep internal message generic for security
                     statusCode = HttpStatusCode.InternalServerError;
                     message = "An unexpected error occurred on the server.";
-                    errors = exception.Message;
                     break;
             }
 
