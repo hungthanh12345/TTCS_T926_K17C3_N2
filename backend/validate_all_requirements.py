@@ -257,6 +257,10 @@ def validate_production_secret_configuration():
         "A JWT signing key must be configured" in program,
         "The API must fail closed when no JWT signing key is configured.",
     )
+    check("double.IsFinite(parsed)" in token_service and "parsed > 0" in token_service,
+          "JWT expiration must reject non-finite and non-positive durations.")
+    check("CultureInfo.InvariantCulture" in token_service,
+          "JWT expiration parsing must not depend on the host locale.")
     print("[PASS] JWT configuration is shared between signing and validation, and local credentials are externalized.")
 
 
