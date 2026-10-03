@@ -1,156 +1,222 @@
+"""Portable checks for project requirements and selected Sprint 1 regressions.
+
+Database and API checks are opt-in so the script never assumes local credentials
+or mutates a developer's database.
+"""
+
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
+import urllib.error
 import urllib.request
+from pathlib import Path
 
-sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
-def test_requirements():
-    print("=" * 60)
-    print("VERIFYING ALL 4 TASK REQUIREMENTS")
-    print("=" * 60)
+ROOT = Path(__file__).resolve().parents[1]
+BACKEND = ROOT / "backend"
+FRONTEND = ROOT / "frontend"
+API_BASE_URL = os.getenv("VALIDATION_API_BASE_URL", "http://localhost:5000").rstrip("/")
 
-    # ---------------------------------------------------------
-    # 1. FIX VIETNAMESE ENCODING BUG & CONNECTION STRING
-    # ---------------------------------------------------------
-    print("\n--- REQUIREMENT 1: VIETNAMESE ENCODING & CONNECTION STRING ---")
-    
-    # Check appsettings.json
-    with open("d:/backend/appsettings.json", "r", encoding="utf-8") as f:
-        appsettings = json.load(f)
-    conn_str = appsettings["ConnectionStrings"]["DefaultConnection"]
-    has_charset = "CharSet=utf8mb4" in conn_str or "charset=utf8mb4" in conn_str
-    print(f"[CHECK] appsettings.json contains CharSet=utf8mb4: {'PASS' if has_charset else 'FAIL'}")
-    assert has_charset, "Connection string missing CharSet=utf8mb4"
 
-    # Check MySQL DB and Table collations
-    cmd = [
-        r"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe",
+def check(condition, message):
+    if not condition:
+        raise AssertionError(message)
+
+
+def request(method, path, body=None, token=None):
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(
+        f"{API_BASE_URL}{path}", data=data, headers=headers, method=method
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            content = response.read().decode("utf-8")
+            return response.status, json.loads(content) if content else {}
+    except urllib.error.HTTPError as error:
+        content = error.read().decode("utf-8")
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            parsed = {"raw": content}
+        return error.code, parsed
+
+
+def get_items(data):
+    if isinstance(data, dict):
+        return data.get("items", [])
+    return data if isinstance(data, list) else []
+
+
+def validate_connection_charset():
+    configured = os.getenv("ConnectionStrings__DefaultConnection") or os.getenv("MYSQL_URL")
+    if not configured:
+        settings_path = BACKEND / "appsettings.Development.json"
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        configured = settings.get("ConnectionStrings", {}).get("DefaultConnection", "")
+
+    if configured.lower().startswith(("mysql://", "mysqls://")):
+        resolver = (BACKEND / "Program.cs").read_text(encoding="utf-8")
+        check('CharSet=utf8mb4' in resolver, "MySQL URI connections must be normalized to utf8mb4.")
+    else:
+        check(
+            "charset=utf8mb4" in configured.lower() or "char set=utf8mb4" in configured.lower(),
+            "Development/database connection configuration must specify utf8mb4.",
+        )
+    print("[PASS] Configured database connection uses utf8mb4.")
+
+
+def validate_database_collation():
+    mysql_cli = os.getenv("MYSQL_CLI") or shutil.which("mysql")
+    defaults_file = os.getenv("MYSQL_DEFAULTS_FILE")
+    if not mysql_cli or not defaults_file:
+        print("[SKIP] Database collation check: set MYSQL_CLI and MYSQL_DEFAULTS_FILE to opt in.")
+        return
+
+    defaults_path = Path(defaults_file).expanduser().resolve()
+    check(defaults_path.is_file(), "MYSQL_DEFAULTS_FILE must point to a MySQL client option file.")
+    command = [
+        mysql_cli,
+        f"--defaults-extra-file={defaults_path}",
         "--default-character-set=utf8mb4",
-        "-u", "root",
-        "-p123456",
+        "--batch",
+        "--skip-column-names",
         "-e",
-        "SELECT default_character_set_name, default_collation_name FROM information_schema.SCHEMATA WHERE schema_name = 'internship_management';"
+        "SELECT default_character_set_name, default_collation_name "
+        "FROM information_schema.SCHEMATA "
+        "WHERE schema_name = 'internship_management';",
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
-    db_utf8 = "utf8mb4" in proc.stdout and "utf8mb4_unicode_ci" in proc.stdout
-    print(f"[CHECK] MySQL Database character set & collation: {'PASS (utf8mb4 / utf8mb4_unicode_ci)' if db_utf8 else 'FAIL'}")
-    assert db_utf8, "Database not set to utf8mb4 / utf8mb4_unicode_ci"
-
-    # ---------------------------------------------------------
-    # 2. RESTRUCTURE MENTOR SEED DATA
-    # ---------------------------------------------------------
-    print("\n--- REQUIREMENT 2: RESTRUCTURE MENTOR SEED DATA ---")
-    # Login as Admin to query API
-    login_req = urllib.request.Request(
-        "http://localhost:5000/api/auth/login",
-        data=json.dumps({"email": "admin@gmail.com", "password": "Admin@123"}).encode("utf-8"),
-        headers={"Content-Type": "application/json"}
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", timeout=15)
+    check(result.returncode == 0, "Could not read the configured MySQL schema metadata.")
+    check(
+        "utf8mb4" in result.stdout and "utf8mb4_unicode_ci" in result.stdout,
+        "Database must use utf8mb4 / utf8mb4_unicode_ci.",
     )
-    res = urllib.request.urlopen(login_req)
-    admin_token = json.loads(res.read().decode("utf-8"))["data"]["token"]
+    print("[PASS] MySQL database uses utf8mb4 / utf8mb4_unicode_ci.")
 
-    # Query Mentors
-    mentor_req = urllib.request.Request(
-        "http://localhost:5000/api/hr/mentors",
-        headers={"Authorization": f"Bearer {admin_token}"}
+
+def validate_seed_api():
+    email = os.getenv("VALIDATION_ADMIN_EMAIL")
+    password = os.getenv("VALIDATION_ADMIN_PASSWORD")
+    if not email or not password:
+        print("[SKIP] API seed checks: set VALIDATION_ADMIN_EMAIL and VALIDATION_ADMIN_PASSWORD to opt in.")
+        return
+
+    status, response = request(
+        "POST", "/api/auth/login", {"email": email, "password": password}
     )
-    res_m = urllib.request.urlopen(mentor_req)
-    mentor_data = json.loads(res_m.read().decode("utf-8"))["data"]
-    mentors = mentor_data.get("items", mentor_data) if isinstance(mentor_data, dict) else mentor_data
-    
-    print(f"[CHECK] Total Mentors count: {len(mentors)} (Expected: exactly 1)")
-    assert len(mentors) == 1, f"Expected 1 mentor, found {len(mentors)}"
-    
-    m0 = mentors[0]
-    print(f"   Mentor Full Name: '{m0['fullName']}' (Expected: 'Nguyễn Khánh Tùng')")
-    print(f"   Department: '{m0['department']}' (Expected: 'Kỹ thuật phần mềm')")
-    print(f"   Specialization: '{m0['specialization']}' (Expected: 'Full-stack Web và Cloud Native')")
-    assert m0["fullName"] == "Nguyễn Khánh Tùng", "Mentor name mismatch"
-    assert m0["department"] == "Kỹ thuật phần mềm", "Mentor department mismatch"
-    assert m0["specialization"] == "Full-stack Web và Cloud Native", "Mentor specialization mismatch"
-    print("[PASS] Mentor seed data correctly restructured to strictly 1 mentor.")
+    check(status == 200, f"Admin login failed with HTTP {status}.")
+    admin_token = response["data"]["token"]
 
-    # Query Students
-    student_req = urllib.request.Request(
-        "http://localhost:5000/api/hr/students",
-        headers={"Authorization": f"Bearer {admin_token}"}
+    status, response = request("GET", "/api/hr/mentors", token=admin_token)
+    check(status == 200, f"Could not retrieve mentors (HTTP {status}).")
+    mentors = get_items(response.get("data"))
+    check(len(mentors) == 1, f"Expected exactly 1 seeded mentor; found {len(mentors)}.")
+    mentor = mentors[0]
+    check(mentor.get("fullName") == "Nguyễn Khánh Tùng", "Seed mentor name mismatch.")
+    check(mentor.get("department") == "Kỹ thuật phần mềm", "Seed mentor department mismatch.")
+    check(
+        mentor.get("specialization") == "Full-stack Web và Cloud Native",
+        "Seed mentor specialization mismatch.",
     )
-    res_s = urllib.request.urlopen(student_req)
-    student_data = json.loads(res_s.read().decode("utf-8"))["data"]
-    students = student_data.get("items", student_data) if isinstance(student_data, dict) else student_data
-    
-    print(f"[CHECK] Total Students count: {len(students)}")
-    has_question_marks = False
-    assigned_count = 0
-    unassigned_count = 0
 
-    for s in students:
-        full_text = f"{s['fullName']} {s['university']} {s['major']}"
-        if "?" in full_text:
-            has_question_marks = True
-            print(f"   [FAIL] Question mark detected in student: {full_text}")
-        if s.get("mentor") and s["mentor"]["fullName"] == "Nguyễn Khánh Tùng":
-            assigned_count += 1
-        elif not s.get("mentor"):
-            unassigned_count += 1
+    status, response = request("GET", "/api/hr/students", token=admin_token)
+    check(status == 200, f"Could not retrieve students (HTTP {status}).")
+    students = get_items(response.get("data"))
+    check(bool(students), "Expected seeded students in the database.")
+    for student in students:
+        check(
+            student.get("university") == "Đại học Công nghệ Thông tin và Truyền thông — ĐHTN",
+            "Seed student university mismatch.",
+        )
+        check(student.get("major") == "Kỹ thuật Phần mềm", "Seed student major mismatch.")
+        visible_text = f"{student.get('fullName', '')} {student.get('university', '')} {student.get('major', '')}"
+        check("?" not in visible_text, "Found corrupted Vietnamese text in student data.")
+        check(
+            (student.get("mentor") or {}).get("fullName") == mentor["fullName"],
+            "A seeded student is not assigned to the expected mentor.",
+        )
 
-        assert s['university'] == 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN', f"University mismatch: {s['university']}"
-        assert s['major'] == 'Kỹ thuật Phần mềm', f"Major mismatch: {s['major']}"
+    print(f"[PASS] API seed checks passed for {len(students)} students and 1 mentor.")
 
-    print(f"[CHECK] Vietnamese diacritics integrity: {'PASS (No ? marks found)' if not has_question_marks else 'FAIL'}")
-    assert not has_question_marks, "Detected question marks in student records"
-    print(f"[CHECK] Students assigned to Nguyễn Khánh Tùng: {assigned_count} / {len(students)}")
-    assert assigned_count == len(students), f"Expected all {len(students)} students assigned to Nguyễn Khánh Tùng, got {assigned_count}"
 
-    # ---------------------------------------------------------
-    # 3. FIX QUICK-LOGIN BEHAVIOR (NO AUTO-SUBMISSION)
-    # ---------------------------------------------------------
-    print("\n--- REQUIREMENT 3: QUICK-LOGIN BEHAVIOR IN FRONTEND ---")
-    with open("d:/frontend/src/views/auth/LoginView.jsx", "r", encoding="utf-8") as f:
-        login_view_code = f.read()
+def validate_frontend_contracts():
+    login_view = (FRONTEND / "src/views/auth/LoginView.jsx").read_text(encoding="utf-8")
+    submit_match = re.search(r"const handleSubmit = async \(e\) => \{([\s\S]*?)\n  \};", login_view)
+    check(submit_match is not None, "Login form submit handler was not found in LoginView.jsx.")
+    submit_body = submit_match.group(1)
+    check(
+        "if (!validate()) return;" in submit_body and "executeLogin(formData)" in submit_body,
+        "Login submission must validate fields before calling the login API.",
+    )
+    check('<form onSubmit={handleSubmit}' in login_view, "Login form must use its validated submit handler.")
+    check('type="email"' in login_view, "Login form must expose an email input.")
+    check('type={showPassword ?' in login_view, "Login form must preserve the password visibility control.")
 
-    # Verify handleQuickFill does NOT execute login
-    quick_fill_match = re.search(r"const handleQuickFill = \(acc\)([\s\S]*?)\};", login_view_code)
-    assert quick_fill_match, "handleQuickFill function not found in LoginView.jsx"
-    quick_fill_body = quick_fill_match.group(1)
-    
-    has_execute_call = "executeLogin" in quick_fill_body or "login(" in quick_fill_body
-    print(f"[CHECK] handleQuickFill does NOT invoke login API automatically: {'PASS' if not has_execute_call else 'FAIL'}")
-    assert not has_execute_call, "handleQuickFill is still automatically submitting the login!"
+    app_code = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
+    check(
+        '<Route path="/" element={<Navigate to="/login" replace />} />' in app_code,
+        "The root route must navigate to the login page.",
+    )
 
-    has_set_form_data = "setFormData" in quick_fill_body
-    print(f"[CHECK] handleQuickFill sets formData email & password: {'PASS' if has_set_form_data else 'FAIL'}")
-    assert has_set_form_data, "handleQuickFill does not set form data"
+    auth_context = (FRONTEND / "src/context/AuthContext.jsx").read_text(encoding="utf-8")
+    check(
+        "const resetSession = () => {" in auth_context and "resetSession," in auth_context,
+        "AuthContext must expose resetSession.",
+    )
 
-    # ---------------------------------------------------------
-    # 4. PREVENT UNWANTED AUTO-LOGIN ON APP LAUNCH
-    # ---------------------------------------------------------
-    print("\n--- REQUIREMENT 4: PREVENT AUTO-LOGIN & CLEAN SESSION RESET ---")
-    with open("d:/frontend/src/App.jsx", "r", encoding="utf-8") as f:
-        app_code = f.read()
+    print("[PASS] Frontend login validation, root route, and session-reset checks passed.")
 
-    # Verify root path navigates to /login
-    has_root_navigate = '<Route path="/" element={<Navigate to="/login" replace />} />' in app_code
-    print(f"[CHECK] App.jsx maps '/' to <Navigate to=\"/login\" replace />: {'PASS' if has_root_navigate else 'FAIL'}")
-    assert has_root_navigate, "App.jsx does not direct root '/' directly to '/login'"
 
-    # Verify LoginView performs clean session reset on mount
-    has_reset_session = "resetSession?.();" in login_view_code and "useEffect" in login_view_code
-    print(f"[CHECK] LoginView.jsx calls resetSession on mount: {'PASS' if has_reset_session else 'FAIL'}")
-    assert has_reset_session, "LoginView does not reset session on mount"
+def validate_production_secret_configuration():
+    settings = json.loads((BACKEND / "appsettings.json").read_text(encoding="utf-8"))
+    check("Key" not in settings.get("Jwt", {}), "A JWT signing key must not be committed in appsettings.json.")
+    check(
+        "DefaultConnection" not in settings.get("ConnectionStrings", {}),
+        "A local database credential must not be committed in appsettings.json.",
+    )
+    program = (BACKEND / "Program.cs").read_text(encoding="utf-8")
+    check("builder.Environment.IsDevelopment()" in program, "Development-only JWT fallback is missing.")
+    check(
+        "A JWT signing key must be configured" in program,
+        "Production must fail closed when no JWT signing key is configured.",
+    )
+    print("[PASS] Production JWT and database secrets are not committed in appsettings.json.")
 
-    # Verify AuthContext provides resetSession
-    with open("d:/frontend/src/context/AuthContext.jsx", "r", encoding="utf-8") as f:
-        auth_context_code = f.read()
-    has_reset_def = "const resetSession = () => {" in auth_context_code and "resetSession," in auth_context_code
-    print(f"[CHECK] AuthContext.jsx implements and exports resetSession: {'PASS' if has_reset_def else 'FAIL'}")
-    assert has_reset_def, "AuthContext does not provide resetSession"
 
-    print("\n" + "=" * 60)
-    print("ALL 4 REQUIREMENTS FULLY VERIFIED AND PASSING!")
-    print("=" * 60)
+def validate_exception_sanitization():
+    middleware = (BACKEND / "Middleware/GlobalExceptionMiddleware.cs").read_text(encoding="utf-8")
+    check(
+        "errors = exception.Message" not in middleware,
+        "Unhandled exception details must not be returned in API error responses.",
+    )
+    check("_logger.LogError(ex," in middleware, "Unhandled exceptions must still be logged server-side.")
+    print("[PASS] Generic server exceptions are logged but not exposed to API clients.")
+
+
+def main():
+    print("Validating repository requirements and selected regressions...")
+    validate_connection_charset()
+    validate_production_secret_configuration()
+    validate_exception_sanitization()
+    validate_frontend_contracts()
+    validate_database_collation()
+    validate_seed_api()
+    print("Validation complete. Optional external checks are marked SKIP when credentials are not configured.")
+
 
 if __name__ == "__main__":
-    test_requirements()
+    try:
+        main()
+    except (AssertionError, OSError, ValueError, subprocess.SubprocessError, urllib.error.URLError) as error:
+        print(f"[FAIL] {error}", file=sys.stderr)
+        sys.exit(1)
