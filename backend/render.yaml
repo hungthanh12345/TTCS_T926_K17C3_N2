@@ -24,10 +24,9 @@ services:
       - key: PORT
         value: 8080
 
-      # Dynamic CORS: Comma-separated list of allowed origins.
-      # Wildcard *.vercel.app is also automatically accepted by Program.cs!
+      # Comma-separated exact origins only; add each production or preview domain explicitly.
       - key: CORS_ALLOWED_ORIGINS
-        value: https://internship-management-frontend.vercel.app,http://localhost:5173,http://localhost:3000
+        value: https://internship-management-frontend.vercel.app
 
       # MySQL Connection String:
       # Obtain from Free Aiven MySQL / TiDB Cloud / Clever Cloud / Railway

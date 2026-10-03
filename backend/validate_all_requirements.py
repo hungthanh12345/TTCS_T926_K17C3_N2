@@ -193,6 +193,18 @@ def validate_mock_fallback_is_development_only():
     print("[PASS] Client-side mock login and data fallbacks require explicit development-only opt-in.")
 
 
+def validate_cors_origins_are_explicit():
+    program = (BACKEND / "Program.cs").read_text(encoding="utf-8")
+    deployment = (BACKEND / "render.yaml").read_text(encoding="utf-8")
+    check(".EndsWith(\".vercel.app\"" not in program, "CORS must not trust all Vercel subdomains.")
+    check(".AllowCredentials()" not in program, "Bearer-token CORS must not enable cookie credentials.")
+    check("uri.AbsolutePath != \"/\"" in program, "CORS entries must be validated as origins without a path.")
+    check("origin.Contains('*', StringComparison.Ordinal)" in program, "CORS entries must reject wildcard host patterns.")
+    check("!isDevelopmentEnvironment && uri.Scheme != Uri.UriSchemeHttps" in program, "Production CORS origins must use HTTPS.")
+    check("https://*.vercel.app" not in deployment, "Deployment configuration must use explicit CORS origins.")
+    print("[PASS] CORS is restricted to explicitly configured origins and excludes cookie credentials.")
+
+
 def validate_production_secret_configuration():
     settings = json.loads((BACKEND / "appsettings.json").read_text(encoding="utf-8"))
     check("Key" not in settings.get("Jwt", {}), "A JWT signing key must not be committed in appsettings.json.")
@@ -256,6 +268,7 @@ def main():
     validate_password_hashing_and_seed_fixtures()
     validate_frontend_contracts()
     validate_mock_fallback_is_development_only()
+    validate_cors_origins_are_explicit()
     validate_database_collation()
     validate_seed_api()
     print("Validation complete. Optional external checks are marked SKIP when credentials are not configured.")

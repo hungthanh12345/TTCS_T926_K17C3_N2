@@ -146,49 +146,48 @@ builder.Services.AddControllers()
 // 5. Configure CORS (Dynamic production origins from CORS_ALLOWED_ORIGINS)
 var allowedOriginsEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")
     ?? builder.Configuration["CORS_ALLOWED_ORIGINS"];
+var isDevelopmentEnvironment = builder.Environment.IsDevelopment();
 
-var allowedOrigins = new List<string>
-{
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174"
-};
+var allowedOrigins = isDevelopmentEnvironment
+    ? new List<string>
+    {
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174"
+    }
+    : new List<string>();
 
 if (!string.IsNullOrWhiteSpace(allowedOriginsEnv))
 {
     var parsedOrigins = allowedOriginsEnv
         .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    allowedOrigins.AddRange(parsedOrigins);
+    foreach (var origin in parsedOrigins)
+    {
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+            (!isDevelopmentEnvironment && uri.Scheme != Uri.UriSchemeHttps) ||
+            origin.Contains('*', StringComparison.Ordinal) || !string.IsNullOrEmpty(uri.UserInfo) || uri.AbsolutePath != "/" ||
+            !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+        {
+            throw new InvalidOperationException($"Invalid CORS origin '{origin}'. Configure a full origin without a path or wildcard.");
+        }
+
+        allowedOrigins.Add(uri.GetLeftPart(UriPartial.Authority));
+    }
 }
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
     {
-        policy.WithOrigins(allowedOrigins.Distinct().ToArray())
-              .SetIsOriginAllowed(origin =>
-              {
-                  if (string.IsNullOrWhiteSpace(origin)) return false;
-                  if (allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase)) return true;
+        if (allowedOrigins.Count == 0)
+            return;
 
-                  if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
-                  {
-                      // Allow any *.vercel.app domain for Vercel preview & production deployments
-                      if (uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase))
-                          return true;
-
-                      // Allow localhost on any port for local development
-                      if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
-                          uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase))
-                          return true;
-                  }
-                  return false;
-              })
+        policy.WithOrigins(allowedOrigins.Distinct(StringComparer.OrdinalIgnoreCase).ToArray())
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowAnyMethod();
     });
 });
 
