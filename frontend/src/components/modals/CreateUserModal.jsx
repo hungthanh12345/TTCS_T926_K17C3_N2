@@ -78,7 +78,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
       setErrors({});
       onClose();
       if (onSuccess) onSuccess();
-    } catch (err) {
+    } catch {
       toast.error('Email này đã tồn tại trên hệ thống hoặc thông tin không hợp lệ.');
     } finally {
       setIsSubmitting(false);

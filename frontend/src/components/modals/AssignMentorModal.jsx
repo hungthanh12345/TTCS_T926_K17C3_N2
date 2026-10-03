@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
-import { UserCheck, User, Building, Award, Users, AlertCircle, Loader2 } from 'lucide-react';
+import { UserCheck, Building, Award, AlertCircle, Loader2 } from 'lucide-react';
 import mentorService from '../../services/mentorService';
 import studentService from '../../services/studentService';
 import toast from 'react-hot-toast';

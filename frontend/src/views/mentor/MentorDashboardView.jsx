@@ -4,17 +4,11 @@ import { useAuth } from '../../context/AuthContext';
 import mentorTaskService from '../../services/mentorTaskService';
 import MentorTaskManagement from '../../components/mentor/MentorTaskManagement';
 import {
-  Users,
-  GraduationCap,
-  Calendar,
   Phone,
   Mail,
   School,
   BookOpen,
-  Award,
   CheckCircle2,
-  Clock,
-  Sparkles,
 } from 'lucide-react';
 import TableSkeleton from '../../components/common/TableSkeleton';
 

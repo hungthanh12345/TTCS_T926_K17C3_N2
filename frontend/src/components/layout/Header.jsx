@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Badge from '../common/Badge';
 
-export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
+export const Header = ({ onOpenMobileSidebar, title }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
 

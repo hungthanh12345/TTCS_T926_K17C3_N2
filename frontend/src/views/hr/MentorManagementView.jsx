@@ -5,7 +5,6 @@ import AddMentorModal from '../../components/modals/AddMentorModal';
 import mentorService from '../../services/mentorService';
 import {
   Briefcase,
-  UserCheck,
   UserPlus,
   Search,
   RefreshCw,

@@ -8,13 +8,10 @@ import {
   Layers,
   LayoutDashboard,
   LogOut,
-  ChevronRight,
   UserCheck,
-  Shield,
   CalendarDays,
   ClipboardCheck,
 } from 'lucide-react';
-import Badge from '../common/Badge';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
   const { user, logout } = useAuth();

@@ -22,12 +22,8 @@ import {
   Trash2,
   AlertTriangle,
   AlertCircle,
-  CheckCircle2,
   X,
   Mail,
-  Building,
-  User,
-  ExternalLink,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 

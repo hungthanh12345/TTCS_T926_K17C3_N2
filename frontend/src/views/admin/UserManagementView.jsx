@@ -104,7 +104,7 @@ export const UserManagementView = () => {
       toast.success('Đã xóa tài khoản người dùng thành công.');
       setDeleteModal({ isOpen: false, user: null, isDeleting: false });
       fetchUsers();
-    } catch (err) {
+    } catch {
       toast.error('Không thể xóa tài khoản. Vui lòng thử lại sau.');
       setDeleteModal((prev) => ({ ...prev, isDeleting: false }));
     }
@@ -121,7 +121,6 @@ export const UserManagementView = () => {
 
   // Chỉ số tổng quan
   const totalCount = users.length;
-  const adminCount = users.filter((u) => u.role === 'ROLE_ADMIN').length;
   const hrCount = users.filter((u) => u.role === 'ROLE_HR').length;
   const mentorCount = users.filter((u) => u.role === 'ROLE_MENTOR').length;
   const studentCount = users.filter((u) => u.role === 'ROLE_STUDENT').length;
