@@ -20,14 +20,16 @@ import StudentTasksPanel from '../../components/student/StudentTasksPanel';
 export const StudentDashboardView = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [profileError, setProfileError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const loadStudentData = useCallback(async () => {
     try {
       const studentProfile = await studentService.getMyProfile();
       setProfile(studentProfile);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
+      setProfileError(error.message || 'Không thể tải hồ sơ sinh viên của bạn.');
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +63,11 @@ export const StudentDashboardView = () => {
 
         {isLoading ? (
           <TableSkeleton rows={2} cols={3} />
-        ) : (
+        ) : profileError ? (
+          <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+            Không thể tải hồ sơ sinh viên: {profileError}
+          </div>
+        ) : profile ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Hồ Sơ Sinh Viên (2 cols) */}
             <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
@@ -202,6 +208,11 @@ export const StudentDashboardView = () => {
                 </span>
               </div>
             </div>
+          </div>
+        ) : (
+          <div role="status" className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+            <h3 className="text-base font-bold text-slate-900">Chưa có hồ sơ sinh viên được liên kết</h3>
+            <p className="mt-2 text-sm text-slate-600">Vui lòng liên hệ HR để kiểm tra tài khoản và hồ sơ thực tập của bạn.</p>
           </div>
         )}
         {user?.role === 'ROLE_STUDENT' && <StudentDocumentsPanel />}
