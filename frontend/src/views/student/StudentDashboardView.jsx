@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import StudentDocumentsPanel from '../../components/student/StudentDocumentsPanel';
+import StudentTasksPanel from '../../components/student/StudentTasksPanel';
 
 export const StudentDashboardView = () => {
   const { user } = useAuth();
@@ -208,6 +209,7 @@ export const StudentDashboardView = () => {
           </div>
         )}
         {user?.role === 'ROLE_STUDENT' && <StudentDocumentsPanel />}
+        {user?.role === 'ROLE_STUDENT' && <StudentTasksPanel />}
       </div>
     </DashboardLayout>
   );

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import studentService from '../../services/studentService';
+import mentorTaskService from '../../services/mentorTaskService';
+import MentorTaskManagement from '../../components/mentor/MentorTaskManagement';
 import {
   Users,
   GraduationCap,
@@ -29,11 +30,8 @@ export const MentorDashboardView = () => {
   const loadMentees = async () => {
     setIsLoading(true);
     try {
-      const allStudents = await studentService.getStudents();
-      const mentees = allStudents.filter(
-        (s) => s.mentorId || s.assignedMentor?.fullName?.includes('Alex')
-      );
-      setStudents(mentees.length > 0 ? mentees : allStudents.slice(0, 3));
+      const assignedStudents = await mentorTaskService.getAssignedStudents();
+      setStudents(assignedStudents);
     } catch (err) {
       console.error(err);
     } finally {
@@ -136,6 +134,7 @@ export const MentorDashboardView = () => {
             </div>
           )}
         </div>
+        <MentorTaskManagement />
       </div>
     </DashboardLayout>
   );

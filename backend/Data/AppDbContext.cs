@@ -16,6 +16,7 @@ namespace InternshipManagementApi.Data
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<InternshipProgram> InternshipPrograms => Set<InternshipProgram>();
         public DbSet<StudentDocument> StudentDocuments => Set<StudentDocument>();
+        public DbSet<InternshipTask> Tasks => Set<InternshipTask>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -165,6 +166,37 @@ namespace InternshipManagementApi.Data
                 entity.HasOne(e => e.Student)
                     .WithMany()
                     .HasForeignKey(e => e.StudentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<InternshipTask>(entity =>
+            {
+                entity.ToTable("internship_tasks");
+                entity.HasKey(task => task.Id);
+                entity.Property(task => task.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(task => task.MentorId).HasColumnName("mentor_id").IsRequired();
+                entity.Property(task => task.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(task => task.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
+                entity.Property(task => task.Description).HasColumnName("description").HasMaxLength(2000);
+                entity.Property(task => task.DueDate).HasColumnName("due_date").HasColumnType("date");
+                entity.Property(task => task.Status)
+                    .HasColumnName("status")
+                    .HasMaxLength(20)
+                    .HasDefaultValue("TO_DO");
+                entity.Property(task => task.CreatedAt).HasColumnName("created_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(task => task.UpdatedAt).HasColumnName("updated_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+
+                entity.HasIndex(task => new { task.MentorId, task.StudentId });
+                entity.HasIndex(task => task.DueDate);
+                entity.HasOne(task => task.Mentor)
+                    .WithMany()
+                    .HasForeignKey(task => task.MentorId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(task => task.Student)
+                    .WithMany()
+                    .HasForeignKey(task => task.StudentId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }
