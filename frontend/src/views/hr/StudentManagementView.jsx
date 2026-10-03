@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import AddStudentModal from '../../components/modals/AddStudentModal';
@@ -50,11 +50,7 @@ export const StudentManagementView = () => {
   const [studentPendingDelete, setStudentPendingDelete] = useState(null);
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const data = await studentService.getStudents();
@@ -66,7 +62,11 @@ export const StudentManagementView = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchStudents();
+  }, [fetchStudents]);
 
   const handleDeleteStudent = async (id, name) => {
     setStudentPendingDelete({ id, name });
@@ -127,10 +127,6 @@ export const StudentManagementView = () => {
     return filteredStudents.slice(start, start + itemsPerPage);
   }, [filteredStudents, currentPage, itemsPerPage]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedUniversity, selectedMajor, selectedStatus]);
-
   // Key KPI metrics
   const totalStudents = students.length;
   const assignedCount = students.filter((s) => !!s.mentorId).length;
@@ -148,6 +144,7 @@ export const StudentManagementView = () => {
     setSelectedUniversity('ALL');
     setSelectedMajor('ALL');
     setSelectedStatus('ALL');
+    setCurrentPage(1);
   };
 
   // Color generator for avatar initials
@@ -290,14 +287,20 @@ export const StudentManagementView = () => {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Tìm theo họ tên, mã sinh viên (STU...), số điện thoại hoặc tên mentor..."
                 className="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
               />
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCurrentPage(1);
+                  }}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                   title="Xóa tìm kiếm"
                 >
@@ -341,7 +344,10 @@ export const StudentManagementView = () => {
             {/* University Filter */}
             <select
               value={selectedUniversity}
-              onChange={(e) => setSelectedUniversity(e.target.value)}
+              onChange={(e) => {
+                setSelectedUniversity(e.target.value);
+                setCurrentPage(1);
+              }}
               className="py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer max-w-[240px] truncate font-medium text-xs shadow-2xs"
             >
               <option value="ALL">Tất cả các Trường Đại học</option>
@@ -355,7 +361,10 @@ export const StudentManagementView = () => {
             {/* Major Filter */}
             <select
               value={selectedMajor}
-              onChange={(e) => setSelectedMajor(e.target.value)}
+              onChange={(e) => {
+                setSelectedMajor(e.target.value);
+                setCurrentPage(1);
+              }}
               className="py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer max-w-[220px] truncate font-medium text-xs shadow-2xs"
             >
               <option value="ALL">Tất cả các Chuyên ngành</option>
@@ -369,7 +378,10 @@ export const StudentManagementView = () => {
             {/* Mentor Status Filter */}
             <select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+              }}
               className="py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer font-medium text-xs shadow-2xs"
             >
               <option value="ALL">Trạng thái: Tất cả</option>
@@ -671,6 +683,7 @@ export const StudentManagementView = () => {
       />
 
       <EditStudentModal
+        key={selectedStudent?.id ?? 'no-student'}
         isOpen={isEditModalOpen}
         student={selectedStudent}
         onClose={() => {
@@ -681,6 +694,7 @@ export const StudentManagementView = () => {
       />
 
       <AssignMentorModal
+        key={selectedStudent?.id ?? 'no-student'}
         isOpen={isAssignModalOpen}
         student={selectedStudent}
         onClose={() => {

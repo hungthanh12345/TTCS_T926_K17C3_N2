@@ -20,7 +20,6 @@ export const StudentTasksPanel = () => {
   const [loadingDetailsId, setLoadingDetailsId] = useState(null);
 
   const loadTasks = useCallback(async () => {
-    setIsLoading(true);
     try {
       setTasks(await mentorTaskService.getMyTasks());
       setStatusDrafts({});
@@ -35,6 +34,11 @@ export const StudentTasksPanel = () => {
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
+
+  const refreshTasks = () => {
+    setIsLoading(true);
+    void loadTasks();
+  };
 
   const showDetails = async (taskId) => {
     if (details?.id === taskId) {
@@ -76,7 +80,7 @@ export const StudentTasksPanel = () => {
           <h3 className="flex items-center gap-2 text-base font-bold text-slate-900"><ClipboardList className="h-5 w-5 text-indigo-600" /> Task được giao</h3>
           <p className="mt-1 text-xs text-slate-500">Cập nhật trạng thái cho task gắn với tài khoản của bạn.</p>
         </div>
-        <button type="button" onClick={loadTasks} disabled={isLoading} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+        <button type="button" onClick={refreshTasks} disabled={isLoading} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
           <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} /> Làm mới
         </button>
       </div>

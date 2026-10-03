@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import studentService from '../../services/studentService';
@@ -22,12 +22,7 @@ export const StudentDashboardView = () => {
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadStudentData();
-  }, []);
-
-  const loadStudentData = async () => {
-    setIsLoading(true);
+  const loadStudentData = useCallback(async () => {
     try {
       const studentProfile = await studentService.getMyProfile();
       setProfile(studentProfile);
@@ -36,7 +31,11 @@ export const StudentDashboardView = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadStudentData();
+  }, [loadStudentData]);
 
   return (
     <DashboardLayout

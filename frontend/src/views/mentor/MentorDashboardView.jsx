@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import mentorTaskService from '../../services/mentorTaskService';
@@ -17,12 +17,7 @@ export const MentorDashboardView = () => {
   const [students, setStudents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadMentees();
-  }, []);
-
-  const loadMentees = async () => {
-    setIsLoading(true);
+  const loadMentees = useCallback(async () => {
     try {
       const assignedStudents = await mentorTaskService.getAssignedStudents();
       setStudents(assignedStudents);
@@ -31,7 +26,11 @@ export const MentorDashboardView = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadMentees();
+  }, [loadMentees]);
 
   return (
     <DashboardLayout

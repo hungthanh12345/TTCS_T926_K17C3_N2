@@ -21,7 +21,6 @@ export const MentorTaskManagement = () => {
   const [busyTaskId, setBusyTaskId] = useState(null);
 
   const loadData = useCallback(async () => {
-    setIsLoading(true);
     try {
       const [assignedStudents, assignedTasks] = await Promise.all([
         mentorTaskService.getAssignedStudents(),
@@ -37,6 +36,11 @@ export const MentorTaskManagement = () => {
   }, []);
 
   useEffect(() => { void loadData(); }, [loadData]);
+
+  const refreshData = async () => {
+    setIsLoading(true);
+    await loadData();
+  };
 
   const startEdit = (task) => {
     setEditingTaskId(task.id);
@@ -72,7 +76,7 @@ export const MentorTaskManagement = () => {
         toast.success('Đã giao task cho sinh viên.');
       }
       cancelEdit();
-      await loadData();
+      await refreshData();
     } catch (error) {
       toast.error(error.message || 'Không thể lưu task.');
     } finally {
@@ -98,7 +102,7 @@ export const MentorTaskManagement = () => {
       await mentorTaskService.deleteTask(task.id);
       if (details?.id === task.id) setDetails(null);
       toast.success('Đã xóa task.');
-      await loadData();
+      await refreshData();
     } catch (error) {
       toast.error(error.message || 'Không thể xóa task.');
     } finally {
@@ -113,7 +117,7 @@ export const MentorTaskManagement = () => {
           <h3 className="flex items-center gap-2 text-base font-bold text-slate-900"><ClipboardList className="h-5 w-5 text-indigo-600" /> Giao và quản lý task</h3>
           <p className="mt-1 text-xs text-slate-500">Chỉ sinh viên được HR ghép với bạn mới xuất hiện ở đây. Trạng thái hiển thị tiến độ do sinh viên cập nhật.</p>
         </div>
-        <button type="button" onClick={loadData} disabled={isLoading} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+        <button type="button" onClick={refreshData} disabled={isLoading} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
           <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} /> Làm mới
         </button>
       </div>

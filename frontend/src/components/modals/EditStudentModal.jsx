@@ -1,36 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Modal from '../common/Modal';
 import { Edit3, Hash, User, Phone, School, BookOpen, Mail, Calendar, Loader2 } from 'lucide-react';
 import studentService from '../../services/studentService';
 import toast from 'react-hot-toast';
 
+const createInitialFormData = (student) => ({
+  studentCode: student?.studentCode || '',
+  fullName: student?.fullName || '',
+  phone: student?.phone || student?.phoneNumber || '',
+  email: student?.email || student?.user?.email || '',
+  university: student?.university || 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
+  major: student?.major || 'Kỹ thuật Phần mềm',
+  internshipPeriod: student?.internshipPeriod || 'Kỳ Thu 2026',
+});
+
 export const EditStudentModal = ({ isOpen, onClose, student, onSuccess }) => {
-  const [formData, setFormData] = useState({
-    studentCode: '',
-    fullName: '',
-    phone: '',
-    email: '',
-    university: '',
-    major: '',
-    internshipPeriod: '',
-  });
+  const [formData, setFormData] = useState(() => createInitialFormData(student));
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (student) {
-      setFormData({
-        studentCode: student.studentCode || '',
-        fullName: student.fullName || '',
-        phone: student.phone || student.phoneNumber || '',
-        email: student.email || student.user?.email || '',
-        university: student.university || 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-        major: student.major || 'Kỹ thuật Phần mềm',
-        internshipPeriod: student.internshipPeriod || 'Kỳ Thu 2026',
-      });
-      setErrors({});
-    }
-  }, [student]);
 
   const universities = [
     'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',

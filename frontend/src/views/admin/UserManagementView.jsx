@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Badge from '../../components/common/Badge';
 import TableSkeleton from '../../components/common/TableSkeleton';
@@ -34,11 +34,7 @@ export const UserManagementView = () => {
     isDeleting: false,
   });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const data = await userService.getUsers();
@@ -73,7 +69,11 @@ export const UserManagementView = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchUsers();
+  }, [fetchUsers]);
 
   // Mở modal xác nhận xóa
   const handleOpenDeleteModal = (u) => {
