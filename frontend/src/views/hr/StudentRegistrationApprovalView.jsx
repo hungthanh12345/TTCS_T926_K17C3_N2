@@ -1,0 +1,154 @@
+import React, { useEffect, useState } from 'react';
+import { Check, ClipboardCheck, GraduationCap, Loader2, RefreshCw, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import DashboardLayout from '../../components/layout/DashboardLayout';
+import studentRegistrationService from '../../services/studentRegistrationService';
+
+export const StudentRegistrationApprovalView = () => {
+  const [registrations, setRegistrations] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [action, setAction] = useState('');
+
+  const loadPending = async (quiet = false) => {
+    if (!quiet) setIsRefreshing(true);
+    try {
+      const items = await studentRegistrationService.getPending();
+      const list = Array.isArray(items) ? items : [];
+      setRegistrations(list);
+      setSelected((current) => current ? list.find((item) => item.studentId === current.studentId) || null : null);
+    } catch (error) {
+      toast.error(error.message || 'Không thể tải hồ sơ đang chờ duyệt.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    studentRegistrationService.getPending()
+      .then((items) => {
+        if (mounted) setRegistrations(Array.isArray(items) ? items : []);
+      })
+      .catch((error) => {
+        if (mounted) toast.error(error.message || 'Không thể tải hồ sơ đang chờ duyệt.');
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  const showDetails = async (item) => {
+    setSelected(item);
+    try {
+      setSelected(await studentRegistrationService.getPendingDetails(item.studentId));
+    } catch (error) {
+      toast.error(error.message || 'Không thể tải chi tiết hồ sơ.');
+    }
+  };
+
+  const review = async (kind) => {
+    if (!selected) return;
+    const prompt = kind === 'approve' ? `Duyệt hồ sơ của ${selected.fullName}?` : `Từ chối hồ sơ của ${selected.fullName}?`;
+    if (!window.confirm(prompt)) return;
+    setAction(kind);
+    try {
+      if (kind === 'approve') await studentRegistrationService.approve(selected.studentId);
+      else await studentRegistrationService.reject(selected.studentId);
+      toast.success(kind === 'approve' ? 'Đã duyệt hồ sơ.' : 'Đã từ chối hồ sơ.');
+      setSelected(null);
+      await loadPending(true);
+    } catch (error) {
+      toast.error(error.message || 'Không thể cập nhật trạng thái hồ sơ.');
+    } finally {
+      setAction('');
+    }
+  };
+
+  return (
+    <DashboardLayout title="Xét duyệt đăng ký" subtitle="Kiểm tra hồ sơ sinh viên mới trước khi cấp quyền sử dụng hệ thống">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <h2 className="font-bold text-slate-900">Hồ sơ chờ duyệt</h2>
+              <p className="mt-1 text-xs text-slate-500">{registrations.length} hồ sơ đang chờ HR xem xét</p>
+            </div>
+            <button type="button" onClick={() => loadPending()} disabled={isRefreshing} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-indigo-700 disabled:opacity-50" aria-label="Làm mới">
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2 p-12 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Đang tải hồ sơ...</div>
+          ) : registrations.length === 0 ? (
+            <div className="p-10 text-center text-sm text-slate-500">Hiện không có hồ sơ nào đang chờ duyệt.</div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {registrations.map((item) => (
+                <button
+                  type="button"
+                  key={item.studentId}
+                  onClick={() => showDetails(item)}
+                  className={`flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-indigo-50/60 ${selected?.studentId === item.studentId ? 'bg-indigo-50' : 'bg-white'}`}
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700"><GraduationCap className="h-5 w-5" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-slate-900">{item.fullName}</span>
+                    <span className="mt-1 block truncate text-xs text-slate-500">{item.email} · {item.studentCode}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">PENDING</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          {!selected ? (
+            <div className="flex min-h-64 flex-col items-center justify-center text-center text-slate-400">
+              <ClipboardCheck className="mb-3 h-9 w-9" />
+              <p className="text-sm font-medium">Chọn một hồ sơ để xem thông tin chi tiết.</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">{selected.fullName}</h2>
+                  <p className="mt-1 text-sm text-slate-500">Mã sinh viên: {selected.studentCode}</p>
+                </div>
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">{selected.status}</span>
+              </div>
+              <dl className="grid gap-4 py-5 sm:grid-cols-2">
+                <Detail label="Email" value={selected.email} />
+                <Detail label="Số điện thoại" value={selected.phoneNumber || 'Chưa cung cấp'} />
+                <Detail label="Trường" value={selected.university} />
+                <Detail label="Chuyên ngành" value={selected.major} />
+                <Detail label="Ngày gửi" value={selected.submittedAt ? new Date(selected.submittedAt).toLocaleString('vi-VN') : '—'} />
+              </dl>
+              <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row">
+                <button type="button" disabled={Boolean(action)} onClick={() => review('approve')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50">
+                  {action === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Duyệt hồ sơ
+                </button>
+                <button type="button" disabled={Boolean(action)} onClick={() => review('reject')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50">
+                  {action === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />} Từ chối
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+    </DashboardLayout>
+  );
+};
+
+const Detail = ({ label, value }) => (
+  <div>
+    <dt className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</dt>
+    <dd className="mt-1 break-words text-sm font-medium text-slate-800">{value}</dd>
+  </div>
+);
+
+export default StudentRegistrationApprovalView;

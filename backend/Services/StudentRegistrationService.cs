@@ -1,0 +1,198 @@
+using InternshipManagementApi.Common.Exceptions;
+using InternshipManagementApi.Data;
+using InternshipManagementApi.Data.Entities;
+using InternshipManagementApi.DTOs.Auth;
+using InternshipManagementApi.DTOs.StudentRegistration;
+using Microsoft.EntityFrameworkCore;
+
+namespace InternshipManagementApi.Services
+{
+    public interface IStudentRegistrationService
+    {
+        Task<StudentRegistrationStatusResponseDto> RegisterAsync(StudentRegistrationRequestDto request);
+        Task<StudentRegistrationStatusResponseDto> GetOwnStatusAsync(LoginRequestDto request);
+        Task<IReadOnlyList<StudentRegistrationReviewDto>> GetPendingAsync();
+        Task<StudentRegistrationReviewDto> GetPendingDetailsAsync(int studentId);
+        Task<StudentRegistrationReviewDto> ApproveAsync(int studentId);
+        Task<StudentRegistrationReviewDto> RejectAsync(int studentId);
+    }
+
+    public sealed class StudentRegistrationService : IStudentRegistrationService
+    {
+        private const string StudentRoleName = "ROLE_STUDENT";
+        private readonly AppDbContext _db;
+        private readonly IPasswordHasher _passwordHasher;
+
+        public StudentRegistrationService(AppDbContext db, IPasswordHasher passwordHasher)
+        {
+            _db = db;
+            _passwordHasher = passwordHasher;
+        }
+
+        public async Task<StudentRegistrationStatusResponseDto> RegisterAsync(StudentRegistrationRequestDto request)
+        {
+            var email = request.Email.Trim().ToLowerInvariant();
+            var studentCode = request.StudentCode.Trim().ToUpperInvariant();
+
+            if (string.IsNullOrWhiteSpace(request.FullName) ||
+                string.IsNullOrWhiteSpace(request.University) ||
+                string.IsNullOrWhiteSpace(request.Major) ||
+                string.IsNullOrWhiteSpace(studentCode))
+            {
+                throw new BadRequestException("Student profile fields cannot be blank.");
+            }
+
+            if (await _db.Users.AnyAsync(user => user.Email.ToLower() == email))
+                throw new ConflictException("This email is already registered.");
+
+            if (await _db.Students.AnyAsync(student => student.StudentCode.ToLower() == studentCode.ToLower()))
+                throw new ConflictException("This student code is already registered.");
+
+            var studentRole = await _db.Roles.SingleOrDefaultAsync(role => role.Name == StudentRoleName);
+            if (studentRole == null)
+                throw new BadRequestException("The student role is not configured in the system.");
+
+            var user = new User
+            {
+                Email = email,
+                PasswordHash = _passwordHasher.Hash(request.Password),
+                RoleId = studentRole.Id,
+                Role = studentRole,
+                Status = UserStatus.PENDING_APPROVAL,
+                Student = new Student
+                {
+                    StudentCode = studentCode,
+                    FullName = request.FullName.Trim(),
+                    PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim(),
+                    University = request.University.Trim(),
+                    Major = request.Major.Trim()
+                }
+            };
+
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+
+            return ToStatusResponse(user, user.Student!);
+        }
+
+        public async Task<StudentRegistrationStatusResponseDto> GetOwnStatusAsync(LoginRequestDto request)
+        {
+            var email = request.Email.Trim().ToLowerInvariant();
+            var user = await _db.Users
+                .Include(item => item.Role)
+                .Include(item => item.Student)
+                .SingleOrDefaultAsync(item => item.Email.ToLower() == email);
+
+            if (user == null ||
+                !_passwordHasher.Verify(request.Password, user.PasswordHash) ||
+                !string.Equals(user.Role?.Name, StudentRoleName, StringComparison.OrdinalIgnoreCase) ||
+                user.Student == null)
+            {
+                throw new UnauthorizedException("Invalid email or password.");
+            }
+
+            return ToStatusResponse(user, user.Student);
+        }
+
+        public async Task<IReadOnlyList<StudentRegistrationReviewDto>> GetPendingAsync()
+        {
+            var students = await _db.Students
+                .AsNoTracking()
+                .Include(student => student.User)
+                    .ThenInclude(user => user!.Role)
+                .Where(student => student.User != null &&
+                                  student.User.Role.Name == StudentRoleName &&
+                                  student.User.Status == UserStatus.PENDING_APPROVAL)
+                .OrderBy(student => student.CreatedAt)
+                .ToListAsync();
+
+            return students.Select(ToReviewDto).ToArray();
+        }
+
+        public async Task<StudentRegistrationReviewDto> GetPendingDetailsAsync(int studentId)
+        {
+            var student = await GetStudentForReviewAsync(studentId);
+            if (student.User!.Status != UserStatus.PENDING_APPROVAL)
+                throw new ConflictException("This student registration is no longer awaiting approval.");
+
+            return ToReviewDto(student);
+        }
+
+        public Task<StudentRegistrationReviewDto> ApproveAsync(int studentId) =>
+            TransitionAsync(studentId, UserStatus.ACTIVE);
+
+        public Task<StudentRegistrationReviewDto> RejectAsync(int studentId) =>
+            TransitionAsync(studentId, UserStatus.REJECTED);
+
+        private async Task<StudentRegistrationReviewDto> TransitionAsync(int studentId, UserStatus targetStatus)
+        {
+            var student = await GetStudentForReviewAsync(studentId);
+            if (student.User!.Status != UserStatus.PENDING_APPROVAL)
+                throw new ConflictException("This student registration is no longer awaiting approval.");
+
+            var changed = await _db.Users
+                .Where(user => user.Id == student.UserId && user.Status == UserStatus.PENDING_APPROVAL)
+                .ExecuteUpdateAsync(update => update.SetProperty(user => user.Status, targetStatus));
+
+            if (changed != 1)
+                throw new ConflictException("This student registration has already been reviewed.");
+
+            student.User.Status = targetStatus;
+            return ToReviewDto(student);
+        }
+
+        private async Task<Student> GetStudentForReviewAsync(int studentId)
+        {
+            var student = await _db.Students
+                .Include(item => item.User)
+                    .ThenInclude(user => user!.Role)
+                .SingleOrDefaultAsync(item => item.Id == studentId);
+
+            if (student?.User == null || !string.Equals(student.User.Role?.Name, StudentRoleName, StringComparison.OrdinalIgnoreCase))
+                throw new NotFoundException($"Student registration {studentId} was not found.");
+
+            return student;
+        }
+
+        private static StudentRegistrationStatusResponseDto ToStatusResponse(User user, Student student)
+        {
+            var status = user.Status switch
+            {
+                UserStatus.ACTIVE => "APPROVED",
+                UserStatus.PENDING_APPROVAL => "PENDING_APPROVAL",
+                UserStatus.REJECTED => "REJECTED",
+                _ => user.Status.ToString()
+            };
+
+            var message = status switch
+            {
+                "APPROVED" => "Your registration has been approved.",
+                "REJECTED" => "Your registration was rejected. Please contact HR.",
+                _ => "Your registration is waiting for HR approval."
+            };
+
+            return new StudentRegistrationStatusResponseDto
+            {
+                StudentId = student.Id,
+                Email = user.Email,
+                FullName = student.FullName,
+                Status = status,
+                Message = message
+            };
+        }
+
+        private static StudentRegistrationReviewDto ToReviewDto(Student student) => new()
+        {
+            StudentId = student.Id,
+            UserId = student.UserId!.Value,
+            Email = student.User!.Email,
+            StudentCode = student.StudentCode,
+            FullName = student.FullName,
+            PhoneNumber = student.PhoneNumber,
+            University = student.University,
+            Major = student.Major,
+            Status = student.User.Status == UserStatus.ACTIVE ? "APPROVED" : student.User.Status.ToString(),
+            SubmittedAt = student.CreatedAt
+        };
+    }
+}

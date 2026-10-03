@@ -33,11 +33,14 @@ api.interceptors.response.use(
       // Server responded with non-2xx status
       if (error.response.status === 401) {
         // Token expired or invalid
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
+        const hadSession = Boolean(sessionStorage.getItem('token'));
+        if (hadSession) {
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
+        }
         
         // Only redirect if not already on the login page
-        if (!window.location.pathname.includes('/login')) {
+        if (hadSession && !window.location.pathname.includes('/login')) {
           window.location.href = '/login?session_expired=true';
         }
       }

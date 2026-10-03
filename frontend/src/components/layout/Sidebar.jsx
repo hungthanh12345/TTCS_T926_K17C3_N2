@@ -12,6 +12,7 @@ import {
   UserCheck,
   Shield,
   CalendarDays,
+  ClipboardCheck,
 } from 'lucide-react';
 import Badge from '../common/Badge';
 
@@ -34,6 +35,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       icon: GraduationCap,
       roles: ['ROLE_ADMIN', 'ROLE_HR'],
       badge: 'HR',
+    },
+    {
+      title: 'Xét Duyệt Đăng Ký',
+      path: '/hr/student-registrations',
+      icon: ClipboardCheck,
+      roles: ['ROLE_HR'],
+      badge: null,
     },
     {
       title: 'Danh Bạ Mentor',
