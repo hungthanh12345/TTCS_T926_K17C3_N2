@@ -17,6 +17,7 @@ USE TTCS_DB;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- Drop tables if they already exist (in reverse dependency order)
+DROP TABLE IF EXISTS `internship_tasks`;
 DROP TABLE IF EXISTS `students`;
 DROP TABLE IF EXISTS `mentors`;
 DROP TABLE IF EXISTS `users`;
@@ -149,3 +150,23 @@ CREATE INDEX `idx_students_university_major` ON `students` (`university`, `major
 -- Foreign key lookup indexes
 CREATE INDEX `idx_students_mentor_id` ON `students` (`mentor_id`);
 CREATE INDEX `idx_users_role_id` ON `users` (`role_id`);
+
+-- Part 5 (US15): mentor-assigned tasks; the only initial state is TO_DO.
+CREATE TABLE `internship_tasks` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `mentor_id` INT NOT NULL,
+    `student_id` INT NOT NULL,
+    `title` VARCHAR(200) NOT NULL,
+    `description` VARCHAR(2000) NULL,
+    `due_date` DATE NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'TO_DO',
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `pk_sprint2_internship_tasks` PRIMARY KEY (`id`),
+    CONSTRAINT `fk_sprint2_internship_tasks_mentor` FOREIGN KEY (`mentor_id`) REFERENCES `mentors` (`id`)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT `fk_sprint2_internship_tasks_student` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    KEY `idx_sprint2_internship_tasks_mentor_student` (`mentor_id`, `student_id`),
+    KEY `idx_sprint2_internship_tasks_due_date` (`due_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
