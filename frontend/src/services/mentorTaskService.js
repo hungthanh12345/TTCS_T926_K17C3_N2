@@ -66,6 +66,22 @@ const mentorTaskService = {
       throw new Error(errorMessage(error));
     }
   },
+
+  async getMyTask(taskId) {
+    try {
+      return unwrap(await api.get(`/student/tasks/${taskId}`));
+    } catch (error) {
+      throw new Error(errorMessage(error));
+    }
+  },
+
+  async updateMyTaskProgress(taskId, data) {
+    try {
+      return unwrap(await api.put(`/student/tasks/${taskId}/progress`, data));
+    } catch (error) {
+      throw new Error(errorMessage(error));
+    }
+  },
 };
 
 export default mentorTaskService;
