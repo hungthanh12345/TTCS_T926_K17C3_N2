@@ -78,7 +78,7 @@ Vì gói Free của Render chỉ cung cấp PostgreSQL, bạn có thể lựa ch
    | `CORS_ALLOWED_ORIGINS` | `https://*.vercel.app,http://localhost:5173` | Hỗ trợ Vercel Frontend |
    | `ASPNETCORE_ENVIRONMENT` | `Production` | Chế độ Production |
    | `PORT` | `8080` | Port container |
-   | `JWT_SECRET_KEY` | `InternshipManagementSystem_SuperSecretSecureKey_2026_JWT_Production_Key!` | Khóa bí mật JWT |
+   | `JWT_SECRET_KEY` | Generate a unique random secret of at least 32 UTF-8 bytes (for example, `openssl rand -base64 48`). Never commit or reuse a public development key. | Required for Production |
    | `JWT_ISSUER` | `InternshipManagementApi` | Issuer |
    | `JWT_AUDIENCE` | `InternshipManagementClient` | Audience |
 6. Nhấn **Create Web Service**.

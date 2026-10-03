@@ -52,9 +52,22 @@ builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
 
 // 3. Configure JWT Authentication & Authorization
-var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
-    ?? builder.Configuration["Jwt:Key"]
-    ?? "InternshipManagementSystem_SuperSecretSecureKey_2026_JWT_Production_Key!";
+var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+if (string.IsNullOrWhiteSpace(jwtKey))
+    jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtKey) && builder.Environment.IsDevelopment())
+    jwtKey = "InternshipManagementSystem_Development_Only_JWT_Key_Replace_For_Local_Use!";
+
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException(
+        "A JWT signing key must be configured with JWT_SECRET_KEY or Jwt:Key outside Development.");
+}
+
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException("The JWT signing key must be at least 32 UTF-8 bytes.");
+
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
     ?? builder.Configuration["Jwt:Issuer"]
     ?? "InternshipManagementApi";
