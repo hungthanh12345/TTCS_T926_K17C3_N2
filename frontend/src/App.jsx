@@ -6,8 +6,10 @@ import ProtectedRoute from './routes/ProtectedRoute';
 
 // Views
 import LoginView from './views/auth/LoginView';
+import StudentRegistrationView from './views/auth/StudentRegistrationView';
 import UserManagementView from './views/admin/UserManagementView';
 import StudentManagementView from './views/hr/StudentManagementView';
+import StudentRegistrationApprovalView from './views/hr/StudentRegistrationApprovalView';
 import MentorManagementView from './views/hr/MentorManagementView';
 import MentorDashboardView from './views/mentor/MentorDashboardView';
 import StudentDashboardView from './views/student/StudentDashboardView';
@@ -50,6 +52,7 @@ export const App = () => {
         <Routes>
           {/* Public Authentication Route */}
           <Route path="/login" element={<LoginView />} />
+          <Route path="/register" element={<StudentRegistrationView />} />
 
           {/* Root Route: Always navigate to /login on app launch / root visit */}
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -70,6 +73,15 @@ export const App = () => {
             element={
               <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_HR']}>
                 <StudentManagementView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hr/student-registrations"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_HR']}>
+                <StudentRegistrationApprovalView />
               </ProtectedRoute>
             }
           />

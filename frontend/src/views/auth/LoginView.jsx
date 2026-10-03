@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Mail,
@@ -312,6 +312,11 @@ export const LoginView = () => {
               )}
             </button>
           </form>
+
+          <p className="text-center text-sm text-slate-400">
+            Bạn chưa có tài khoản?{' '}
+            <Link to="/register" className="font-semibold text-indigo-300 hover:text-white">Đăng ký sinh viên</Link>
+          </p>
 
           {/* Ghi chú bảo mật hệ thống */}
           <div className="pt-6 border-t border-slate-800/80">

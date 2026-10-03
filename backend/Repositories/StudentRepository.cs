@@ -75,6 +75,9 @@ namespace InternshipManagementApi.Repositories
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
                 .AsNoTracking()
+                // Registration profiles are visible in the approval queue until HR accepts them.
+                .Where(s => s.User == null ||
+                            (s.User.Status != UserStatus.PENDING_APPROVAL && s.User.Status != UserStatus.REJECTED))
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filter.University) && !string.Equals(filter.University, "ALL", StringComparison.OrdinalIgnoreCase))
