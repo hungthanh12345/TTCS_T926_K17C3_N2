@@ -21,7 +21,7 @@ export const LoginView = () => {
   // Reset any cached session on login screen mount for clean state
   useEffect(() => {
     resetSession?.();
-  }, []);
+  }, [resetSession]);
 
   const [formData, setFormData] = useState({
     email: '',

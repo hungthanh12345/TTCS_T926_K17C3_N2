@@ -169,9 +169,11 @@ def validate_frontend_contracts():
 
     auth_context = (FRONTEND / "src/context/AuthContext.jsx").read_text(encoding="utf-8")
     check(
-        "const resetSession = () => {" in auth_context and "resetSession," in auth_context,
-        "AuthContext must expose resetSession.",
+        "const resetSession = useCallback(() => {" in auth_context and "resetSession," in auth_context,
+        "AuthContext must expose a stable resetSession callback.",
     )
+    check("useState(readInitialSession)" in auth_context, "AuthContext must load stored auth state before the first protected-route render.")
+    check("Initialize auth state from this tab's session storage" not in auth_context, "Auth initialization must not require an effect-driven second render.")
 
     print("[PASS] Frontend login validation, root route, and session-reset checks passed.")
 
