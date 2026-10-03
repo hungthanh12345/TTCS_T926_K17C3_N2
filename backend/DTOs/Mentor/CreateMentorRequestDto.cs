@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using InternshipManagementApi.Common;
 
 namespace InternshipManagementApi.DTOs.Mentor
 {
@@ -11,6 +12,7 @@ namespace InternshipManagementApi.DTOs.Mentor
 
         [MinLength(12, ErrorMessage = "Initial password must contain at least 12 characters.")]
         [MaxLength(72, ErrorMessage = "Initial password cannot exceed 72 characters.")]
+        [MaxUtf8ByteLength(72)]
         public string? Password { get; set; }
 
         [Required(ErrorMessage = "Full name is required.")]

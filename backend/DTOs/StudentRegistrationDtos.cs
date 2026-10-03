@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using InternshipManagementApi.Common;
 
 namespace InternshipManagementApi.DTOs.StudentRegistration
 {
@@ -7,7 +8,7 @@ namespace InternshipManagementApi.DTOs.StudentRegistration
         [Required, EmailAddress, MaxLength(150)]
         public string Email { get; set; } = string.Empty;
 
-        [Required, MinLength(6), MaxLength(100)]
+        [Required, MinLength(6), MaxLength(100), MaxUtf8ByteLength(72)]
         public string Password { get; set; } = string.Empty;
 
         [Required, MaxLength(50)]
