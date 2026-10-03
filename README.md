@@ -130,7 +130,7 @@ The system directly maps and enforces constraints on the 4 primary MySQL tables 
   ```json
   {
     "email": "admin@gmail.com",
-    "password": "Admin@123"
+    "password": "YOUR_ACCOUNT_PASSWORD"
   }
   ```
 - **Response (200 OK):**
@@ -164,7 +164,7 @@ The system directly maps and enforces constraints on the 4 primary MySQL tables 
   ```json
   {
     "email": "elena.mentor@system.local",
-    "password": "Password@123",
+    "password": "YOUR_UNIQUE_PASSWORD",
     "roleName": "ROLE_MENTOR",
     "status": 0
   }
@@ -350,9 +350,16 @@ Web client will start at:
 - **Web App:** `http://localhost:5173/`
 
 ### 5. Automated Tests
+The API smoke suite is read-only and needs valid test-account credentials. Run it from `backend/`; its credentials are entered at the prompt and are not stored in the repository:
 ```powershell
+cd backend
+$env:VALIDATION_ADMIN_EMAIL = Read-Host "Test admin email"
+$adminPasswordSecure = Read-Host "Test admin password" -AsSecureString
+$env:VALIDATION_ADMIN_PASSWORD = [Net.NetworkCredential]::new("", $adminPasswordSecure).Password
 python test_suite.py
 python validate_all_requirements.py
+Remove-Item Env:VALIDATION_ADMIN_EMAIL, Env:VALIDATION_ADMIN_PASSWORD
 ```
+For the optional HR-to-admin role check, set `VALIDATION_HR_EMAIL` and `VALIDATION_HR_PASSWORD` in the same terminal. Database and seed checks in the validator are opt-in and never mutate a database.
 
 Seed accounts and their shared test password are development fixtures only. Do not seed them into a public or production database. Use locally seeded accounts only on a disposable development database.

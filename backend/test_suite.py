@@ -1,216 +1,95 @@
-import urllib.request
-import urllib.error
-import json
-import sys
+"""Read-only API smoke checks; credentials and target are provided via environment."""
 
-BASE_URL = "http://localhost:5000"
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+
+BASE_URL = os.getenv("VALIDATION_API_BASE_URL", "http://localhost:5000").rstrip("/")
+ADMIN_EMAIL = os.getenv("VALIDATION_ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("VALIDATION_ADMIN_PASSWORD")
+HR_EMAIL = os.getenv("VALIDATION_HR_EMAIL")
+HR_PASSWORD = os.getenv("VALIDATION_HR_PASSWORD")
+
 
 def request(method, path, body=None, token=None):
-    url = f"{BASE_URL}{path}"
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
-        
+
     data = json.dumps(body).encode("utf-8") if body is not None else None
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    
+    req = urllib.request.Request(f"{BASE_URL}{path}", data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req) as resp:
-            content = resp.read().decode("utf-8")
-            return resp.status, json.loads(content) if content else {}
-    except urllib.error.HTTPError as e:
-        content = e.read().decode("utf-8")
+        with urllib.request.urlopen(req, timeout=10) as response:
+            content = response.read().decode("utf-8")
+            return response.status, json.loads(content) if content else {}
+    except urllib.error.HTTPError as error:
+        content = error.read().decode("utf-8")
         try:
             parsed = json.loads(content)
-        except Exception:
+        except json.JSONDecodeError:
             parsed = {"raw": content}
-        return e.code, parsed
+        return error.code, parsed
+
+
+def check(condition, description):
+    if not condition:
+        raise AssertionError(description)
+    print(f"[PASS] {description}")
+
+
+def login(email, password, expected_role):
+    status, response = request("POST", "/api/auth/login", {"email": email, "password": password})
+    check(status == 200, f"{expected_role} account can log in (HTTP {status}).")
+    data = response.get("data", {})
+    check(data.get("user", {}).get("role") == expected_role, f"Login returns the {expected_role} role.")
+    token = data.get("token")
+    check(isinstance(token, str) and bool(token), "Login response contains a Bearer token.")
+    return token
+
 
 def run_tests():
-    passed = 0
-    failed = 0
+    if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+        print("[SKIP] API smoke checks are read-only and opt-in. Set VALIDATION_ADMIN_EMAIL and VALIDATION_ADMIN_PASSWORD.")
+        return
 
-    def assert_eq(test_name, actual, expected):
-        nonlocal passed, failed
-        if actual == expected:
-            print(f"[PASS] {test_name} (Status: {actual})")
-            passed += 1
-        else:
-            print(f"[FAIL] {test_name}: expected {expected}, got {actual}")
-            failed += 1
+    parsed_url = urllib.parse.urlparse(BASE_URL)
+    check(parsed_url.scheme in {"http", "https"} and bool(parsed_url.netloc), "API base URL is an absolute HTTP(S) URL.")
 
-    print("==================================================")
-    print("STARTING FULL END-TO-END SUITE FOR BACKEND API")
-    print("==================================================")
+    admin_token = login(ADMIN_EMAIL, ADMIN_PASSWORD, "ROLE_ADMIN")
 
-    # 1. AUTHENTICATION TESTS
-    # 1.1 Login with wrong password
-    status, res = request("POST", "/api/auth/login", {"email": "admin@gmail.com", "password": "WrongPassword"})
-    assert_eq("1.1 Login with invalid credentials", status, 401)
+    status, _ = request("POST", "/api/auth/login", {"email": ADMIN_EMAIL, "password": "invalid-test-password"})
+    check(status == 401, f"Invalid password is rejected (HTTP {status}).")
 
-    # 1.2 Login with valid admin credentials
-    status, res = request("POST", "/api/auth/login", {"email": "admin@gmail.com", "password": "Admin@123"})
-    assert_eq("1.2 Login with valid Admin credentials", status, 200)
-    admin_token = res["data"]["token"]
-    assert res["data"]["user"]["role"] == "ROLE_ADMIN", "Admin role mismatch"
+    status, response = request("GET", "/api/admin/users")
+    check(status == 401, f"Admin endpoint rejects a missing token (HTTP {status}).")
 
-    # 2. AUTHORIZATION TESTS
-    # 2.1 Access /api/admin/users without token
-    status, res = request("GET", "/api/admin/users")
-    assert_eq("2.1 Access admin endpoint without token", status, 401)
+    status, response = request("GET", "/api/admin/users", token=admin_token)
+    check(status == 200 and isinstance(response.get("data"), list), f"Admin can read users (HTTP {status}).")
 
-    # 2.2 Access /api/admin/users with Admin token
-    status, res = request("GET", "/api/admin/users", token=admin_token)
-    assert_eq("2.2 Access admin endpoint with Admin token", status, 200)
-    print(f"    -> Found {len(res['data'])} existing users")
+    status, response = request(
+        "POST",
+        "/api/auth/login",
+        {"email": "invalid-email", "password": "short"},
+    )
+    check(status == 400 and response.get("success") is False, f"Login request validation returns 400 (HTTP {status}).")
 
-    # 3. USER MANAGEMENT (ADMIN)
-    # 3.1 Create new HR user
-    hr_email = "alex.hr@system.local"
-    status, res = request("POST", "/api/admin/users", {
-        "email": hr_email,
-        "password": "Password@123",
-        "roleName": "ROLE_HR",
-        "status": 0 # ACTIVE
-    }, token=admin_token)
-    if status == 409: # Already exists from previous run
-        print(f"    (User {hr_email} already exists, continuing)")
+    if HR_EMAIL and HR_PASSWORD:
+        hr_token = login(HR_EMAIL, HR_PASSWORD, "ROLE_HR")
+        status, _ = request("GET", "/api/admin/users", token=hr_token)
+        check(status == 403, f"HR is denied admin-only access (HTTP {status}).")
     else:
-        assert_eq("3.1 Create HR user account", status, 201)
+        print("[SKIP] HR-to-admin authorization check: set VALIDATION_HR_EMAIL and VALIDATION_HR_PASSWORD.")
 
-    # 3.2 Create new Mentor user
-    mentor_email = "elena.mentor@system.local"
-    status, res = request("POST", "/api/admin/users", {
-        "email": mentor_email,
-        "password": "Password@123",
-        "roleName": "ROLE_MENTOR"
-    }, token=admin_token)
-    if status == 409:
-        print(f"    (User {mentor_email} already exists, continuing)")
-        # Look up existing id
-        _, users_res = request("GET", "/api/admin/users", token=admin_token)
-        mentor_user_id = next(u["id"] for u in users_res["data"] if u["email"] == mentor_email)
-    else:
-        assert_eq("3.2 Create Mentor user account", status, 201)
-        mentor_user_id = res["data"]["id"]
+    print("All configured read-only API checks passed.")
 
-    # 3.3 Create new Student user
-    student_email = "michael.student@system.local"
-    status, res = request("POST", "/api/admin/users", {
-        "email": student_email,
-        "password": "Password@123",
-        "roleName": "ROLE_STUDENT"
-    }, token=admin_token)
-    if status == 409:
-        print(f"    (User {student_email} already exists, continuing)")
-        _, users_res = request("GET", "/api/admin/users", token=admin_token)
-        student_user_id = next(u["id"] for u in users_res["data"] if u["email"] == student_email)
-    else:
-        assert_eq("3.3 Create Student user account", status, 201)
-        student_user_id = res["data"]["id"]
-
-    # 4. HR LOGIN & RBAC FORBIDDEN TEST
-    # 4.1 Login as HR user
-    status, res = request("POST", "/api/auth/login", {"email": hr_email, "password": "Password@123"})
-    assert_eq("4.1 Login as new HR user", status, 200)
-    hr_token = res["data"]["token"]
-    assert res["data"]["user"]["role"] == "ROLE_HR", "Expected ROLE_HR"
-
-    # 4.2 HR user attempts to access /api/admin/users -> 403 Forbidden
-    status, res = request("GET", "/api/admin/users", token=hr_token)
-    assert_eq("4.2 RBAC: HR access to Admin endpoint", status, 403)
-
-    # 5. MENTOR MANAGEMENT (HR)
-    # 5.1 Create Mentor profile
-    status, res = request("POST", "/api/hr/mentors", {
-        "userId": mentor_user_id,
-        "fullName": "Elena Rostova",
-        "phoneNumber": "0988776655",
-        "department": "AI & Cloud Engineering",
-        "specialization": "Distributed Systems & Machine Learning"
-    }, token=hr_token)
-    if status == 409:
-        print(f"    (Mentor profile for user {mentor_user_id} already exists, fetching)")
-        _, mentors_res = request("GET", "/api/hr/mentors", token=hr_token)
-        mentor_id = next(m["id"] for m in mentors_res["data"] if m["userId"] == mentor_user_id)
-    else:
-        assert_eq("5.1 Create Mentor profile", status, 201)
-        mentor_id = res["data"]["id"]
-
-    # 5.2 Retrieve all Mentors
-    status, res = request("GET", "/api/hr/mentors", token=hr_token)
-    assert_eq("5.2 Retrieve all Mentors", status, 200)
-    print(f"    -> Retrieved {len(res['data'])} mentors")
-
-    # 6. STUDENT MANAGEMENT (HR)
-    # 6.1 Create Student Profile
-    student_code = "STU2026888"
-    status, res = request("POST", "/api/hr/students", {
-        "studentCode": student_code,
-        "fullName": "Michael Scott",
-        "phoneNumber": "0911223344",
-        "university": "Hanoi University of Science and Technology",
-        "major": "Computer Science",
-        "userId": student_user_id
-    }, token=hr_token)
-    if status == 409:
-        print(f"    (Student profile {student_code} already exists, searching)")
-        _, s_res = request("GET", f"/api/hr/students/search?keyword={student_code}", token=hr_token)
-        student_id = s_res["data"]["items"][0]["id"]
-    else:
-        assert_eq("6.1 Create Student profile", status, 201)
-        student_id = res["data"]["id"]
-
-    # 6.2 Get Student by ID
-    status, res = request("GET", f"/api/hr/students/{student_id}", token=hr_token)
-    assert_eq("6.2 Get Student details by ID", status, 200)
-    assert res["data"]["studentCode"] == student_code
-
-    # 6.3 Update Student profile
-    status, res = request("PUT", f"/api/hr/students/{student_id}", {
-        "fullName": "Michael Gary Scott",
-        "phoneNumber": "0911223399",
-        "university": "Hanoi University of Science and Technology",
-        "major": "Software Architecture",
-        "studentCode": student_code,
-        "userId": student_user_id
-    }, token=hr_token)
-    assert_eq("6.3 Update Student profile", status, 200)
-    assert res["data"]["fullName"] == "Michael Gary Scott"
-
-    # 6.4 Assign Mentor to Student
-    status, res = request("PUT", f"/api/hr/students/{student_id}/assign-mentor", {
-        "mentorId": mentor_id
-    }, token=hr_token)
-    assert_eq("6.4 Assign Mentor to Student", status, 200)
-    assert res["data"]["mentorId"] == mentor_id, "MentorId should match assigned mentor"
-    assert res["data"]["mentor"]["fullName"] == "Elena Rostova", "Mentor fullName should match"
-
-    # 6.5 Search Students with filters & pagination
-    status, res = request("GET", "/api/hr/students/search?university=Hanoi&page=1&pageSize=5", token=hr_token)
-    assert_eq("6.5 Search Students with filters & pagination", status, 200)
-    assert res["data"]["totalItems"] >= 1, "Should find at least 1 student"
-    print(f"    -> Search found {res['data']['totalItems']} total items, Page {res['data']['pageNumber']}/{res['data']['totalPages']}")
-
-    # 7. VALIDATION & ERROR HANDLING
-    # 7.1 Input validation error (empty email and short password)
-    status, res = request("POST", "/api/auth/login", {"email": "invalid-email", "password": "123"})
-    assert_eq("7.1 Validation failure response (400 Bad Request)", status, 400)
-    assert res["success"] is False
-
-    # 7.2 Non-existent resource (404 Not Found)
-    status, res = request("GET", "/api/hr/students/999999", token=hr_token)
-    assert_eq("7.2 Non-existent student response (404 Not Found)", status, 404)
-    assert res["success"] is False
-
-    print("==================================================")
-    print(f"RESULTS: {passed} PASSED, {failed} FAILED")
-    print("==================================================")
-    if failed > 0:
-        sys.exit(1)
 
 if __name__ == "__main__":
-    run_tests()
+    try:
+        run_tests()
+    except (AssertionError, OSError, ValueError, urllib.error.URLError) as error:
+        print(f"[FAIL] {error}", file=sys.stderr)
+        sys.exit(1)

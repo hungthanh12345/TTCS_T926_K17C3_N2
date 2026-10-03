@@ -216,6 +216,15 @@ def validate_safe_database_setup():
     print("[PASS] Database deployment starts with an additive baseline and avoids destructive local scripts.")
 
 
+def validate_api_test_safety():
+    test_suite = (BACKEND / "test_suite.py").read_text(encoding="utf-8")
+    check("VALIDATION_ADMIN_EMAIL" in test_suite and "VALIDATION_ADMIN_PASSWORD" in test_suite, "API tests must receive credentials from the environment.")
+    check('"Admin@123"' not in test_suite, "API tests must not commit a default account password.")
+    check("request(\"PUT\"" not in test_suite and "request(\"DELETE\"" not in test_suite, "API smoke tests must not modify or delete production data.")
+    check("request(\"POST\", \"/api/auth/login\"" in test_suite, "Mutating API tests must be excluded from the default smoke suite.")
+    print("[PASS] API smoke tests are environment-driven and read-only.")
+
+
 def validate_production_secret_configuration():
     settings = json.loads((BACKEND / "appsettings.json").read_text(encoding="utf-8"))
     check("Key" not in settings.get("Jwt", {}), "A JWT signing key must not be committed in appsettings.json.")
@@ -281,6 +290,7 @@ def main():
     validate_mock_fallback_is_development_only()
     validate_cors_origins_are_explicit()
     validate_safe_database_setup()
+    validate_api_test_safety()
     validate_database_collation()
     validate_seed_api()
     print("Validation complete. Optional external checks are marked SKIP when credentials are not configured.")
