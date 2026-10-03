@@ -1,5 +1,6 @@
 import api from './api';
 import { getStoredMentors, saveStoredMentors, getStoredStudents } from './mockData';
+import { isMockModeEnabled } from './mockMode';
 
 export const mentorService = {
   /**
@@ -30,7 +31,7 @@ export const mentorService = {
             : m.activeMentees || 0,
       }));
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         let mentors = getStoredMentors();
         const students = getStoredStudents();
 
@@ -87,7 +88,7 @@ export const mentorService = {
             : m.activeMentees || 0,
       };
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const mentors = getStoredMentors();
         const found = mentors.find((m) => m.id === id);
         if (!found) throw new Error('Không tìm thấy Mentor');
@@ -120,7 +121,7 @@ export const mentorService = {
         activeMentees: resData.assignedStudentsCount || 0,
       };
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const mentors = getStoredMentors();
 
         const newMentor = {
@@ -153,7 +154,7 @@ export const mentorService = {
       const response = await api.delete(`/hr/mentors/${id}`);
       return response.data;
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const mentors = getStoredMentors();
         const updated = mentors.filter((m) => m.id !== id);
         saveStoredMentors(updated);

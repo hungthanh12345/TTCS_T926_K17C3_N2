@@ -176,6 +176,23 @@ def validate_frontend_contracts():
     print("[PASS] Frontend login validation, root route, and session-reset checks passed.")
 
 
+def validate_mock_fallback_is_development_only():
+    mock_mode = (FRONTEND / "src/services/mockMode.js").read_text(encoding="utf-8")
+    check("import.meta.env.DEV" in mock_mode, "Mock mode must be restricted to development builds.")
+    check("VITE_ENABLE_MOCK_DATA === 'true'" in mock_mode, "Mock mode must require explicit opt-in.")
+
+    auth_service = (FRONTEND / "src/services/authService.js").read_text(encoding="utf-8")
+    check("demo_jwt_token_" not in auth_service, "The login API must not fabricate a JWT when the response is incomplete.")
+    check("|| 'ROLE_ADMIN'" not in auth_service, "Login must not default an unknown account to administrator.")
+    check("error.isAxiosError && !error.response && isMockModeEnabled" in auth_service, "Mock login must only handle opted-in network failures.")
+
+    for relative_path in ("src/services/userService.js", "src/services/mentorService.js", "src/services/studentService.js"):
+        service = (FRONTEND / relative_path).read_text(encoding="utf-8")
+        check("if (!error.response)" not in service, f"{relative_path} must not silently substitute mock data in production.")
+        check("!error.response && isMockModeEnabled" in service, f"{relative_path} mock behavior must be opt-in.")
+    print("[PASS] Client-side mock login and data fallbacks require explicit development-only opt-in.")
+
+
 def validate_production_secret_configuration():
     settings = json.loads((BACKEND / "appsettings.json").read_text(encoding="utf-8"))
     check("Key" not in settings.get("Jwt", {}), "A JWT signing key must not be committed in appsettings.json.")
@@ -233,6 +250,7 @@ def main():
     validate_exception_sanitization()
     validate_password_hashing_and_seed_fixtures()
     validate_frontend_contracts()
+    validate_mock_fallback_is_development_only()
     validate_database_collation()
     validate_seed_api()
     print("Validation complete. Optional external checks are marked SKIP when credentials are not configured.")

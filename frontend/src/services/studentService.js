@@ -1,5 +1,6 @@
 import api from './api';
 import { getStoredStudents, saveStoredStudents, getStoredMentors } from './mockData';
+import { isMockModeEnabled } from './mockMode';
 
 export const studentService = {
   /**
@@ -45,7 +46,7 @@ export const studentService = {
         status: s.mentorId ? 'ACTIVE' : 'PENDING_ASSIGNMENT',
       }));
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         let students = getStoredStudents();
 
         if (params.search) {
@@ -99,7 +100,7 @@ export const studentService = {
         mentor: s.mentor || s.assignedMentor || null,
       };
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const students = getStoredStudents();
         const found = students.find((s) => s.id === id);
         if (!found) throw new Error('Student not found');
@@ -127,7 +128,7 @@ export const studentService = {
       const response = await api.post('/hr/students', payload);
       return response.data?.data || response.data;
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const students = getStoredStudents();
         
         if (students.some((s) => s.studentCode.toLowerCase() === studentData.studentCode.trim().toLowerCase())) {
@@ -182,7 +183,7 @@ export const studentService = {
         assignedMentor: resData.mentor || resData.assignedMentor,
       };
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const students = getStoredStudents();
         const index = students.findIndex((s) => s.id === id);
         if (index === -1) throw new Error('Không tìm thấy sinh viên');
@@ -223,7 +224,7 @@ export const studentService = {
         assignedMentor: resData.mentor || resData.assignedMentor,
       };
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const students = getStoredStudents();
         const mentors = getStoredMentors();
 
@@ -262,7 +263,7 @@ export const studentService = {
       const response = await api.delete(`/hr/students/${id}`);
       return response.data;
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const students = getStoredStudents();
         const updated = students.filter((s) => s.id !== id);
         saveStoredStudents(updated);

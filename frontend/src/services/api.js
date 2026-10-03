@@ -46,7 +46,7 @@ api.interceptors.response.use(
       }
     } else if (error.request) {
       // Network error or backend offline
-      console.warn('Backend server is unreachable at http://localhost:5000/api. Verifying mock fallback mode.');
+      console.warn('The configured API endpoint is unreachable.');
     }
     return Promise.reject(error);
   }

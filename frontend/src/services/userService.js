@@ -1,5 +1,6 @@
 import api from './api';
 import { getStoredUsers, saveStoredUsers } from './mockData';
+import { isMockModeEnabled } from './mockMode';
 
 export const userService = {
   /**
@@ -11,7 +12,7 @@ export const userService = {
       const response = await api.get('/admin/users', { params });
       return response.data?.data || response.data;
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         // Fallback to local storage persistence
         let users = getStoredUsers();
         if (params.role) {
@@ -77,7 +78,7 @@ export const userService = {
       const response = await api.post('/admin/users', payload);
       return response.data?.data || response.data;
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         // Local fallback creation
         const users = getStoredUsers();
         
@@ -114,7 +115,7 @@ export const userService = {
       const response = await api.delete(`/admin/users/${id}`);
       return response.data;
     } catch (error) {
-      if (!error.response) {
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         const users = getStoredUsers();
         const updated = users.filter((u) => String(u.id) !== String(id));
         saveStoredUsers(updated);

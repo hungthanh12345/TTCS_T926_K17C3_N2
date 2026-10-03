@@ -1,5 +1,6 @@
 import api from './api';
 import { getStoredUsers } from './mockData';
+import { isMockModeEnabled } from './mockMode';
 
 const saveSession = (token, user) => {
   sessionStorage.setItem('token', token);
@@ -34,22 +35,31 @@ export const authService = {
     try {
       const response = await api.post('/auth/login', { email, password });
       const payload = response.data?.data || response.data;
-      
-      const token = payload.token || payload.accessToken || 'demo_jwt_token_' + Date.now();
-      const rawUser = payload.user || payload;
+
+      const token = payload?.token || payload?.accessToken;
+      const rawUser = payload?.user || payload;
+      const allowedRoles = new Set(['ROLE_ADMIN', 'ROLE_HR', 'ROLE_MENTOR', 'ROLE_STUDENT']);
+      if (typeof token !== 'string' || !token.trim() || !allowedRoles.has(rawUser?.role)) {
+        throw new Error('API trả về thông tin đăng nhập không hợp lệ.');
+      }
+
       const user = {
-        userId: rawUser.userId || rawUser.id || payload.userId || 'USR-001',
-        email: rawUser.email || payload.email || email,
-        role: rawUser.role || payload.role || 'ROLE_ADMIN',
-        status: rawUser.status || payload.status || 'ACTIVE',
-        fullName: rawUser.fullName || rawUser.name || email.split('@')[0],
+        userId: rawUser?.userId || rawUser?.id || payload?.userId,
+        email: rawUser?.email || payload?.email,
+        role: rawUser?.role,
+        status: rawUser?.status || payload?.status || 'ACTIVE',
+        fullName: rawUser?.fullName || rawUser?.name || email.split('@')[0],
       };
+
+      if (user.userId == null || !user.email) {
+        throw new Error('API trả về hồ sơ người dùng không đầy đủ.');
+      }
 
       saveSession(token, user);
       return { token, user };
     } catch (error) {
-      // If network error (backend server offline), check mock users for seamless developer demo
-      if (!error.response) {
+      // An offline demo is opt-in and restricted to Vite development mode.
+      if (error.isAxiosError && !error.response && isMockModeEnabled) {
         console.info('Backend unreachable, testing against mock credential repository.');
         const mockUsers = getStoredUsers();
         const matched = mockUsers.find(
@@ -94,8 +104,7 @@ export const authService = {
         throw new Error('Invalid email or password. Please verify your credentials.');
       }
 
-      // Re-throw server error
-      const message = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      const message = error.response?.data?.message || error.message || 'Login failed. Please check your credentials.';
       throw new Error(message);
     }
   },
