@@ -175,6 +175,16 @@ def validate_frontend_contracts():
     check("useState(readInitialSession)" in auth_context, "AuthContext must load stored auth state before the first protected-route render.")
     check("Initialize auth state from this tab's session storage" not in auth_context, "Auth initialization must not require an effect-driven second render.")
 
+    profile_controller = (BACKEND / "Controllers/StudentProfileController.cs").read_text(encoding="utf-8")
+    student_repository = (BACKEND / "Repositories/StudentRepository.cs").read_text(encoding="utf-8")
+    dashboard = (FRONTEND / "src/views/student/StudentDashboardView.jsx").read_text(encoding="utf-8")
+    check('[Route("api/student/profile")]' in profile_controller and '[Authorize(Roles = "ROLE_STUDENT")]' in profile_controller,
+          "Student profile API must be restricted to student accounts.")
+    check("GetStudentByUserIdAsync(userId)" in profile_controller and "student.UserId == userId" in student_repository,
+          "Student profile API must scope the record to the authenticated user ID.")
+    check("studentService.getMyProfile()" in dashboard and "allStudents[0]" not in dashboard,
+          "Student dashboard must use its own profile endpoint without a cross-account fallback.")
+
     print("[PASS] Frontend login validation, root route, and session-reset checks passed.")
 
 

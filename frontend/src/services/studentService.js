@@ -4,6 +4,27 @@ import { isMockModeEnabled } from './mockMode';
 
 export const studentService = {
   /**
+   * Get the profile linked to the authenticated student account.
+   * GET /api/student/profile
+   */
+  async getMyProfile() {
+    try {
+      const response = await api.get('/student/profile');
+      const student = response.data?.data || response.data;
+      return {
+        ...student,
+        phone: student.phoneNumber || student.phone || '',
+        phoneNumber: student.phoneNumber || student.phone || '',
+        email: student.user?.email || student.email || '',
+        assignedMentor: student.mentor || student.assignedMentor || null,
+        mentor: student.mentor || student.assignedMentor || null,
+      };
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Không thể tải hồ sơ sinh viên của bạn.');
+    }
+  },
+
+  /**
    * Get all students with filtering, search, and pagination
    * GET /api/hr/students
    */

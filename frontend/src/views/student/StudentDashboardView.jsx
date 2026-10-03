@@ -29,11 +29,8 @@ export const StudentDashboardView = () => {
   const loadStudentData = async () => {
     setIsLoading(true);
     try {
-      const allStudents = await studentService.getStudents();
-      const matched =
-        allStudents.find((s) => s.email?.toLowerCase() === user?.email?.toLowerCase()) ||
-        allStudents[0];
-      setProfile(matched);
+      const studentProfile = await studentService.getMyProfile();
+      setProfile(studentProfile);
     } catch (err) {
       console.error(err);
     } finally {

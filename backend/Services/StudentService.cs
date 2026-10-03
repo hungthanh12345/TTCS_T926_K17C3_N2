@@ -11,6 +11,7 @@ namespace InternshipManagementApi.Services
     {
         Task<StudentResponseDto> CreateStudentAsync(CreateStudentRequestDto request);
         Task<StudentResponseDto> GetStudentByIdAsync(int id);
+        Task<StudentResponseDto> GetStudentByUserIdAsync(int userId);
         Task<StudentResponseDto> UpdateStudentAsync(int id, UpdateStudentRequestDto request);
         Task<PagedResult<StudentResponseDto>> SearchStudentsAsync(StudentSearchFilterDto filter);
         Task<StudentResponseDto> AssignMentorAsync(int studentId, AssignMentorRequestDto request);
@@ -97,6 +98,17 @@ namespace InternshipManagementApi.Services
             if (student == null)
             {
                 throw new NotFoundException($"Student with ID {id} not found.");
+            }
+
+            return MapToResponseDto(student);
+        }
+
+        public async Task<StudentResponseDto> GetStudentByUserIdAsync(int userId)
+        {
+            var student = await _studentRepository.GetByUserIdWithDetailsAsync(userId);
+            if (student == null)
+            {
+                throw new NotFoundException("Student profile for the authenticated account was not found.");
             }
 
             return MapToResponseDto(student);

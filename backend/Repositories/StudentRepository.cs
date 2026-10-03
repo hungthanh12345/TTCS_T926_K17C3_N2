@@ -10,6 +10,7 @@ namespace InternshipManagementApi.Repositories
     {
         Task<Student?> GetByIdAsync(int id);
         Task<Student?> GetByIdWithDetailsAsync(int id);
+        Task<Student?> GetByUserIdWithDetailsAsync(int userId);
         Task<Student?> GetByStudentCodeAsync(string studentCode);
         Task<bool> ExistsByStudentCodeAsync(string studentCode, int? excludeId = null);
         Task<bool> ExistsByUserIdAsync(int userId, int? excludeId = null);
@@ -39,6 +40,15 @@ namespace InternshipManagementApi.Repositories
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
                 .FirstOrDefaultAsync(s => s.Id == id);
+        }
+
+        public async Task<Student?> GetByUserIdWithDetailsAsync(int userId)
+        {
+            return await _context.Students
+                .AsNoTracking()
+                .Include(s => s.User)
+                .Include(s => s.Mentor)
+                .FirstOrDefaultAsync(student => student.UserId == userId);
         }
 
         public async Task<Student?> GetByStudentCodeAsync(string studentCode)
