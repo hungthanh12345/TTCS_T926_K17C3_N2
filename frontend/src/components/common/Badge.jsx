@@ -19,12 +19,6 @@ const ROLE_MAP = {
     style: 'bg-indigo-50 text-indigo-700 border-indigo-200/80 ring-indigo-500/10',
     dot: 'bg-indigo-500',
   },
-  '1': {
-    label: 'Quản trị viên',
-    style: 'bg-indigo-50 text-indigo-700 border-indigo-200/80 ring-indigo-500/10',
-    dot: 'bg-indigo-500',
-  },
-
   ROLE_HR: {
     label: 'Nhân sự (HR)',
     style: 'bg-purple-50 text-purple-700 border-purple-200/80 ring-purple-500/10',
@@ -35,12 +29,6 @@ const ROLE_MAP = {
     style: 'bg-purple-50 text-purple-700 border-purple-200/80 ring-purple-500/10',
     dot: 'bg-purple-500',
   },
-  '2': {
-    label: 'Nhân sự (HR)',
-    style: 'bg-purple-50 text-purple-700 border-purple-200/80 ring-purple-500/10',
-    dot: 'bg-purple-500',
-  },
-
   ROLE_MENTOR: {
     label: 'Mentor Doanh nghiệp',
     style: 'bg-amber-50 text-amber-700 border-amber-200/80 ring-amber-500/10',
@@ -51,23 +39,12 @@ const ROLE_MAP = {
     style: 'bg-amber-50 text-amber-700 border-amber-200/80 ring-amber-500/10',
     dot: 'bg-amber-500',
   },
-  '3': {
-    label: 'Mentor Doanh nghiệp',
-    style: 'bg-amber-50 text-amber-700 border-amber-200/80 ring-amber-500/10',
-    dot: 'bg-amber-500',
-  },
-
   ROLE_STUDENT: {
     label: 'Thực tập sinh',
     style: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 ring-emerald-500/10',
     dot: 'bg-emerald-500',
   },
   4: {
-    label: 'Thực tập sinh',
-    style: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 ring-emerald-500/10',
-    dot: 'bg-emerald-500',
-  },
-  '4': {
     label: 'Thực tập sinh',
     style: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 ring-emerald-500/10',
     dot: 'bg-emerald-500',
