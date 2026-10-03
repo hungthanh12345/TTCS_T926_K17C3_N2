@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using MySqlConnector;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +22,7 @@ if (!string.IsNullOrEmpty(dynamicPort))
 }
 
 // 1. Configure Database Connection (MySQL via Pomelo EF Core)
-var connectionString = ResolveConnectionString(builder.Configuration);
+var connectionString = ResolveConnectionString(builder.Configuration, builder.Environment.IsProduction());
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -282,7 +283,7 @@ app.MapControllers();
 app.Run();
 
 // Helper: Connection String Resolver supporting ADO.NET and URI formats
-static string ResolveConnectionString(IConfiguration configuration)
+static string ResolveConnectionString(IConfiguration configuration, bool requireTls)
 {
     var rawConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
         ?? Environment.GetEnvironmentVariable("MYSQL_URL")
@@ -298,6 +299,7 @@ static string ResolveConnectionString(IConfiguration configuration)
         rawConnection.StartsWith("mysqls://", StringComparison.OrdinalIgnoreCase))
     {
         var uri = new Uri(rawConnection);
+        var uriRequiresTls = requireTls || string.Equals(uri.Scheme, "mysqls", StringComparison.OrdinalIgnoreCase);
         var userInfo = uri.UserInfo.Split(':');
         var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
         var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
@@ -305,23 +307,38 @@ static string ResolveConnectionString(IConfiguration configuration)
         var port = uri.Port > 0 ? uri.Port : 3306;
         var database = uri.AbsolutePath.TrimStart('/');
 
-        return $"Server={host};Port={port};Database={database};User={username};Password={password};CharSet=utf8mb4;SslMode=Preferred;AllowPublicKeyRetrieval=True;";
+        var uriBuilder = new MySqlConnectionStringBuilder
+        {
+            Server = host,
+            Port = (uint)port,
+            Database = database,
+            UserID = username,
+            Password = password,
+            CharacterSet = "utf8mb4",
+            SslMode = uriRequiresTls ? MySqlSslMode.Required : MySqlSslMode.Preferred,
+            AllowPublicKeyRetrieval = true
+        };
+        return uriBuilder.ConnectionString;
     }
 
-    // Append cloud-friendly MySQL flags if missing
-    var connBuilder = new StringBuilder(rawConnection.TrimEnd(';'));
-    if (!rawConnection.Contains("CharSet=", StringComparison.OrdinalIgnoreCase))
+    // Normalize MySQL options and require encrypted transport in production.
+    var connBuilder = new MySqlConnectionStringBuilder(rawConnection);
+    if (!connBuilder.ContainsKey("Character Set") && !connBuilder.ContainsKey("CharSet"))
     {
-        connBuilder.Append(";CharSet=utf8mb4");
+        connBuilder.CharacterSet = "utf8mb4";
     }
-    if (!rawConnection.Contains("AllowPublicKeyRetrieval=", StringComparison.OrdinalIgnoreCase))
+    if (!connBuilder.ContainsKey("AllowPublicKeyRetrieval"))
     {
-        connBuilder.Append(";AllowPublicKeyRetrieval=True");
+        connBuilder.AllowPublicKeyRetrieval = true;
     }
-    if (!rawConnection.Contains("SslMode=", StringComparison.OrdinalIgnoreCase))
+    if (requireTls)
     {
-        connBuilder.Append(";SslMode=Preferred");
+        connBuilder.SslMode = MySqlSslMode.Required;
+    }
+    else if (!connBuilder.ContainsKey("SslMode"))
+    {
+        connBuilder.SslMode = MySqlSslMode.Preferred;
     }
 
-    return connBuilder.ToString();
+    return connBuilder.ConnectionString;
 }

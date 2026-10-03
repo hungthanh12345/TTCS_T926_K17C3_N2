@@ -30,7 +30,7 @@ services:
 
       # MySQL Connection String:
       # Obtain from Free Aiven MySQL / TiDB Cloud / Clever Cloud / Railway
-      # Example: Server=mysql-xxx.aivencloud.com;Port=12345;Database=defaultdb;User=avnadmin;Password=secret;CharSet=utf8mb4;SslMode=Preferred;
+      # Example: Server=mysql-xxx.aivencloud.com;Port=12345;Database=defaultdb;User=avnadmin;Password=secret;CharSet=utf8mb4;SslMode=Required;
       # Or URI format: mysql://avnadmin:secret@mysql-xxx.aivencloud.com:12345/defaultdb
       - key: ConnectionStrings__DefaultConnection
         sync: false

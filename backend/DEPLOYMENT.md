@@ -75,7 +75,7 @@ Vì gói Free của Render chỉ cung cấp PostgreSQL, bạn có thể lựa ch
 5. Trong mục **Environment Variables**, thêm các biến sau:
    | Key | Value | Ghi chú |
    |---|---|---|
-   | `ConnectionStrings__DefaultConnection` | `Server=host;Port=port;Database=defaultdb;User=user;Password=pass;CharSet=utf8mb4;SslMode=Preferred;AllowPublicKeyRetrieval=True;` *(hoặc URI `mysql://...` từ Aiven)* | Kết nối MySQL |
+   | `ConnectionStrings__DefaultConnection` | `Server=host;Port=port;Database=defaultdb;User=user;Password=pass;CharSet=utf8mb4;SslMode=Required;AllowPublicKeyRetrieval=True;` *(hoặc URI `mysql://...` từ Aiven; production backend luôn bắt buộc TLS)* | Kết nối MySQL |
    | `CORS_ALLOWED_ORIGINS` | `https://your-project.vercel.app` | Danh sách chính xác các origin, phân tách bằng dấu phẩy; thêm từng domain preview riêng nếu cần. Không dùng wildcard. |
    | `ASPNETCORE_ENVIRONMENT` | `Production` | Chế độ Production |
    | `PORT` | `8080` | Port container |
