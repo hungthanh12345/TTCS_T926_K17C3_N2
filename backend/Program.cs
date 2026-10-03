@@ -250,12 +250,32 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Health Check Endpoint for Render / Railway / Docker
-app.MapGet("/health", () => Results.Ok(new
+app.MapGet("/health", async (AppDbContext db, CancellationToken cancellationToken) =>
 {
-    status = "Healthy",
-    service = "InternshipManagementApi",
-    timestamp = DateTime.UtcNow
-}));
+    try
+    {
+        var databaseIsAvailable = await db.Database.CanConnectAsync(cancellationToken);
+        var status = databaseIsAvailable ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable;
+        return Results.Json(new
+        {
+            status = databaseIsAvailable ? "Healthy" : "Unhealthy",
+            service = "InternshipManagementApi",
+            database = databaseIsAvailable ? "Available" : "Unavailable",
+            timestamp = DateTime.UtcNow
+        }, statusCode: status);
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogWarning(exception, "Database readiness check failed.");
+        return Results.Json(new
+        {
+            status = "Unhealthy",
+            service = "InternshipManagementApi",
+            database = "Unavailable",
+            timestamp = DateTime.UtcNow
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
 
 app.MapControllers();
 

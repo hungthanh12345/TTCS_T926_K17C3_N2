@@ -88,7 +88,7 @@ Vì gói Free của Render chỉ cung cấp PostgreSQL, bạn có thể lựa ch
    👉 **`https://internship-management-api.onrender.com`**
 9. Kiểm tra:
    * Mở `https://internship-management-api.onrender.com` -> Giao diện Swagger UI tương tác trực quan.
-   * Mở `https://internship-management-api.onrender.com/health` -> Trả về `{"status":"Healthy"}`.
+   * Mở `https://internship-management-api.onrender.com/health` -> Trả HTTP 200 khi API kết nối được MySQL hoặc HTTP 503 khi database chưa sẵn sàng. Phản hồi không chứa thông tin kết nối.
 
 ---
 

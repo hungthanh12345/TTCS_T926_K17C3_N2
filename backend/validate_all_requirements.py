@@ -270,6 +270,17 @@ def validate_exception_sanitization():
     print("[PASS] Generic server exceptions are logged but not exposed to API clients.")
 
 
+def validate_database_readiness_health_check():
+    program = (BACKEND / "Program.cs").read_text(encoding="utf-8")
+    check("db.Database.CanConnectAsync(cancellationToken)" in program,
+          "The health endpoint must verify that the configured database is reachable.")
+    check("StatusCodes.Status503ServiceUnavailable" in program,
+          "The health endpoint must report an unavailable database with HTTP 503.")
+    check('app.Logger.LogWarning(exception, "Database readiness check failed.")' in program,
+          "Database health failures must be logged without exposing details in the response.")
+    print("[PASS] Health endpoint reports database readiness without leaking connection details.")
+
+
 def validate_password_hashing_and_seed_fixtures():
     hasher = (BACKEND / "Services/BcryptPasswordHasher.cs").read_text(encoding="utf-8")
     check("BCrypt.Net.BCrypt.Verify(password, passwordHash)" in hasher, "Passwords must be checked using BCrypt.")
@@ -297,6 +308,7 @@ def main():
     validate_connection_charset()
     validate_production_secret_configuration()
     validate_exception_sanitization()
+    validate_database_readiness_health_check()
     validate_password_hashing_and_seed_fixtures()
     validate_frontend_contracts()
     validate_mock_fallback_is_development_only()
