@@ -15,6 +15,7 @@ namespace InternshipManagementApi.Data
         public DbSet<Student> Students => Set<Student>();
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<InternshipProgram> InternshipPrograms => Set<InternshipProgram>();
+        public DbSet<StudentDocument> StudentDocuments => Set<StudentDocument>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -144,6 +145,27 @@ namespace InternshipManagementApi.Data
                     .WithMany(d => d.Programs)
                     .HasForeignKey(e => e.DepartmentId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<StudentDocument>(entity =>
+            {
+                entity.ToTable("student_documents");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(e => e.DocumentType).HasColumnName("document_type").HasMaxLength(40).IsRequired();
+                entity.Property(e => e.OriginalFileName).HasColumnName("original_file_name").HasMaxLength(255).IsRequired();
+                entity.Property(e => e.StoredFileName).HasColumnName("stored_file_name").HasMaxLength(255);
+                entity.Property(e => e.ContentType).HasColumnName("content_type").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.SizeBytes).HasColumnName("size_bytes").IsRequired();
+                entity.Property(e => e.FileContent).HasColumnName("file_content").HasColumnType("longblob");
+                entity.Property(e => e.UploadedAt).HasColumnName("uploaded_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.HasIndex(e => new { e.StudentId, e.UploadedAt });
+                entity.HasOne(e => e.Student)
+                    .WithMany()
+                    .HasForeignKey(e => e.StudentId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
 

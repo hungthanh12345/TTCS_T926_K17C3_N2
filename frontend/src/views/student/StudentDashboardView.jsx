@@ -14,6 +14,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import TableSkeleton from '../../components/common/TableSkeleton';
+import StudentDocumentsPanel from '../../components/student/StudentDocumentsPanel';
 
 export const StudentDashboardView = () => {
   const { user } = useAuth();
@@ -206,6 +207,7 @@ export const StudentDashboardView = () => {
             </div>
           </div>
         )}
+        {user?.role === 'ROLE_STUDENT' && <StudentDocumentsPanel />}
       </div>
     </DashboardLayout>
   );
