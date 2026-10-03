@@ -188,6 +188,29 @@ def validate_frontend_contracts():
     print("[PASS] Frontend login validation, root route, and session-reset checks passed.")
 
 
+def validate_dashboard_roles_match_api_policies():
+    app_code = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
+    dashboard_routes = {
+        "/mentor/students": ("ROLE_MENTOR", BACKEND / "Controllers/MentorTasksController.cs"),
+        "/student/profile": ("ROLE_STUDENT", BACKEND / "Controllers/StudentProfileController.cs"),
+    }
+    for route_path, (required_role, controller_path) in dashboard_routes.items():
+        route_match = re.search(
+            rf'path="{re.escape(route_path)}"([\s\S]*?)/>', app_code
+        )
+        check(route_match is not None, f"Frontend route {route_path} must exist.")
+        roles_match = re.search(r"allowedRoles=\{\[([^\]]*)\]\}", route_match.group(1))
+        check(roles_match is not None, f"Frontend route {route_path} must declare allowed roles.")
+        frontend_roles = set(re.findall(r"'([^']+)'", roles_match.group(1)))
+        check(frontend_roles == {required_role},
+              f"Frontend route {route_path} must allow only the role authorized by its API.")
+
+        controller = controller_path.read_text(encoding="utf-8")
+        check(f'[Authorize(Roles = "{required_role}")]' in controller,
+              f"The API for {route_path} must require {required_role}.")
+    print("[PASS] Mentor and student dashboard routes match their API role policies.")
+
+
 def validate_mock_fallback_is_development_only():
     mock_mode = (FRONTEND / "src/services/mockMode.js").read_text(encoding="utf-8")
     check("import.meta.env.DEV" in mock_mode, "Mock mode must be restricted to development builds.")
@@ -203,6 +226,13 @@ def validate_mock_fallback_is_development_only():
         check("if (!error.response)" not in service, f"{relative_path} must not silently substitute mock data in production.")
         check("!error.response && isMockModeEnabled" in service, f"{relative_path} mock behavior must be opt-in.")
     print("[PASS] Client-side mock login and data fallbacks require explicit development-only opt-in.")
+
+
+def validate_vite_host_check_is_enabled():
+    vite_config = (FRONTEND / "vite.config.js").read_text(encoding="utf-8")
+    check("allowedHosts: true" not in vite_config,
+          "The Vite development server must keep host validation enabled to mitigate DNS rebinding.")
+    print("[PASS] Vite keeps development-server host validation enabled.")
 
 
 def validate_cors_origins_are_explicit():
@@ -319,6 +349,36 @@ def validate_password_hashing_and_seed_fixtures():
     print("[PASS] Password verification has no seed-password bypass; seed fixtures use BCrypt hashes and are marked development-only.")
 
 
+def validate_bcrypt_password_byte_limit():
+    hasher = (BACKEND / "Services/BcryptPasswordHasher.cs").read_text(encoding="utf-8")
+    attribute = (BACKEND / "Common/MaxUtf8ByteLengthAttribute.cs").read_text(encoding="utf-8")
+    check("Encoding.UTF8.GetByteCount(text) <= MaximumBytes" in attribute,
+          "Password length validation must count UTF-8 bytes, not characters.")
+    check("MaximumUtf8PasswordBytes = 72" in hasher and "Encoding.UTF8.GetByteCount(password) > MaximumUtf8PasswordBytes" in hasher,
+          "BCrypt hashing and verification must reject inputs beyond its 72-byte limit.")
+
+    password_dtos = (
+        "DTOs/Auth/LoginRequestDto.cs",
+        "DTOs/Admin/CreateUserRequestDto.cs",
+        "DTOs/StudentRegistrationDtos.cs",
+        "DTOs/Mentor/CreateMentorRequestDto.cs",
+    )
+    for relative_path in password_dtos:
+        dto = (BACKEND / relative_path).read_text(encoding="utf-8")
+        check("MaxUtf8ByteLength(72)" in dto,
+              f"{relative_path} must reject over-limit passwords during request validation.")
+    print("[PASS] Password DTOs and BCrypt reject passwords longer than 72 UTF-8 bytes.")
+
+
+def validate_account_status_enum():
+    create_user_dto = (BACKEND / "DTOs/Admin/CreateUserRequestDto.cs").read_text(encoding="utf-8")
+    check("[EnumDataType(typeof(UserStatus)" in create_user_dto,
+          "Account creation must reject numeric user status values not defined by UserStatus.")
+    check("public UserStatus Status { get; set; } = UserStatus.ACTIVE;" in create_user_dto,
+          "Account creation must preserve ACTIVE as the default status.")
+    print("[PASS] Account creation validates status values and retains its ACTIVE default.")
+
+
 def main():
     print("Validating repository requirements and selected regressions...")
     validate_connection_charset()
@@ -327,8 +387,12 @@ def main():
     validate_database_readiness_health_check()
     validate_production_mysql_tls()
     validate_password_hashing_and_seed_fixtures()
+    validate_bcrypt_password_byte_limit()
+    validate_account_status_enum()
     validate_frontend_contracts()
+    validate_dashboard_roles_match_api_policies()
     validate_mock_fallback_is_development_only()
+    validate_vite_host_check_is_enabled()
     validate_cors_origins_are_explicit()
     validate_safe_database_setup()
     validate_api_test_safety()
