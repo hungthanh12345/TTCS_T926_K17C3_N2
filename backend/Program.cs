@@ -56,13 +56,10 @@ var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 if (string.IsNullOrWhiteSpace(jwtKey))
     jwtKey = builder.Configuration["Jwt:Key"];
 
-if (string.IsNullOrWhiteSpace(jwtKey) && builder.Environment.IsDevelopment())
-    jwtKey = "InternshipManagementSystem_Development_Only_JWT_Key_Replace_For_Local_Use!";
-
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException(
-        "A JWT signing key must be configured with JWT_SECRET_KEY or Jwt:Key outside Development.");
+        "A JWT signing key must be configured with JWT_SECRET_KEY or Jwt:Key.");
 }
 
 if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
@@ -74,6 +71,11 @@ var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
     ?? builder.Configuration["Jwt:Audience"]
     ?? "InternshipManagementClient";
+
+// Ensure token creation uses exactly the same resolved values as validation.
+builder.Configuration["Jwt:Key"] = jwtKey;
+builder.Configuration["Jwt:Issuer"] = jwtIssuer;
+builder.Configuration["Jwt:Audience"] = jwtAudience;
 
 builder.Services.AddAuthentication(options =>
 {

@@ -22,9 +22,12 @@ namespace InternshipManagementApi.Services
 
         public (string Token, DateTime ExpiresAt, long ExpiresInSeconds) GenerateToken(User user)
         {
-            var jwtKey = _configuration["Jwt:Key"] ?? "YourSuperSecretKeyForInternshipManagementSystem2026SecureKey!";
-            var issuer = _configuration["Jwt:Issuer"] ?? "InternshipManagementApi";
-            var audience = _configuration["Jwt:Audience"] ?? "InternshipManagementClient";
+            var jwtKey = _configuration["Jwt:Key"]
+                ?? throw new InvalidOperationException("JWT signing key is not configured.");
+            var issuer = _configuration["Jwt:Issuer"]
+                ?? throw new InvalidOperationException("JWT issuer is not configured.");
+            var audience = _configuration["Jwt:Audience"]
+                ?? throw new InvalidOperationException("JWT audience is not configured.");
             var expiryMinutesStr = _configuration["Jwt:ExpiryMinutes"];
             double expiryMinutes;
             if (!string.IsNullOrEmpty(expiryMinutesStr) && double.TryParse(expiryMinutesStr, out var mins))

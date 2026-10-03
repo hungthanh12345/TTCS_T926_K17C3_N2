@@ -60,9 +60,8 @@ def get_items(data):
 def validate_connection_charset():
     configured = os.getenv("ConnectionStrings__DefaultConnection") or os.getenv("MYSQL_URL")
     if not configured:
-        settings_path = BACKEND / "appsettings.Development.json"
-        settings = json.loads(settings_path.read_text(encoding="utf-8"))
-        configured = settings.get("ConnectionStrings", {}).get("DefaultConnection", "")
+        print("[SKIP] Database connection charset check: no connection string is configured in the environment.")
+        return
 
     if configured.lower().startswith(("mysql://", "mysqls://")):
         resolver = (BACKEND / "Program.cs").read_text(encoding="utf-8")
@@ -185,12 +184,19 @@ def validate_production_secret_configuration():
         "A local database credential must not be committed in appsettings.json.",
     )
     program = (BACKEND / "Program.cs").read_text(encoding="utf-8")
-    check("builder.Environment.IsDevelopment()" in program, "Development-only JWT fallback is missing.")
+    token_service = (BACKEND / "Services/JwtTokenService.cs").read_text(encoding="utf-8")
+    development_settings = json.loads((BACKEND / "appsettings.Development.json").read_text(encoding="utf-8"))
+    check("Development_Only_JWT_Key" not in program, "A built-in development JWT key must not be committed.")
+    check('builder.Configuration["Jwt:Key"] = jwtKey;' in program, "Token signing and validation must use the same resolved JWT key.")
+    check('builder.Configuration["Jwt:Issuer"] = jwtIssuer;' in program, "Token signing and validation must use the same resolved JWT issuer.")
+    check('builder.Configuration["Jwt:Audience"] = jwtAudience;' in program, "Token signing and validation must use the same resolved JWT audience.")
+    check('?? "YourSuperSecretKey' not in token_service, "JWT token creation must not use a built-in signing key.")
+    check("ConnectionStrings" not in development_settings, "A local database credential must not be committed in development settings.")
     check(
         "A JWT signing key must be configured" in program,
-        "Production must fail closed when no JWT signing key is configured.",
+        "The API must fail closed when no JWT signing key is configured.",
     )
-    print("[PASS] Production JWT and database secrets are not committed in appsettings.json.")
+    print("[PASS] JWT configuration is shared between signing and validation, and local credentials are externalized.")
 
 
 def validate_exception_sanitization():

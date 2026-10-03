@@ -307,14 +307,21 @@ All API errors conform to a unified JSON contract:
 - MySQL Server 8.0 running on `localhost:3306` with database `internship_management`
 
 ### 2. Database Initialization
+The schema and seed scripts reset/replace development data. Use them only with a disposable local development database; do not run them against production or a database containing data that must be kept. Use your MySQL client's password prompt rather than putting a password in a command.
 ```powershell
-mysql -u root -p123456 -e "CREATE DATABASE IF NOT EXISTS internship_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql --default-character-set=utf8mb4 -u root -p123456 -e "source schema.sql"
-mysql --default-character-set=utf8mb4 -u root -p123456 -e "source seed_data.sql"
+mysql -u YOUR_LOCAL_MYSQL_USER -p -e "CREATE DATABASE IF NOT EXISTS internship_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql --default-character-set=utf8mb4 -u YOUR_LOCAL_MYSQL_USER -p internship_management < backend/schema.sql
+mysql --default-character-set=utf8mb4 -u YOUR_LOCAL_MYSQL_USER -p internship_management < backend/seed_data.sql
 ```
 
-### 3. Run Backend API
+### 3. Configure and Run Backend API
+Local database and JWT settings belong in .NET User Secrets, not committed settings files. From `backend/`, set values for your local MySQL account and generate a unique signing key of at least 32 UTF-8 bytes:
 ```powershell
+cd backend
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Port=3306;Database=internship_management;User=YOUR_LOCAL_MYSQL_USER;Password=YOUR_LOCAL_MYSQL_PASSWORD;CharSet=utf8mb4;"
+$secretBytes = [byte[]]::new(48)
+[Security.Cryptography.RandomNumberGenerator]::Fill($secretBytes)
+dotnet user-secrets set "Jwt:Key" ([Convert]::ToBase64String($secretBytes))
 dotnet run --launch-profile http
 ```
 The server will start listening at:
@@ -336,8 +343,4 @@ python test_suite.py
 python validate_all_requirements.py
 ```
 
-### 6. Default Seed Test Credentials (All Roles: Admin@123)
-- **Admin Account:** `admin@gmail.com` / `Admin@123`
-- **HR Account:** `customer.hr@company.com` / `Admin@123`
-- **Mentor Account:** `tung.nk@gmail.com` / `Admin@123`
-- **Student Account:** `hung.nt@gmail.com` / `Admin@123`
+Seed accounts and their shared test password are development fixtures only. Do not seed them into a public or production database. Use locally seeded accounts only on a disposable development database.
