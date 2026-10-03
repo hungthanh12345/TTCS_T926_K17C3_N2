@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Text;
 using InternshipManagementApi.Common.Exceptions;
 using InternshipManagementApi.Data.Entities;
 using InternshipManagementApi.DTOs.Mentor;
@@ -81,13 +82,23 @@ namespace InternshipManagementApi.Services
                 }
                 else
                 {
+                    if (string.IsNullOrWhiteSpace(request.Password))
+                    {
+                        throw new BadRequestException("An initial password is required when creating a mentor account.");
+                    }
+
+                    if (Encoding.UTF8.GetByteCount(request.Password) > 72)
+                    {
+                        throw new BadRequestException("Initial password cannot exceed 72 UTF-8 bytes.");
+                    }
+
                     var mentorRole = await _roleRepository.GetByNameAsync("ROLE_MENTOR")
                         ?? throw new InvalidOperationException("System role 'ROLE_MENTOR' not found in database.");
 
                     user = new User
                     {
                         Email = email,
-                        PasswordHash = _passwordHasher.Hash("Admin@123"),
+                        PasswordHash = _passwordHasher.Hash(request.Password),
                         RoleId = mentorRole.Id,
                         Status = UserStatus.ACTIVE
                     };

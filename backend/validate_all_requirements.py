@@ -240,6 +240,11 @@ def validate_password_hashing_and_seed_fixtures():
             f"{relative_path} must use a syntactically valid BCrypt work-factor-11 seed hash.",
         )
         check("Never run this seed script in production" in seed, f"{relative_path} must be labeled as development-only.")
+    mentor_service = (BACKEND / "Services/MentorService.cs").read_text(encoding="utf-8")
+    mentor_request = (BACKEND / "DTOs/Mentor/CreateMentorRequestDto.cs").read_text(encoding="utf-8")
+    check('Hash("Admin@123")' not in mentor_service, "New mentor accounts must not receive a shared default password.")
+    check("_passwordHasher.Hash(request.Password)" in mentor_service, "Mentor account passwords must be hashed from the submitted initial credential.")
+    check("Initial password must contain at least 12 characters" in mentor_request, "Mentor account creation must validate initial password length.")
     print("[PASS] Password verification has no seed-password bypass; seed fixtures use BCrypt hashes and are marked development-only.")
 
 

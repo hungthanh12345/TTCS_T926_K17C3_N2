@@ -108,6 +108,7 @@ export const mentorService = {
       const payload = {
         fullName: mentorData.fullName?.trim(),
         email: mentorData.email?.trim() || null,
+        password: mentorData.password || null,
         phoneNumber: mentorData.phoneNumber || mentorData.phone || null,
         phone: mentorData.phone || mentorData.phoneNumber || null,
         department: mentorData.department?.trim(),

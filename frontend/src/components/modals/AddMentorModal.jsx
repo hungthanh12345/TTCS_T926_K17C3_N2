@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
-import { UserCheck, User, Phone, Mail, Building, Award, Loader2 } from 'lucide-react';
+import { UserCheck, User, Phone, Mail, Lock, Building, Award, Loader2 } from 'lucide-react';
 import mentorService from '../../services/mentorService';
 import toast from 'react-hot-toast';
 
@@ -9,6 +9,7 @@ export const AddMentorModal = ({ isOpen, onClose, onSuccess }) => {
     fullName: '',
     phone: '',
     email: '',
+    password: '',
     department: 'Kỹ thuật Phần mềm & Cloud',
     specialization: '',
   });
@@ -28,6 +29,8 @@ export const AddMentorModal = ({ isOpen, onClose, onSuccess }) => {
     const errs = {};
     if (!formData.fullName.trim()) errs.fullName = 'Họ và tên Mentor là bắt buộc';
     if (!formData.phone.trim()) errs.phone = 'Số điện thoại liên hệ là bắt buộc';
+    if (formData.password.length < 12) errs.password = 'Mật khẩu ban đầu cần ít nhất 12 ký tự';
+    if (new TextEncoder().encode(formData.password).length > 72) errs.password = 'Mật khẩu ban đầu không được vượt quá 72 byte UTF-8';
     if (!formData.department.trim()) errs.department = 'Vui lòng chọn phòng ban chuyên môn';
     if (!formData.specialization.trim()) {
       errs.specialization = 'Vui lòng nhập định hướng chuyên môn hoặc công nghệ thành thạo';
@@ -49,6 +52,7 @@ export const AddMentorModal = ({ isOpen, onClose, onSuccess }) => {
         fullName: '',
         phone: '',
         email: '',
+        password: '',
         department: 'Kỹ thuật Phần mềm & Cloud',
         specialization: '',
       });
@@ -99,6 +103,37 @@ export const AddMentorModal = ({ isOpen, onClose, onSuccess }) => {
           {errors.fullName && (
             <p className="mt-1 text-xs text-rose-500 font-medium">{errors.fullName}</p>
           )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Mật khẩu ban đầu của tài khoản Mentor <span className="text-rose-500">*</span>
+          </label>
+          <div className="relative rounded-xl shadow-xs">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <Lock className="w-4 h-4" />
+            </div>
+            <input
+              type="password"
+              required
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={72}
+              value={formData.password}
+              onChange={(e) => {
+                setFormData({ ...formData, password: e.target.value });
+                if (errors.password) setErrors({ ...errors, password: null });
+              }}
+              placeholder="Ít nhất 12 ký tự"
+              className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all ${
+                errors.password
+                  ? 'border-rose-300 focus:ring-rose-400 focus:border-rose-400'
+                  : 'border-slate-300 focus:ring-indigo-500 focus:border-indigo-500'
+              }`}
+            />
+          </div>
+          {errors.password && <p className="mt-1 text-xs text-rose-500 font-medium">{errors.password}</p>}
+          <p className="mt-1 text-xs text-slate-500">Chia sẻ mật khẩu ban đầu với Mentor qua kênh riêng.</p>
         </div>
 
         {/* Email & Số điện thoại */}

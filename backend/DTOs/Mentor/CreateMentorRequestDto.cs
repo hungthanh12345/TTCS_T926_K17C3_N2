@@ -9,6 +9,10 @@ namespace InternshipManagementApi.DTOs.Mentor
         [EmailAddress(ErrorMessage = "Invalid email format.")]
         public string? Email { get; set; }
 
+        [MinLength(12, ErrorMessage = "Initial password must contain at least 12 characters.")]
+        [MaxLength(72, ErrorMessage = "Initial password cannot exceed 72 characters.")]
+        public string? Password { get; set; }
+
         [Required(ErrorMessage = "Full name is required.")]
         [MaxLength(100, ErrorMessage = "Full name cannot exceed 100 characters.")]
         public string FullName { get; set; } = string.Empty;
