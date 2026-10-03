@@ -109,7 +109,7 @@ export const App = () => {
           <Route
             path="/mentor/students"
             element={
-              <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_MENTOR']}>
+              <ProtectedRoute allowedRoles={['ROLE_MENTOR']}>
                 <MentorDashboardView />
               </ProtectedRoute>
             }
@@ -120,7 +120,7 @@ export const App = () => {
           <Route
             path="/student/profile"
             element={
-              <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_STUDENT']}>
+              <ProtectedRoute allowedRoles={['ROLE_STUDENT']}>
                 <StudentDashboardView />
               </ProtectedRoute>
             }
