@@ -160,6 +160,18 @@ def validate_frontend_contracts():
     check('<form onSubmit={handleSubmit}' in login_view, "Login form must use its validated submit handler.")
     check('type="email"' in login_view, "Login form must expose an email input.")
     check('type={showPassword ?' in login_view, "Login form must preserve the password visibility control.")
+    check("Đăng nhập nhanh" in login_view, "Login page must render the quick demo-login section.")
+    quick_login_match = re.search(
+        r'<section[^>]+aria-labelledby="quick-login-title"[\s\S]*?</section>', login_view
+    )
+    check(quick_login_match is not None, "Quick demo accounts must be grouped in their own section.")
+    if quick_login_match is not None:
+        quick_login_section = quick_login_match.group(0)
+        check('grid-cols-1' in quick_login_section and 'sm:grid-cols-2' in quick_login_section,
+              "Quick demo account cards must stay responsive on mobile and desktop.")
+        check('type="button"' in quick_login_section and "executeLogin(" not in quick_login_section and
+              "navigate(" not in quick_login_section,
+              "Selecting a demo account must not submit login or navigate away.")
     for demo_email in (
         "admin@gmail.com",
         "customer.hr@company.com",
@@ -167,6 +179,8 @@ def validate_frontend_contracts():
         "hung.nt@gmail.com",
     ):
         check(demo_email in login_view, f"Login demo account {demo_email} must be available as a quick-fill option.")
+    for demo_role in ("ROLE_ADMIN", "ROLE_HR", "ROLE_MENTOR", "ROLE_STUDENT"):
+        check(demo_role in login_view, f"Login demo role {demo_role} must be visible in its quick-fill option.")
     check("document.getElementById('login-password')?.focus()" in login_view,
           "Selecting a demo account must focus the password input.")
     check("Admin@123" not in login_view, "The demo password must not be hard-coded in the frontend.")

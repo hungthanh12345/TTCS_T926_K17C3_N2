@@ -15,10 +15,10 @@ import {
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { label: 'Quản trị viên', shortLabel: 'Admin', email: 'admin@gmail.com' },
-  { label: 'Nhân sự', shortLabel: 'HR', email: 'customer.hr@company.com' },
-  { label: 'Mentor', shortLabel: 'Mentor', email: 'tung.nk@gmail.com' },
-  { label: 'Sinh viên', shortLabel: 'Sinh viên', email: 'hung.nt@gmail.com' },
+  { label: 'Admin', role: 'ROLE_ADMIN', email: 'admin@gmail.com' },
+  { label: 'HR', role: 'ROLE_HR', email: 'customer.hr@company.com' },
+  { label: 'Mentor', role: 'ROLE_MENTOR', email: 'tung.nk@gmail.com' },
+  { label: 'Sinh viên', role: 'ROLE_STUDENT', email: 'hung.nt@gmail.com' },
 ];
 
 export const LoginView = () => {
@@ -322,18 +322,18 @@ export const LoginView = () => {
             </button>
           </form>
 
-          {/* Tài khoản mẫu: điền nhanh email, vẫn xác thực bằng mật khẩu bình thường */}
-          <section className="rounded-2xl border border-slate-700/80 bg-slate-950/40 p-4" aria-labelledby="demo-accounts-title">
+          {/* Chọn nhanh tài khoản mẫu; đăng nhập vẫn xác thực qua API như bình thường */}
+          <section className="rounded-2xl border border-slate-700/80 bg-slate-950/40 p-4" aria-labelledby="quick-login-title">
             <div className="flex items-center gap-2">
               <UserRound className="h-4 w-4 text-indigo-300" />
-              <h3 id="demo-accounts-title" className="text-sm font-semibold text-slate-200">
-                Tài khoản demo
+              <h3 id="quick-login-title" className="text-sm font-semibold text-slate-200">
+                Đăng nhập nhanh
               </h3>
             </div>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Chọn vai trò để điền email. Nhập mật khẩu tài khoản mẫu đã được cấu hình rồi đăng nhập.
+              Chọn tài khoản để điền email, sau đó nhập mật khẩu và bấm Đăng nhập.
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {DEMO_ACCOUNTS.map((account) => (
                 <button
                   key={account.email}
@@ -341,15 +341,18 @@ export const LoginView = () => {
                   disabled={isSubmitting}
                   onClick={() => {
                     setFormData((current) => ({ ...current, email: account.email }));
-                    setErrors({});
+                    setErrors((current) => ({ ...current, email: null }));
                     document.getElementById('login-password')?.focus();
                   }}
-                  aria-label={`Điền email tài khoản demo ${account.label}`}
-                  className="rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-left text-xs font-medium text-slate-300 transition-colors hover:border-indigo-400/70 hover:bg-indigo-500/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={`Chọn ${account.label}, ${account.role}, ${account.email}`}
+                  className="rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2.5 text-left text-xs font-medium text-slate-300 transition-colors hover:border-indigo-400/70 hover:bg-indigo-500/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <span className="block">{account.shortLabel}</span>
-                  <span className="mt-0.5 block truncate text-[10px] font-normal text-slate-500">
+                  <span className="block font-semibold text-slate-100">{account.label}</span>
+                  <span className="mt-1 block break-all text-[10px] font-normal text-slate-400">
                     {account.email}
+                  </span>
+                  <span className="mt-1.5 inline-flex rounded-md border border-indigo-400/20 bg-indigo-400/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-indigo-200">
+                    {account.role}
                   </span>
                 </button>
               ))}
