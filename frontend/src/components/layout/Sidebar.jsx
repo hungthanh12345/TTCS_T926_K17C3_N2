@@ -11,6 +11,7 @@ import {
   UserCheck,
   CalendarDays,
   ClipboardCheck,
+  BarChart3,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
@@ -51,6 +52,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       title: 'Chương Trình Thực Tập',
       path: '/hr/programs',
       icon: CalendarDays,
+      roles: ['ROLE_ADMIN', 'ROLE_HR'],
+      badge: null,
+    },
+    {
+      title: 'Tổng Hợp Kết Quả Thực Tập',
+      path: '/hr/internship-summary',
+      icon: BarChart3,
       roles: ['ROLE_ADMIN', 'ROLE_HR'],
       badge: null,
     },

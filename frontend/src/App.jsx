@@ -16,6 +16,7 @@ import StudentDashboardView from './views/student/StudentDashboardView';
 import NotFoundView from './views/common/NotFoundView';
 import InternshipProgramsView from './views/hr/InternshipProgramsView';
 import StudentScheduleView from './views/student/StudentScheduleView';
+import HrInternshipSummaryView from './views/hr/HrInternshipSummaryView';
 
 export const App = () => {
   return (
@@ -102,6 +103,15 @@ export const App = () => {
             element={
               <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_HR']}>
                 <InternshipProgramsView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hr/internship-summary"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_HR', 'ROLE_ADMIN']}>
+                <HrInternshipSummaryView />
               </ProtectedRoute>
             }
           />
