@@ -66,14 +66,14 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       title: 'Sinh Viên Hướng Dẫn',
       path: '/mentor/students',
       icon: UserCheck,
-      roles: ['ROLE_MENTOR', 'ROLE_ADMIN'],
+      roles: ['ROLE_MENTOR'],
       badge: null,
     },
     {
       title: 'Hồ Sơ Thực Tập',
       path: '/student/profile',
       icon: LayoutDashboard,
-      roles: ['ROLE_STUDENT', 'ROLE_ADMIN'],
+      roles: ['ROLE_STUDENT'],
       badge: null,
     },
     {
