@@ -3,6 +3,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import mentorTaskService from '../../services/mentorTaskService';
 import MentorTaskManagement from '../../components/mentor/MentorTaskManagement';
+import MentorWeeklyReportsPanel from '../../components/mentor/MentorWeeklyReportsPanel';
 import {
   Phone,
   Mail,
@@ -128,6 +129,7 @@ export const MentorDashboardView = () => {
           )}
         </div>
         <MentorTaskManagement />
+        <MentorWeeklyReportsPanel />
       </div>
     </DashboardLayout>
   );
