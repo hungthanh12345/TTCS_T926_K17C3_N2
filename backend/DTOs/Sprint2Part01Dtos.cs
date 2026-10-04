@@ -35,4 +35,12 @@ namespace InternshipManagementApi.DTOs.Sprint2
         DateOnly? EndDate,
         DateTime CreatedAt,
         DateTime UpdatedAt);
+
+    public sealed class InternshipProgramAssignmentRequestDto
+    {
+        [Range(1, int.MaxValue)]
+        public int? ProgramId { get; set; }
+    }
+
+    public sealed record InternshipProgramAssignmentResponseDto(int StudentId, int? ProgramId, string? ProgramName);
 }

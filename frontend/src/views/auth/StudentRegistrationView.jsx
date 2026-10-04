@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, ClipboardCheck, GraduationCap, Loader2, UserPlus } from 'lucide-react';
 import studentRegistrationService from '../../services/studentRegistrationService';
@@ -11,6 +11,7 @@ const blankRegistration = {
   phoneNumber: '',
   university: '',
   major: '',
+  programId: '',
 };
 
 const statusStyles = {
@@ -26,6 +27,18 @@ export const StudentRegistrationView = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [programs, setPrograms] = useState([]);
+  const [documents, setDocuments] = useState({ cv: null, internshipLetter: null });
+  const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
+
+  useEffect(() => {
+    let isActive = true;
+    studentRegistrationService.getPrograms()
+      .then((items) => { if (isActive) setPrograms(Array.isArray(items) ? items : []); })
+      .catch((requestError) => { if (isActive) setError(requestError.message); })
+      .finally(() => { if (isActive) setIsLoadingPrograms(false); });
+    return () => { isActive = false; };
+  }, []);
 
   const switchMode = (nextMode) => {
     setMode(nextMode);
@@ -39,7 +52,7 @@ export const StudentRegistrationView = () => {
     setResult(null);
     setIsSubmitting(true);
     try {
-      const created = await studentRegistrationService.register(registration);
+      const created = await studentRegistrationService.register(registration, documents);
       setResult(created);
       setCredentials({ email: registration.email, password: registration.password });
     } catch (requestError) {
@@ -108,9 +121,19 @@ export const StudentRegistrationView = () => {
               <Field label="Số điện thoại" value={registration.phoneNumber} onChange={(value) => setRegistration({ ...registration, phoneNumber: value })} />
               <Field label="Trường đại học" required value={registration.university} onChange={(value) => setRegistration({ ...registration, university: value })} />
               <Field label="Chuyên ngành" required value={registration.major} onChange={(value) => setRegistration({ ...registration, major: value })} />
+              <label className="block space-y-1.5 sm:col-span-2">
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Chương trình thực tập<span className="ml-1 text-rose-500">*</span></span>
+                <select value={registration.programId} onChange={(event) => setRegistration({ ...registration, programId: event.target.value })} required disabled={isLoadingPrograms || programs.length === 0} className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100">
+                  <option value="">{isLoadingPrograms ? 'Đang tải chương trình...' : 'Chọn chương trình thực tập'}</option>
+                  {programs.map((program) => <option key={program.id} value={program.id}>{program.name} · {program.departmentName}</option>)}
+                </select>
+                {programs.length === 0 && !isLoadingPrograms && <span className="block text-xs text-amber-700">Hiện chưa có chương trình để đăng ký. Vui lòng liên hệ HR.</span>}
+              </label>
+              <FileField label="CV" required value={documents.cv} onChange={(file) => setDocuments((current) => ({ ...current, cv: file }))} />
+              <FileField label="Đơn xin thực tập" required value={documents.internshipLetter} onChange={(file) => setDocuments((current) => ({ ...current, internshipLetter: file }))} />
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isLoadingPrograms || programs.length === 0}
                 className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 disabled:cursor-wait disabled:opacity-60 sm:col-span-2"
               >
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
@@ -171,6 +194,14 @@ const Field = ({ label, value, onChange, type = 'text', required = false, minLen
       minLength={minLength}
       className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
     />
+  </label>
+);
+
+const FileField = ({ label, value, onChange, required = false }) => (
+  <label className="block space-y-1.5">
+    <span className="text-xs font-bold uppercase tracking-wide text-slate-600">{label}{required && <span className="ml-1 text-rose-500">*</span>}</span>
+    <input type="file" accept=".pdf,.doc,.docx" required={required} onChange={(event) => onChange(event.target.files?.[0] || null)} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo-700" />
+    <span className="block truncate text-xs text-slate-500">{value?.name || 'PDF, DOC hoặc DOCX · tối đa 10 MB'}</span>
   </label>
 );
 

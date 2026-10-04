@@ -106,7 +106,7 @@ export const MentorWeeklyReportsPanel = () => {
                     <p className="truncate text-sm font-bold text-slate-900">{report.studentName}</p>
                     <p className="mt-0.5 text-xs text-slate-500">{report.studentCode}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${report.status === 'REVIEWED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{STATUS_LABELS[report.status] || report.status}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${report.isLate ? 'bg-rose-50 text-rose-700' : report.status === 'REVIEWED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{STATUS_LABELS[report.status] || report.status}{report.isLate ? ' · Trễ hạn' : ' · Đúng hạn'}</span>
                 </div>
                 <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-indigo-700"><CalendarDays className="h-3.5 w-3.5" /> Tuần {formatWeek(report.weekStartDate)}</p>
                 <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-600">{report.workSummary}</p>

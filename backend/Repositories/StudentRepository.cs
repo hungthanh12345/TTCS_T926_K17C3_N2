@@ -39,6 +39,7 @@ namespace InternshipManagementApi.Repositories
             return await _context.Students
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
+                .Include(s => s.Program)
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
 
@@ -48,6 +49,7 @@ namespace InternshipManagementApi.Repositories
                 .AsNoTracking()
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
+                .Include(s => s.Program)
                 .FirstOrDefaultAsync(student => student.UserId == userId);
         }
 
@@ -56,6 +58,7 @@ namespace InternshipManagementApi.Repositories
             return await _context.Students
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
+                .Include(s => s.Program)
                 .FirstOrDefaultAsync(s => s.StudentCode.ToLower() == studentCode.Trim().ToLower());
         }
 
@@ -84,6 +87,7 @@ namespace InternshipManagementApi.Repositories
             var query = _context.Students
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
+                .Include(s => s.Program)
                 .AsNoTracking()
                 // Registration profiles are visible in the approval queue until HR accepts them.
                 .Where(s => s.User == null ||

@@ -27,5 +27,16 @@ namespace InternshipManagementApi.Controllers
             var events = await _scheduleService.GetMyScheduleAsync(userId, cancellationToken);
             return Ok(ApiResponse<IReadOnlyList<StudentScheduleEventDto>>.Ok(events));
         }
+
+        [HttpGet("overview")]
+        public async Task<IActionResult> GetMyScheduleOverview(CancellationToken cancellationToken)
+        {
+            var value = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("userId");
+            if (!int.TryParse(value, out var userId))
+                return Unauthorized(ApiResponse.Fail("Invalid user identity."));
+
+            var schedule = await _scheduleService.GetMyScheduleOverviewAsync(userId, cancellationToken);
+            return Ok(ApiResponse<StudentScheduleResponseDto>.Ok(schedule));
+        }
     }
 }

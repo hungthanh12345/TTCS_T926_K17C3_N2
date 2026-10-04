@@ -6,6 +6,7 @@ import EditStudentModal from '../../components/modals/EditStudentModal';
 import AssignMentorModal from '../../components/modals/AssignMentorModal';
 import Modal from '../../components/common/Modal';
 import studentService from '../../services/studentService';
+import US11 from '../../services/sprint2/US11';
 import {
   GraduationCap,
   UserPlus,
@@ -31,6 +32,7 @@ export const StudentManagementView = () => {
   const [students, setStudents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [programs, setPrograms] = useState([]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +69,26 @@ export const StudentManagementView = () => {
   useEffect(() => {
     void fetchStudents();
   }, [fetchStudents]);
+
+  useEffect(() => {
+    let active = true;
+    US11.getHrPrograms()
+      .then((items) => { if (active) setPrograms(Array.isArray(items) ? items : []); })
+      .catch((error) => toast.error(error.message || 'Không thể tải danh sách chương trình.'));
+    return () => { active = false; };
+  }, []);
+
+  const assignProgram = async (student, value) => {
+    try {
+      const assignment = await US11.assignStudentProgram(student.id, value ? Number(value) : null);
+      setStudents((items) => items.map((item) => (item.id === student.id
+        ? { ...item, programId: assignment.programId, programName: assignment.programName }
+        : item)));
+      toast.success('Đã cập nhật chương trình thực tập.');
+    } catch (error) {
+      toast.error(error.message || 'Không thể cập nhật chương trình thực tập.');
+    }
+  };
 
   const handleDeleteStudent = async (id, name) => {
     setStudentPendingDelete({ id, name });
@@ -189,7 +211,7 @@ export const StudentManagementView = () => {
                 {totalStudents}
               </span>
               <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                Kỳ 2026
+                Hồ sơ hiện có
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-2">Dữ liệu thực tập sinh toàn hệ thống</p>
@@ -454,6 +476,7 @@ export const StudentManagementView = () => {
                     <th className="py-3.5 px-6">Họ Tên và Liên Hệ</th>
                     <th className="py-3.5 px-6">Trường Đại Học</th>
                     <th className="py-3.5 px-6">Chuyên Ngành</th>
+                    <th className="py-3.5 px-6">Chương trình</th>
                     <th className="py-3.5 px-6">Mentor Phụ Trách</th>
                     <th className="py-3.5 px-6 text-right">Thao Tác</th>
                   </tr>
@@ -519,6 +542,18 @@ export const StudentManagementView = () => {
                             <BookOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                             <span className="truncate max-w-[160px]">{s.major}</span>
                           </div>
+                        </td>
+
+                        <td className="py-4 px-6 align-middle">
+                          <select
+                            aria-label={`Chương trình của ${s.fullName}`}
+                            value={s.programId || ''}
+                            onChange={(event) => void assignProgram(s, event.target.value)}
+                            className="max-w-52 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                          >
+                            <option value="">Chưa gán chương trình</option>
+                            {programs.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
+                          </select>
                         </td>
 
                         {/* Assigned Mentor Status */}

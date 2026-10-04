@@ -246,6 +246,8 @@ namespace InternshipManagementApi.Services
                 University = student.University,
                 Major = student.Major,
                 MentorId = student.MentorId,
+                ProgramId = student.ProgramId,
+                ProgramName = student.Program?.Name,
                 Mentor = student.Mentor != null ? new MentorSummaryDto
                 {
                     Id = student.Mentor.Id,

@@ -17,6 +17,7 @@ import NotFoundView from './views/common/NotFoundView';
 import InternshipProgramsView from './views/hr/InternshipProgramsView';
 import StudentScheduleView from './views/student/StudentScheduleView';
 import HrInternshipSummaryView from './views/hr/HrInternshipSummaryView';
+import LandingView from './views/common/LandingView';
 
 export const App = () => {
   return (
@@ -56,8 +57,7 @@ export const App = () => {
           <Route path="/login" element={<LoginView />} />
           <Route path="/register" element={<StudentRegistrationView />} />
 
-          {/* Root Route: Always navigate to /login on app launch / root visit */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<LandingView />} />
 
           {/* Story 2: Admin Dashboard & Account Management */}
           <Route

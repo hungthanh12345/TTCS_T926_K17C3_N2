@@ -100,6 +100,7 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.University).HasColumnName("university").HasMaxLength(150).IsRequired();
                 entity.Property(e => e.Major).HasColumnName("major").HasMaxLength(100).IsRequired();
                 entity.Property(e => e.MentorId).HasColumnName("mentor_id");
+                entity.Property(e => e.ProgramId).HasColumnName("program_id");
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
 
@@ -108,6 +109,7 @@ namespace InternshipManagementApi.Data
                 entity.HasIndex(e => e.University);
                 entity.HasIndex(e => e.Major);
                 entity.HasIndex(e => e.MentorId);
+                entity.HasIndex(e => e.ProgramId);
 
                 entity.HasOne(e => e.User)
                       .WithOne(u => u.Student)
@@ -117,6 +119,11 @@ namespace InternshipManagementApi.Data
                 entity.HasOne(e => e.Mentor)
                       .WithMany(m => m.Students)
                       .HasForeignKey(e => e.MentorId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Program)
+                      .WithMany(program => program.Students)
+                      .HasForeignKey(e => e.ProgramId)
                       .OnDelete(DeleteBehavior.SetNull);
             });
 

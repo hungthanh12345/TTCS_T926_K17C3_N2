@@ -23,16 +23,16 @@ const formatDate = (value) => {
     }).format(date);
 };
 
-export const StudentScheduleView = () => {
-  const [events, setEvents] = useState([]);
+export const StudentScheduleView = ({ embedded = false }) => {
+  const [schedule, setSchedule] = useState({ program: null, events: [] });
+  const events = schedule.events;
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const loadSchedule = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
     try {
-      setEvents(await studentScheduleService.getMySchedule());
+      setSchedule(await studentScheduleService.getMySchedule());
+      setError('');
     } catch (loadError) {
       setError(loadError.message || 'Không thể tải lịch thực tập của bạn.');
     } finally {
@@ -41,40 +41,28 @@ export const StudentScheduleView = () => {
   }, []);
 
   useEffect(() => {
-    let isActive = true;
-    studentScheduleService.getMySchedule()
-      .then((schedule) => {
-        if (isActive) setEvents(schedule);
-      })
-      .catch((loadError) => {
-        if (isActive) setError(loadError.message || 'Không thể tải lịch thực tập của bạn.');
-      })
-      .finally(() => {
-        if (isActive) setIsLoading(false);
-      });
+    void loadSchedule();
+  }, [loadSchedule]);
 
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  const refreshSchedule = () => {
+    setIsLoading(true);
+    setError('');
+    void loadSchedule();
+  };
 
-  return (
-    <DashboardLayout
-      title="Lịch Thực Tập Cá Nhân"
-      subtitle="Theo dõi các hạn hoàn thành công việc được Mentor giao cho bạn"
-    >
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  const content = (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
               <CalendarDays className="h-5 w-5 text-indigo-600" />
               Lịch công việc
             </h2>
-            <p className="mt-1 text-xs text-slate-500">Các task có hạn hoàn thành, sắp xếp theo ngày gần nhất.</p>
+            <p className="mt-1 text-xs text-slate-500">Thời gian chương trình và các task có hạn hoàn thành.</p>
           </div>
           <button
             type="button"
-            onClick={() => void loadSchedule()}
+            onClick={refreshSchedule}
             disabled={isLoading}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -83,6 +71,16 @@ export const StudentScheduleView = () => {
           </button>
         </div>
 
+        {schedule.program ? (
+          <div className="mb-5 grid gap-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-4 sm:grid-cols-3">
+            <div><p className="text-[11px] font-bold uppercase tracking-wide text-indigo-500">Chương trình</p><p className="mt-1 text-sm font-semibold text-slate-900">{schedule.program.name}</p><p className="text-xs text-slate-500">{schedule.program.departmentName}</p></div>
+            <div><p className="text-[11px] font-bold uppercase tracking-wide text-indigo-500">Bắt đầu</p><p className="mt-1 text-sm font-semibold text-slate-900">{schedule.program.startDate ? formatDate(schedule.program.startDate) : 'Chưa thiết lập'}</p></div>
+            <div><p className="text-[11px] font-bold uppercase tracking-wide text-indigo-500">Kết thúc</p><p className="mt-1 text-sm font-semibold text-slate-900">{schedule.program.endDate ? formatDate(schedule.program.endDate) : 'Chưa thiết lập'}</p></div>
+          </div>
+        ) : (
+          <div role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Hồ sơ của bạn chưa được gắn với chương trình thực tập. Vui lòng liên hệ HR.</div>
+        )}
+
         {isLoading ? (
           <div role="status" className="flex items-center gap-2 py-8 text-sm text-slate-500">
             <LoaderCircle className="h-4 w-4 animate-spin" /> Đang tải lịch thực tập...
@@ -90,7 +88,7 @@ export const StudentScheduleView = () => {
         ) : error ? (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
             <p>Không thể tải lịch: {error}</p>
-            <button type="button" onClick={() => void loadSchedule()} className="mt-3 font-semibold underline underline-offset-2">
+            <button type="button" onClick={refreshSchedule} className="mt-3 font-semibold underline underline-offset-2">
               Thử lại
             </button>
           </div>
@@ -124,7 +122,17 @@ export const StudentScheduleView = () => {
             ))}
           </ol>
         )}
-      </section>
+    </section>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <DashboardLayout
+      title="Lịch Thực Tập Cá Nhân"
+      subtitle="Theo dõi các hạn hoàn thành công việc được Mentor giao cho bạn"
+    >
+      {content}
     </DashboardLayout>
   );
 };

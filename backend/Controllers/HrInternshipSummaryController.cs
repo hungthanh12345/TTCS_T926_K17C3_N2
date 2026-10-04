@@ -18,9 +18,9 @@ namespace InternshipManagementApi.Controllers
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<HrInternshipSummaryResponseDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetSummary()
+        public async Task<IActionResult> GetSummary([FromQuery] int? programId)
         {
-            var summary = await _summary.GetSummaryAsync();
+            var summary = await _summary.GetSummaryAsync(programId);
             return Ok(ApiResponse<HrInternshipSummaryResponseDto>.Ok(summary));
         }
     }

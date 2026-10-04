@@ -10,6 +10,7 @@ namespace InternshipManagementApi.Services
     public interface IStudentRegistrationService
     {
         Task<StudentRegistrationStatusResponseDto> RegisterAsync(StudentRegistrationRequestDto request);
+        Task<StudentRegistrationStatusResponseDto> RegisterWithApplicationAsync(StudentRegistrationApplicationRequestDto request);
         Task<StudentRegistrationStatusResponseDto> GetOwnStatusAsync(LoginRequestDto request);
         Task<IReadOnlyList<StudentRegistrationReviewDto>> GetPendingAsync();
         Task<StudentRegistrationReviewDto> GetPendingDetailsAsync(int studentId);
@@ -75,6 +76,105 @@ namespace InternshipManagementApi.Services
             return ToStatusResponse(user, user.Student!);
         }
 
+        public async Task<StudentRegistrationStatusResponseDto> RegisterWithApplicationAsync(
+            StudentRegistrationApplicationRequestDto request)
+        {
+            var cv = await StudentDocumentFileValidator.InspectAsync(request.Cv);
+            if (!cv.IsValid)
+                throw new BadRequestException($"CV: {cv.Error}");
+
+            var letter = await StudentDocumentFileValidator.InspectAsync(request.InternshipLetter);
+            if (!letter.IsValid)
+                throw new BadRequestException($"Đơn xin thực tập: {letter.Error}");
+
+            var email = request.Email.Trim().ToLowerInvariant();
+            var studentCode = request.StudentCode.Trim().ToUpperInvariant();
+            ValidateRequiredProfile(request.FullName, request.University, request.Major, studentCode);
+            await EnsureRegistrationIsUniqueAsync(email, studentCode);
+
+            var program = await _db.InternshipPrograms
+                .Include(item => item.Department)
+                .SingleOrDefaultAsync(item => item.Id == request.ProgramId);
+            if (program == null)
+                throw new BadRequestException("Chương trình thực tập không tồn tại.");
+
+            var studentRole = await _db.Roles.SingleOrDefaultAsync(role => role.Name == StudentRoleName);
+            if (studentRole == null)
+                throw new BadRequestException("The student role is not configured in the system.");
+
+            var student = new Student
+            {
+                StudentCode = studentCode,
+                FullName = request.FullName.Trim(),
+                PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim(),
+                University = request.University.Trim(),
+                Major = request.Major.Trim(),
+                ProgramId = program.Id,
+                Program = program
+            };
+            var user = new User
+            {
+                Email = email,
+                PasswordHash = _passwordHasher.Hash(request.Password),
+                RoleId = studentRole.Id,
+                Role = studentRole,
+                Status = UserStatus.PENDING_APPROVAL,
+                Student = student
+            };
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                _db.Users.Add(user);
+                await _db.SaveChangesAsync();
+
+                var uploadedAt = DateTime.UtcNow;
+                _db.StudentDocuments.AddRange(
+                    CreateDocument(student.Id, "CV", cv, uploadedAt),
+                    CreateDocument(student.Id, "INTERNSHIP_LETTER", letter, uploadedAt));
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
+            return ToStatusResponse(user, student);
+        }
+
+        private async Task EnsureRegistrationIsUniqueAsync(string email, string studentCode)
+        {
+            if (await _db.Users.AnyAsync(user => user.Email.ToLower() == email))
+                throw new ConflictException("This email is already registered.");
+            if (await _db.Students.AnyAsync(student => student.StudentCode.ToLower() == studentCode.ToLower()))
+                throw new ConflictException("This student code is already registered.");
+        }
+
+        private static void ValidateRequiredProfile(string fullName, string university, string major, string studentCode)
+        {
+            if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(university) ||
+                string.IsNullOrWhiteSpace(major) || string.IsNullOrWhiteSpace(studentCode))
+                throw new BadRequestException("Student profile fields cannot be blank.");
+        }
+
+        private static StudentDocument CreateDocument(
+            int studentId,
+            string documentType,
+            StudentDocumentFileInspection file,
+            DateTime uploadedAt) => new()
+        {
+            StudentId = studentId,
+            DocumentType = documentType,
+            OriginalFileName = file.FileName!,
+            StoredFileName = $"db-{Guid.NewGuid():N}{Path.GetExtension(file.FileName)}",
+            ContentType = file.ContentType!,
+            SizeBytes = file.Content!.LongLength,
+            FileContent = file.Content,
+            UploadedAt = uploadedAt
+        };
+
         public async Task<StudentRegistrationStatusResponseDto> GetOwnStatusAsync(LoginRequestDto request)
         {
             var email = request.Email.Trim().ToLowerInvariant();
@@ -100,6 +200,7 @@ namespace InternshipManagementApi.Services
                 .AsNoTracking()
                 .Include(student => student.User)
                     .ThenInclude(user => user!.Role)
+                .Include(student => student.Program)
                 .Where(student => student.User != null &&
                                   student.User.Role.Name == StudentRoleName &&
                                   student.User.Status == UserStatus.PENDING_APPROVAL)
@@ -146,6 +247,7 @@ namespace InternshipManagementApi.Services
             var student = await _db.Students
                 .Include(item => item.User)
                     .ThenInclude(user => user!.Role)
+                .Include(item => item.Program)
                 .SingleOrDefaultAsync(item => item.Id == studentId);
 
             if (student?.User == null || !string.Equals(student.User.Role?.Name, StudentRoleName, StringComparison.OrdinalIgnoreCase))
@@ -191,6 +293,7 @@ namespace InternshipManagementApi.Services
             PhoneNumber = student.PhoneNumber,
             University = student.University,
             Major = student.Major,
+            ProgramName = student.Program?.Name,
             Status = student.User.Status == UserStatus.ACTIVE ? "APPROVED" : student.User.Status.ToString(),
             SubmittedAt = student.CreatedAt
         };

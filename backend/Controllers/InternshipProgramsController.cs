@@ -73,6 +73,31 @@ namespace InternshipManagementApi.Controllers
             return Ok(ApiResponse<IEnumerable<InternshipProgramResponseDto>>.Ok(programs));
         }
 
+        [HttpPut("students/{studentId:int}/program")]
+        public async Task<IActionResult> AssignStudentProgram(
+            int studentId,
+            [FromBody] InternshipProgramAssignmentRequestDto request)
+        {
+            var student = await _db.Students.SingleOrDefaultAsync(item => item.Id == studentId);
+            if (student == null)
+                return NotFound(ApiResponse.Fail("Student profile was not found."));
+
+            InternshipProgram? program = null;
+            if (request.ProgramId.HasValue)
+            {
+                program = await _db.InternshipPrograms.SingleOrDefaultAsync(item => item.Id == request.ProgramId.Value);
+                if (program == null)
+                    return BadRequest(ApiResponse.Fail("Internship program was not found."));
+            }
+
+            student.ProgramId = program?.Id;
+            student.Program = program;
+            await _db.SaveChangesAsync();
+
+            var response = new InternshipProgramAssignmentResponseDto(student.Id, student.ProgramId, program?.Name);
+            return Ok(ApiResponse<InternshipProgramAssignmentResponseDto>.Ok(response, "Student program assignment updated."));
+        }
+
         [HttpPost("programs")]
         public async Task<IActionResult> CreateProgram([FromBody] InternshipProgramRequest request)
         {

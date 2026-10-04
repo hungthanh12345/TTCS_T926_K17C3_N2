@@ -11,5 +11,6 @@ namespace InternshipManagementApi.Data.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public Department Department { get; set; } = null!;
+        public ICollection<Student> Students { get; set; } = new List<Student>();
     }
 }

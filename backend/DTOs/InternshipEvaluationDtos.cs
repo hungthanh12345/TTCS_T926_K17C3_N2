@@ -45,6 +45,8 @@ namespace InternshipManagementApi.DTOs.Evaluations
     public sealed class HrInternshipSummaryItemDto
     {
         public int StudentId { get; init; }
+        public int? ProgramId { get; init; }
+        public string? ProgramName { get; init; }
         public string StudentCode { get; init; } = string.Empty;
         public string StudentName { get; init; } = string.Empty;
         public string University { get; init; } = string.Empty;
@@ -65,6 +67,8 @@ namespace InternshipManagementApi.DTOs.Evaluations
 
     public sealed class HrInternshipSummaryResponseDto
     {
+        public int? ProgramId { get; init; }
+        public string? ProgramName { get; init; }
         public int TotalStudents { get; init; }
         public int EvaluatedStudents { get; init; }
         public int PendingEvaluations { get; init; }
