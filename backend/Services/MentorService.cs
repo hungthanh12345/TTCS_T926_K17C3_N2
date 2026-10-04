@@ -184,6 +184,11 @@ namespace InternshipManagementApi.Services
                 throw new NotFoundException($"Mentor with ID {id} not found.");
             }
 
+            if (await _mentorRepository.HasWorkReferencesAsync(id))
+            {
+                throw new ConflictException("Cannot delete a mentor with assigned tasks or review history.");
+            }
+
             await _mentorRepository.DeleteAsync(mentor);
         }
     }

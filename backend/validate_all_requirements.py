@@ -211,6 +211,28 @@ def validate_dashboard_roles_match_api_policies():
     print("[PASS] Mentor and student dashboard routes match their API role policies.")
 
 
+def validate_sidebar_roles_match_routes():
+    app_code = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
+    sidebar = (FRONTEND / "src/components/layout/Sidebar.jsx").read_text(encoding="utf-8")
+    routes = {}
+    for match in re.finditer(r'<Route\s+path="([^"]+)"([\s\S]*?)/>', app_code):
+        roles_match = re.search(r"allowedRoles=\{\[([^\]]*)\]\}", match.group(2))
+        if roles_match:
+            routes[match.group(1)] = set(re.findall(r"'([^']+)'", roles_match.group(1)))
+
+    nav_items = {}
+    for match in re.finditer(r"\{\s*title:[\s\S]*?path:\s*'([^']+)'([\s\S]*?)\n\s*\},", sidebar):
+        roles_match = re.search(r"roles:\s*\[([^\]]*)\]", match.group(2))
+        if roles_match:
+            nav_items[match.group(1)] = set(re.findall(r"'([^']+)'", roles_match.group(1)))
+
+    for path, roles in nav_items.items():
+        if path in routes:
+            check(roles == routes[path],
+                  f"Sidebar roles for {path} must match its protected route roles.")
+    print("[PASS] Sidebar navigation exposes protected routes only to roles accepted by each route.")
+
+
 def validate_student_schedule_contract():
     controller = (BACKEND / "Controllers/StudentScheduleController.cs").read_text(encoding="utf-8")
     service = (BACKEND / "Services/StudentScheduleService.cs").read_text(encoding="utf-8")
@@ -352,6 +374,18 @@ def validate_part09_contract():
           "path: '/hr/internship-summary'" in sidebar and "ROLE_HR" in sidebar and "ROLE_ADMIN" in sidebar,
           "HR summary route and navigation must be available only to HR/Admin roles.")
     print("[PASS] US19/US20 roles, ownership, score validation, data aggregation, and UI wiring are present.")
+
+
+def validate_mentor_delete_preserves_work_history():
+    mentor_service = (BACKEND / "Services/MentorService.cs").read_text(encoding="utf-8")
+    mentor_repository = (BACKEND / "Repositories/MentorRepository.cs").read_text(encoding="utf-8")
+    hr_controller = (BACKEND / "Controllers/HrController.cs").read_text(encoding="utf-8")
+    check("HasWorkReferencesAsync" in mentor_service and "ConflictException" in mentor_service and
+          "HasWorkReferencesAsync" in mentor_repository and "_context.Tasks.AnyAsync" in mentor_repository and
+          "_context.MentorFeedbacks.AnyAsync" in mentor_repository and
+          "StatusCodes.Status409Conflict" in hr_controller,
+          "Mentor deletion must preserve assigned tasks and feedback history with a 409 conflict response.")
+    print("[PASS] Mentor deletion guards assigned tasks and feedback history.")
 
 
 def validate_mock_fallback_is_development_only():
@@ -542,9 +576,11 @@ def main():
     validate_account_status_enum()
     validate_frontend_contracts()
     validate_dashboard_roles_match_api_policies()
+    validate_sidebar_roles_match_routes()
     validate_student_schedule_contract()
     validate_weekly_report_contract()
     validate_part09_contract()
+    validate_mentor_delete_preserves_work_history()
     validate_mock_fallback_is_development_only()
     validate_vite_host_check_is_enabled()
     validate_cors_origins_are_explicit()
