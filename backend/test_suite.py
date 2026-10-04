@@ -28,6 +28,15 @@ REPORT_MENTOR_A_EMAIL = os.getenv("VALIDATION_REPORT_MENTOR_A_EMAIL")
 REPORT_MENTOR_A_PASSWORD = os.getenv("VALIDATION_REPORT_MENTOR_A_PASSWORD")
 REPORT_MENTOR_B_EMAIL = os.getenv("VALIDATION_REPORT_MENTOR_B_EMAIL")
 REPORT_MENTOR_B_PASSWORD = os.getenv("VALIDATION_REPORT_MENTOR_B_PASSWORD")
+PART09_TESTS = os.getenv("VALIDATION_PART09_TESTS") == "1"
+EVALUATION_STUDENT_A_EMAIL = os.getenv("VALIDATION_EVALUATION_STUDENT_A_EMAIL")
+EVALUATION_STUDENT_A_PASSWORD = os.getenv("VALIDATION_EVALUATION_STUDENT_A_PASSWORD")
+EVALUATION_STUDENT_B_EMAIL = os.getenv("VALIDATION_EVALUATION_STUDENT_B_EMAIL")
+EVALUATION_STUDENT_B_PASSWORD = os.getenv("VALIDATION_EVALUATION_STUDENT_B_PASSWORD")
+EVALUATION_MENTOR_A_EMAIL = os.getenv("VALIDATION_EVALUATION_MENTOR_A_EMAIL")
+EVALUATION_MENTOR_A_PASSWORD = os.getenv("VALIDATION_EVALUATION_MENTOR_A_PASSWORD")
+EVALUATION_MENTOR_B_EMAIL = os.getenv("VALIDATION_EVALUATION_MENTOR_B_EMAIL")
+EVALUATION_MENTOR_B_PASSWORD = os.getenv("VALIDATION_EVALUATION_MENTOR_B_PASSWORD")
 
 
 def request(method, path, body=None, token=None):
@@ -218,8 +227,139 @@ def run_weekly_report_ownership_tests():
     print("[PASS] US17/US18 authenticated CRUD, role, feedback, validation, and cross-owner API checks passed.")
 
 
+def run_part09_tests():
+    if not PART09_TESTS:
+        print("[SKIP] US19/US20 mutating API checks: set VALIDATION_PART09_TESTS=1 to opt in against a fresh isolated test database.")
+        return
+
+    if not WEEKLY_REPORT_TEST_DATABASE:
+        raise AssertionError("US19/US20 tests write evaluations; set VALIDATION_TEST_DATABASE=1 only when the API uses a disposable test database.")
+
+    parsed_url = urllib.parse.urlparse(BASE_URL)
+    if parsed_url.hostname not in {"localhost", "127.0.0.1", "::1"}:
+        raise AssertionError("US19/US20 mutating API checks are restricted to a loopback API host.")
+
+    credentials = (
+        EVALUATION_STUDENT_A_EMAIL, EVALUATION_STUDENT_A_PASSWORD,
+        EVALUATION_STUDENT_B_EMAIL, EVALUATION_STUDENT_B_PASSWORD,
+        EVALUATION_MENTOR_A_EMAIL, EVALUATION_MENTOR_A_PASSWORD,
+        EVALUATION_MENTOR_B_EMAIL, EVALUATION_MENTOR_B_PASSWORD,
+        HR_EMAIL, HR_PASSWORD,
+    )
+    if not all(credentials):
+        raise AssertionError("US19/US20 checks need two student, two mentor, and one HR test account, with students assigned to different mentors.")
+
+    def raw_request(method, path, payload, token=None):
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        req = urllib.request.Request(f"{BASE_URL}{path}", data=payload, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                return response.status, response.read().decode("utf-8")
+        except urllib.error.HTTPError as error:
+            return error.code, error.read().decode("utf-8")
+
+    def evaluation_payload(skills=8, attitude=9, comments="Part 09 integration evaluation."):
+        return {"skillsScore": skills, "attitudeScore": attitude, "comments": comments}
+
+    status, _ = request("GET", "/api/mentor/evaluations")
+    check(status == 401, f"Anonymous users cannot access mentor evaluations (HTTP {status}).")
+    status, _ = request("GET", "/api/student/evaluations")
+    check(status == 401, f"Anonymous users cannot view evaluations (HTTP {status}).")
+    status, _ = request("GET", "/api/hr/internship-summary")
+    check(status == 401, f"Anonymous users cannot view the HR summary (HTTP {status}).")
+
+    student_a = login(EVALUATION_STUDENT_A_EMAIL, EVALUATION_STUDENT_A_PASSWORD, "ROLE_STUDENT")
+    student_b = login(EVALUATION_STUDENT_B_EMAIL, EVALUATION_STUDENT_B_PASSWORD, "ROLE_STUDENT")
+    mentor_a = login(EVALUATION_MENTOR_A_EMAIL, EVALUATION_MENTOR_A_PASSWORD, "ROLE_MENTOR")
+    mentor_b = login(EVALUATION_MENTOR_B_EMAIL, EVALUATION_MENTOR_B_PASSWORD, "ROLE_MENTOR")
+    hr_token = login(HR_EMAIL, HR_PASSWORD, "ROLE_HR")
+
+    status, profile_a_response = request("GET", "/api/student/profile", token=student_a)
+    profile_a = profile_a_response.get("data", {})
+    check(status == 200 and isinstance(profile_a.get("id"), int) and profile_a.get("mentorId") is not None,
+          "Student A profile belongs to an assigned mentor.")
+    status, profile_b_response = request("GET", "/api/student/profile", token=student_b)
+    profile_b = profile_b_response.get("data", {})
+    check(status == 200 and isinstance(profile_b.get("id"), int) and profile_b.get("mentorId") is not None and
+          profile_b.get("mentorId") != profile_a.get("mentorId"),
+          "Student B is assigned to a different mentor for cross-owner checks.")
+
+    status, mentor_a_students = request("GET", "/api/mentor/evaluations", token=mentor_a)
+    mentor_a_items = mentor_a_students.get("data", [])
+    student_a_item = next((item for item in mentor_a_items if item.get("studentId") == profile_a["id"]), None)
+    check(status == 200 and student_a_item is not None,
+          "Mentor A can list their assigned student for evaluation.")
+    status, mentor_b_students = request("GET", "/api/mentor/evaluations", token=mentor_b)
+    mentor_b_items = mentor_b_students.get("data", [])
+    student_b_item = next((item for item in mentor_b_items if item.get("studentId") == profile_b["id"]), None)
+    check(status == 200 and student_b_item is not None,
+          "Mentor B can list their assigned student for evaluation.")
+    check(student_a_item.get("evaluation") is None and student_b_item.get("evaluation") is None,
+          "The isolated test students have no prior final evaluation.")
+
+    status, _ = request("POST", f"/api/mentor/evaluations/students/{profile_a['id']}", evaluation_payload(), token=student_a)
+    check(status == 403, f"Student role cannot create an evaluation (HTTP {status}).")
+    status, _ = request("POST", f"/api/mentor/evaluations/students/{profile_a['id']}", evaluation_payload(skills=0), token=mentor_a)
+    check(status == 400, f"Evaluation rejects a score below 1 (HTTP {status}).")
+    status, _ = request("POST", f"/api/mentor/evaluations/students/{profile_a['id']}", evaluation_payload(attitude=11), token=mentor_a)
+    check(status == 400, f"Evaluation rejects a score above 10 (HTTP {status}).")
+    status, _ = request("POST", f"/api/mentor/evaluations/students/{profile_a['id']}", {"skillsScore": 8, "attitudeScore": 9}, token=mentor_a)
+    check(status == 400, f"Evaluation requires a comment (HTTP {status}).")
+    status, _ = raw_request("POST", f"/api/mentor/evaluations/students/{profile_a['id']}", b'{"skillsScore":', mentor_a)
+    check(status == 400, f"Malformed evaluation JSON is rejected (HTTP {status}).")
+    status, _ = request("POST", "/api/mentor/evaluations/students/2147483000", evaluation_payload(), token=mentor_a)
+    check(status == 404, f"Evaluation rejects a non-existing student (HTTP {status}).")
+    status, _ = request("POST", f"/api/mentor/evaluations/students/{profile_b['id']}", evaluation_payload(), token=mentor_a)
+    check(status == 404, f"Mentor A cannot evaluate a student assigned to Mentor B (HTTP {status}).")
+
+    status, created_a = request("POST", f"/api/mentor/evaluations/students/{profile_a['id']}", evaluation_payload(), token=mentor_a)
+    check(status == 201 and isinstance(created_a.get("data", {}).get("id"), int),
+          f"Mentor A can evaluate their assigned student (HTTP {status}).")
+    evaluation_a_id = created_a["data"]["id"]
+    status, _ = request("POST", f"/api/mentor/evaluations/students/{profile_a['id']}", evaluation_payload(), token=mentor_a)
+    check(status == 409, f"Duplicate evaluation for a student is rejected (HTTP {status}).")
+    status, updated_a = request("PUT", f"/api/mentor/evaluations/{evaluation_a_id}", evaluation_payload(9, 9, "Updated evaluation after review."), token=mentor_a)
+    check(status == 200 and updated_a.get("data", {}).get("overallScore") == 9,
+          f"The authoring mentor can update their evaluation (HTTP {status}).")
+    status, _ = request("GET", "/api/mentor/evaluations/2147483000", token=mentor_a)
+    check(status == 404, f"A non-existing evaluation returns not found (HTTP {status}).")
+    status, _ = request("GET", f"/api/mentor/evaluations/{evaluation_a_id}", token=mentor_b)
+    check(status == 404, f"Mentor B cannot view Mentor A's evaluation (HTTP {status}).")
+    status, _ = request("PUT", f"/api/mentor/evaluations/{evaluation_a_id}", evaluation_payload(), token=mentor_b)
+    check(status == 404, f"Mentor B cannot update Mentor A's evaluation (HTTP {status}).")
+    status, _ = request("PUT", f"/api/mentor/evaluations/{evaluation_a_id}", evaluation_payload(), token=student_a)
+    check(status == 403, f"Student cannot modify an evaluation (HTTP {status}).")
+    status, own_evaluations = request("GET", "/api/student/evaluations", token=student_a)
+    check(status == 200 and evaluation_a_id in {item.get("id") for item in own_evaluations.get("data", [])},
+          "Student A can read their own evaluation.")
+    status, _ = request("GET", f"/api/student/evaluations/{evaluation_a_id}", token=student_b)
+    check(status == 404, f"Student B cannot view Student A's evaluation (HTTP {status}).")
+
+    status, _ = request("GET", "/api/hr/internship-summary", token=mentor_a)
+    check(status == 403, f"Mentor role cannot view the HR summary (HTTP {status}).")
+    status, _ = request("GET", "/api/hr/internship-summary", token=student_a)
+    check(status == 403, f"Student role cannot view the HR summary (HTTP {status}).")
+    status, summary_response = request("GET", "/api/hr/internship-summary", token=hr_token)
+    summary = summary_response.get("data", {})
+    summary_item = next((item for item in summary.get("items", []) if item.get("studentId") == profile_a["id"]), None)
+    check(status == 200 and summary_item is not None and summary_item.get("evaluationStatus") == "EVALUATED" and
+          summary_item.get("overallScore") == 9,
+          "HR can view an accurate summary including the saved evaluation.")
+    if ADMIN_EMAIL and ADMIN_PASSWORD:
+        admin_token = login(ADMIN_EMAIL, ADMIN_PASSWORD, "ROLE_ADMIN")
+        status, _ = request("GET", "/api/hr/internship-summary", token=admin_token)
+        check(status == 200, f"Admin can view the HR summary under the current role policy (HTTP {status}).")
+    else:
+        print("[SKIP] Admin-to-HR-summary check: set VALIDATION_ADMIN_EMAIL and VALIDATION_ADMIN_PASSWORD.")
+
+    print("[PASS] US19/US20 authenticated evaluation, validation, ownership, and HR summary API checks passed.")
+
+
 def run_tests():
     run_weekly_report_ownership_tests()
+    run_part09_tests()
     if not ADMIN_EMAIL or not ADMIN_PASSWORD:
         print("[SKIP] API smoke checks are read-only and opt-in. Set VALIDATION_ADMIN_EMAIL and VALIDATION_ADMIN_PASSWORD.")
         run_student_schedule_tests()
