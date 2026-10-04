@@ -19,6 +19,7 @@ namespace InternshipManagementApi.Data
         public DbSet<InternshipTask> Tasks => Set<InternshipTask>();
         public DbSet<WeeklyReport> WeeklyReports => Set<WeeklyReport>();
         public DbSet<MentorFeedback> MentorFeedbacks => Set<MentorFeedback>();
+        public DbSet<InternshipEvaluation> InternshipEvaluations => Set<InternshipEvaluation>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -248,6 +249,36 @@ namespace InternshipManagementApi.Data
                     .WithMany()
                     .HasForeignKey(feedback => feedback.MentorId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<InternshipEvaluation>(entity =>
+            {
+                entity.ToTable("internship_evaluations", table => table.HasCheckConstraint(
+                    "ck_internship_evaluations_scores",
+                    "`skills_score` BETWEEN 1 AND 10 AND `attitude_score` BETWEEN 1 AND 10"));
+                entity.HasKey(evaluation => evaluation.Id);
+                entity.Property(evaluation => evaluation.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(evaluation => evaluation.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(evaluation => evaluation.MentorId).HasColumnName("mentor_id");
+                entity.Property(evaluation => evaluation.MentorNameSnapshot).HasColumnName("mentor_name_snapshot").HasMaxLength(100).IsRequired();
+                entity.Property(evaluation => evaluation.SkillsScore).HasColumnName("skills_score").IsRequired();
+                entity.Property(evaluation => evaluation.AttitudeScore).HasColumnName("attitude_score").IsRequired();
+                entity.Property(evaluation => evaluation.Comments).HasColumnName("comments").HasColumnType("text").IsRequired();
+                entity.Property(evaluation => evaluation.EvaluatedAt).HasColumnName("evaluated_at").IsRequired();
+                entity.Property(evaluation => evaluation.CreatedAt).HasColumnName("created_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.Property(evaluation => evaluation.UpdatedAt).HasColumnName("updated_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAddOrUpdate();
+                entity.HasIndex(evaluation => evaluation.StudentId).IsUnique();
+                entity.HasIndex(evaluation => evaluation.MentorId);
+                entity.HasOne(evaluation => evaluation.Student)
+                    .WithMany()
+                    .HasForeignKey(evaluation => evaluation.StudentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(evaluation => evaluation.Mentor)
+                    .WithMany()
+                    .HasForeignKey(evaluation => evaluation.MentorId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
 
