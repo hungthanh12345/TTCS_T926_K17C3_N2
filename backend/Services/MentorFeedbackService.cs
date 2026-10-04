@@ -85,6 +85,7 @@ namespace InternshipManagementApi.Services
             var report = await _db.WeeklyReports
                 .Include(item => item.Student)
                 .Include(item => item.MentorFeedback)
+                    .ThenInclude(feedback => feedback!.Mentor)
                 .SingleOrDefaultAsync(item => item.Id == reportId && item.Student.MentorId == mentor.Id);
 
             if (report == null)
