@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import mentorTaskService from '../../services/mentorTaskService';
 import MentorTaskManagement from '../../components/mentor/MentorTaskManagement';
 import MentorWeeklyReportsPanel from '../../components/mentor/MentorWeeklyReportsPanel';
+import MentorEvaluationPanel from '../../components/mentor/MentorEvaluationPanel';
 import {
   Phone,
   Mail,
@@ -130,6 +131,7 @@ export const MentorDashboardView = () => {
         </div>
         <MentorTaskManagement />
         <MentorWeeklyReportsPanel />
+        <MentorEvaluationPanel />
       </div>
     </DashboardLayout>
   );

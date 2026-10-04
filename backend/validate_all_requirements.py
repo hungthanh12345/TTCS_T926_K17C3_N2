@@ -293,6 +293,67 @@ def validate_weekly_report_contract():
     print("[PASS] US17/US18 API roles, ownership, validation, persistence, and frontend integration are wired.")
 
 
+def validate_part09_contract():
+    mentor_controller = (BACKEND / "Controllers/MentorEvaluationsController.cs").read_text(encoding="utf-8")
+    student_controller = (BACKEND / "Controllers/StudentEvaluationsController.cs").read_text(encoding="utf-8")
+    summary_controller = (BACKEND / "Controllers/HrInternshipSummaryController.cs").read_text(encoding="utf-8")
+    evaluation_service = (BACKEND / "Services/InternshipEvaluationService.cs").read_text(encoding="utf-8")
+    summary_service = (BACKEND / "Services/HrInternshipSummaryService.cs").read_text(encoding="utf-8")
+    evaluation_dto = (BACKEND / "DTOs/InternshipEvaluationDtos.cs").read_text(encoding="utf-8")
+    db_context = (BACKEND / "Data/AppDbContext.cs").read_text(encoding="utf-8")
+    migration = (BACKEND / "migrations/20261004_part09_internship_evaluations.sql").read_text(encoding="utf-8")
+    mentor_api = (FRONTEND / "src/services/internshipEvaluationService.js").read_text(encoding="utf-8")
+    hr_api = (FRONTEND / "src/services/hrInternshipSummaryService.js").read_text(encoding="utf-8")
+    mentor_panel = (FRONTEND / "src/components/mentor/MentorEvaluationPanel.jsx").read_text(encoding="utf-8")
+    student_panel = (FRONTEND / "src/components/student/StudentEvaluationPanel.jsx").read_text(encoding="utf-8")
+    hr_view = (FRONTEND / "src/views/hr/HrInternshipSummaryView.jsx").read_text(encoding="utf-8")
+
+    check('[Route("api/mentor/evaluations")]' in mentor_controller and
+          '[Authorize(Roles = "ROLE_MENTOR")]' in mentor_controller,
+          "US19 write/read APIs must be restricted to Mentor accounts.")
+    check('[Route("api/student/evaluations")]' in student_controller and
+          '[Authorize(Roles = "ROLE_STUDENT")]' in student_controller and "GetOwnByIdAsync" in student_controller,
+          "Students must have read-only access to their own evaluations.")
+    check('[Route("api/hr/internship-summary")]' in summary_controller and
+          '[Authorize(Roles = "ROLE_HR,ROLE_ADMIN")]' in summary_controller,
+          "US20 summary API must use the existing HR/Admin role policy.")
+    check("ClaimTypes.NameIdentifier" in mentor_controller and "ClaimTypes.NameIdentifier" in student_controller and
+          "evaluation.Student.MentorId == mentorId" in evaluation_service and
+          "evaluation.StudentId == student.Id" in evaluation_service and
+          "evaluation.MentorId != mentor.Id" in evaluation_service,
+          "Evaluation ownership must be derived from authenticated accounts, assigned students, and evaluation authorship.")
+    check("Range(1, 10)" in evaluation_dto and "StringLength(4000, MinimumLength = 2)" in evaluation_dto and
+          "ValidateRequest" in evaluation_service and "ConflictException" in evaluation_service,
+          "Evaluation requests must validate 1–10 scores, comments, and duplicate submissions.")
+    check("InternshipEvaluations" in db_context and "IsUnique()" in db_context and
+          "HasCheckConstraint" in db_context and "fk_internship_evaluations_student" in migration and
+          "fk_internship_evaluations_mentor" in migration and "uk_internship_evaluations_student" in migration and
+          "CHECK" in migration and "DROP TABLE" not in migration.upper(),
+          "Evaluation persistence must be additive with score, uniqueness, and foreign-key constraints.")
+    student_model = (BACKEND / "Data/Entities/Student.cs").read_text(encoding="utf-8")
+    check("InternshipProgramId" not in student_model and "internship_program_id" not in migration,
+          "Part 09 must not invent a Student–InternshipProgram assignment absent from the current model.")
+    check("GroupBy(report => report.StudentId)" in summary_service and "MentorFeedbacks" in summary_service and
+          "InternshipEvaluations" in summary_service and "WeeklyReportCount" in summary_service,
+          "HR summary must aggregate existing reports, feedback, and evaluations without persisting duplicate summary data.")
+    check("api.get('/mentor/evaluations')" in mentor_api and "api.post(`/mentor/evaluations/students/${studentId}`" in mentor_api and
+          "api.get('/student/evaluations')" in mentor_api and "api.get('/hr/internship-summary')" in hr_api,
+          "US19/US20 frontend services must call the live backend APIs.")
+    check('role="status"' in mentor_panel and 'role="alert"' in mentor_panel and
+          'role="status"' in student_panel and 'role="alert"' in student_panel and
+          'role="status"' in hr_view and 'role="alert"' in hr_view,
+          "Mentor, student, and HR evaluation interfaces must render loading, empty, and error states.")
+    check("VALIDATION_PART09_TESTS" in (BACKEND / "test_suite.py").read_text(encoding="utf-8"),
+          "Part 09 authorization and validation integration checks must be available as opt-in tests.")
+    app_code = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
+    sidebar = (FRONTEND / "src/components/layout/Sidebar.jsx").read_text(encoding="utf-8")
+    route_match = re.search(r'path="/hr/internship-summary"([\s\S]*?)/>', app_code)
+    check(route_match is not None and "ROLE_HR" in route_match.group(1) and "ROLE_ADMIN" in route_match.group(1) and
+          "path: '/hr/internship-summary'" in sidebar and "ROLE_HR" in sidebar and "ROLE_ADMIN" in sidebar,
+          "HR summary route and navigation must be available only to HR/Admin roles.")
+    print("[PASS] US19/US20 roles, ownership, score validation, data aggregation, and UI wiring are present.")
+
+
 def validate_mock_fallback_is_development_only():
     mock_mode = (FRONTEND / "src/services/mockMode.js").read_text(encoding="utf-8")
     check("import.meta.env.DEV" in mock_mode, "Mock mode must be restricted to development builds.")
@@ -348,11 +409,13 @@ def validate_api_test_safety():
     check("request(\"POST\", \"/api/auth/login\"" in test_suite, "API checks must authenticate through the existing login endpoint.")
     check('WEEKLY_REPORT_TESTS = os.getenv("VALIDATION_WEEKLY_REPORT_TESTS") == "1"' in test_suite and
           'WEEKLY_REPORT_TEST_DATABASE = os.getenv("VALIDATION_TEST_DATABASE") == "1"' in test_suite and
+          'PART09_TESTS = os.getenv("VALIDATION_PART09_TESTS") == "1"' in test_suite and
           'parsed_url.hostname not in {"localhost", "127.0.0.1", "::1"}' in test_suite,
-          "Mutating weekly-report tests must require explicit opt-in, a disposable database declaration, and a loopback API.")
-    check("if not WEEKLY_REPORT_TESTS:" in test_suite and "if not WEEKLY_REPORT_TEST_DATABASE:" in test_suite,
-          "Weekly-report writes must stay outside the default API smoke suite and require a test database.")
-    print("[PASS] API checks use environment credentials; write tests require explicit disposable-database opt-in.")
+          "Mutating API tests must require explicit opt-in, a disposable database declaration, and a loopback API.")
+    check("if not WEEKLY_REPORT_TESTS:" in test_suite and "if not PART09_TESTS:" in test_suite and
+          test_suite.count("if not WEEKLY_REPORT_TEST_DATABASE:") >= 2,
+          "Weekly-report and evaluation writes must stay outside the default API smoke suite and require a test database.")
+    print("[PASS] API checks use environment credentials; mutating writes require opt-in, a disposable DB, and loopback.")
 
 
 def validate_production_secret_configuration():
@@ -481,6 +544,7 @@ def main():
     validate_dashboard_roles_match_api_policies()
     validate_student_schedule_contract()
     validate_weekly_report_contract()
+    validate_part09_contract()
     validate_mock_fallback_is_development_only()
     validate_vite_host_check_is_enabled()
     validate_cors_origins_are_explicit()
