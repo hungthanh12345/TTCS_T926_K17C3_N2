@@ -343,7 +343,11 @@ SOURCE backend/migrations/20261002_part02_program_dates.sql;
 SOURCE backend/migrations/20261003_part03_student_documents.sql;
 SOURCE backend/migrations/20261003_part04_student_registration_approval.sql;
 SOURCE backend/migrations/20261003_part05_mentor_task_assignment.sql;
+SOURCE backend/migrations/20261004_part08_weekly_reports_and_mentor_feedback.sql;
+SOURCE backend/migrations/20261004_part09_internship_evaluations.sql;
 ```
+Part 09 adds one final evaluation per current student profile. The existing data model does not link students to internship programs; the HR summary aggregates evaluations, weekly reports, and mentor feedback from the relationships already present.
+
 For a disposable development database only, load the shared fixture accounts and data:
 ```sql
 SOURCE backend/seed_data.sql;
