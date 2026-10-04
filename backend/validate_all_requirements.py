@@ -246,6 +246,53 @@ def validate_student_schedule_contract():
     print("[PASS] US14 API ownership, student-only access, frontend route, and read-only states are wired.")
 
 
+def validate_weekly_report_contract():
+    student_controller = (BACKEND / "Controllers/StudentWeeklyReportsController.cs").read_text(encoding="utf-8")
+    mentor_controller = (BACKEND / "Controllers/MentorWeeklyReportsController.cs").read_text(encoding="utf-8")
+    report_service = (BACKEND / "Services/WeeklyReportService.cs").read_text(encoding="utf-8")
+    feedback_service = (BACKEND / "Services/MentorFeedbackService.cs").read_text(encoding="utf-8")
+    dto = (BACKEND / "DTOs/WeeklyReportDtos.cs").read_text(encoding="utf-8")
+    db_context = (BACKEND / "Data/AppDbContext.cs").read_text(encoding="utf-8")
+    migration = (BACKEND / "migrations/20261004_part08_weekly_reports_and_mentor_feedback.sql").read_text(encoding="utf-8")
+    student_api = (FRONTEND / "src/services/weeklyReportService.js").read_text(encoding="utf-8")
+    mentor_api = (FRONTEND / "src/services/mentorWeeklyReportService.js").read_text(encoding="utf-8")
+    student_panel = (FRONTEND / "src/components/student/StudentWeeklyReportsPanel.jsx").read_text(encoding="utf-8")
+    mentor_panel = (FRONTEND / "src/components/mentor/MentorWeeklyReportsPanel.jsx").read_text(encoding="utf-8")
+
+    check('[Route("api/student/weekly-reports")]' in student_controller and
+          '[Authorize(Roles = "ROLE_STUDENT")]' in student_controller,
+          "US17 routes must be restricted to authenticated students.")
+    check('[Route("api/mentor/weekly-reports")]' in mentor_controller and
+          '[Authorize(Roles = "ROLE_MENTOR")]' in mentor_controller,
+          "US18 routes must be restricted to authenticated mentors.")
+    check("ClaimTypes.NameIdentifier" in student_controller and 'FindFirstValue("userId")' in student_controller and
+          "report.StudentId == student.Id" in report_service,
+          "Student report reads and writes must derive ownership from the authenticated user.")
+    check("report.Student.MentorId == mentor.Id" in report_service and
+          "item.Student.MentorId == mentor.Id" in feedback_service and
+          "feedback.MentorId != mentor.Id" in feedback_service,
+          "Mentor report access and feedback updates must be limited to assigned students and the author.")
+    check("WeekStartDate" in dto and "WorkSummary" in dto and "NextWeekPlan" in dto and "StringLength" in dto,
+          "Weekly report DTOs must expose the report fields with bounded input validation.")
+    check("WeeklyReports" in db_context and "MentorFeedbacks" in db_context and
+          "IsUnique()" in db_context and "fk_weekly_reports_student" in migration and
+          "fk_mentor_feedback_weekly_report" in migration and "fk_mentor_feedback_mentor" in migration and
+          "DROP TABLE" not in migration.upper(),
+          "Part 08 persistence must enforce unique weeks and additive foreign-key constraints.")
+    check("api.get('/student/weekly-reports')" in student_api and "api.post('/student/weekly-reports'" in student_api and
+          "api.get('/mentor/weekly-reports')" in mentor_api and "api.post(`/mentor/weekly-reports/${reportId}/feedback`" in mentor_api,
+          "US17 and US18 frontend services must call the real backend APIs.")
+    student_dashboard = (FRONTEND / "src/views/student/StudentDashboardView.jsx").read_text(encoding="utf-8")
+    mentor_dashboard = (FRONTEND / "src/views/mentor/MentorDashboardView.jsx").read_text(encoding="utf-8")
+    check('role="status"' in student_panel and 'role="alert"' in student_panel and
+          'role="status"' in mentor_panel and 'role="alert"' in mentor_panel and
+          "StudentWeeklyReportsPanel" in student_dashboard and "MentorWeeklyReportsPanel" in mentor_dashboard,
+          "Student and mentor report panels must be dashboard-integrated with loading, empty, and error states.")
+    check("VALIDATION_WEEKLY_REPORT_TESTS" in (BACKEND / "test_suite.py").read_text(encoding="utf-8"),
+          "Part 08 authenticated ownership integration checks must be available as an opt-in test.")
+    print("[PASS] US17/US18 API roles, ownership, validation, persistence, and frontend integration are wired.")
+
+
 def validate_mock_fallback_is_development_only():
     mock_mode = (FRONTEND / "src/services/mockMode.js").read_text(encoding="utf-8")
     check("import.meta.env.DEV" in mock_mode, "Mock mode must be restricted to development builds.")
@@ -297,9 +344,15 @@ def validate_api_test_safety():
     test_suite = (BACKEND / "test_suite.py").read_text(encoding="utf-8")
     check("VALIDATION_ADMIN_EMAIL" in test_suite and "VALIDATION_ADMIN_PASSWORD" in test_suite, "API tests must receive credentials from the environment.")
     check('"Admin@123"' not in test_suite, "API tests must not commit a default account password.")
-    check("request(\"PUT\"" not in test_suite and "request(\"DELETE\"" not in test_suite, "API smoke tests must not modify or delete production data.")
-    check("request(\"POST\", \"/api/auth/login\"" in test_suite, "Mutating API tests must be excluded from the default smoke suite.")
-    print("[PASS] API smoke tests are environment-driven and read-only.")
+    check("request(\"DELETE\"" not in test_suite, "API integration tests must not delete test or production records.")
+    check("request(\"POST\", \"/api/auth/login\"" in test_suite, "API checks must authenticate through the existing login endpoint.")
+    check('WEEKLY_REPORT_TESTS = os.getenv("VALIDATION_WEEKLY_REPORT_TESTS") == "1"' in test_suite and
+          'WEEKLY_REPORT_TEST_DATABASE = os.getenv("VALIDATION_TEST_DATABASE") == "1"' in test_suite and
+          'parsed_url.hostname not in {"localhost", "127.0.0.1", "::1"}' in test_suite,
+          "Mutating weekly-report tests must require explicit opt-in, a disposable database declaration, and a loopback API.")
+    check("if not WEEKLY_REPORT_TESTS:" in test_suite and "if not WEEKLY_REPORT_TEST_DATABASE:" in test_suite,
+          "Weekly-report writes must stay outside the default API smoke suite and require a test database.")
+    print("[PASS] API checks use environment credentials; write tests require explicit disposable-database opt-in.")
 
 
 def validate_production_secret_configuration():
@@ -427,6 +480,7 @@ def main():
     validate_frontend_contracts()
     validate_dashboard_roles_match_api_policies()
     validate_student_schedule_contract()
+    validate_weekly_report_contract()
     validate_mock_fallback_is_development_only()
     validate_vite_host_check_is_enabled()
     validate_cors_origins_are_explicit()
