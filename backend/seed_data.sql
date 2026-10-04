@@ -36,25 +36,25 @@ ON DUPLICATE KEY UPDATE
 -- ----------------------------------------------------------------------------
 INSERT INTO `users` (`id`, `email`, `password_hash`, `role_id`, `status`) VALUES
 -- Quản trị viên (Admin) - Role 1
-(1, 'admin@gmail.com', '$2a$11$DmQNujx.XQHrkXbxyuItV.e8AlqCxjyR7zyd/5w.YGLubrmlu2giC', 1, 'ACTIVE'),
+(1, 'admin@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 1, 'ACTIVE'),
 
 -- Quản lý Nhân sự (HR) - Role 2
-(2, 'customer.hr@company.com', '$2a$11$D/DCgZpscmOXOipgXrjScuu/Shcrl7XLWLShcwhlbyp8I/bJnmiqy', 2, 'ACTIVE'),
+(2, 'customer.hr@company.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 2, 'ACTIVE'),
 
 -- Mentor Doanh nghiệp Duy nhất (Nguyễn Khánh Tùng) - Role 3
-(3, 'tung.nk@gmail.com', '$2a$11$eOM5Tf4R2rsxO3dgzmNg7eUfBEyEJv0xvL3LZ.5ZGDJhIPi4swrmi', 3, 'ACTIVE'),
+(3, 'tung.nk@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 3, 'ACTIVE'),
 
 -- 10 Sinh viên Thực tập - Role 4
-(4, 'hung.nt@gmail.com', '$2a$11$BcoAzdN.rmC0yJltmOURi.b0CCISr0TeQrJ8at4UhP4y53LJlkjQK', 4, 'ACTIVE'),
-(5, 'hung.dm@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE'),
-(6, 'hung.ht@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE'),
-(7, 'giang.td@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE'),
-(8, 'duong.dh@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE'),
-(9, 'han.dd@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE'),
-(10, 'huan.bn@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE'),
-(11, 'hai.nh@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE'),
-(12, 'huong.ph@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE'),
-(13, 'giang.nt@gmail.com', '$2a$11$ev6oSD1Xqs2FQ3y1qyr9BeA1B2kXKK6dfPDQ.A/GoHAG6dO8F1biS', 4, 'ACTIVE')
+(4, 'hung.nt@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(5, 'hung.dm@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(6, 'hung.ht@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(7, 'giang.td@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(8, 'duong.dh@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(9, 'han.dd@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(10, 'huan.bn@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(11, 'hai.nh@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(12, 'huong.ph@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE'),
+(13, 'giang.nt@gmail.com', '$2a$11$9qdMiMhsZy239X8zOXcS0O/Iiab9s/GYC.B2Bt2FB5/oMuChTd8ie', 4, 'ACTIVE')
 ON DUPLICATE KEY UPDATE 
     `email` = VALUES(`email`),
     `password_hash` = VALUES(`password_hash`), 

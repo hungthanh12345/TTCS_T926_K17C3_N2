@@ -160,15 +160,21 @@ def validate_frontend_contracts():
     check('<form onSubmit={handleSubmit}' in login_view, "Login form must use its validated submit handler.")
     check('type="email"' in login_view, "Login form must expose an email input.")
     check('type={showPassword ?' in login_view, "Login form must preserve the password visibility control.")
-    check("Đăng nhập nhanh" in login_view, "Login page must render the quick demo-login section.")
+    check("Tài Khoản Demo Nhanh" in login_view, "Login page must render the quick demo-login section.")
+    check("const DEMO_PASSWORD = import.meta.env.DEV ? 'Admin@123' : null;" in login_view,
+          "The shared demo password must only be present in development mode.")
+    check("password: DEMO_PASSWORD" in login_view,
+          "Selecting a demo account must fill the shared password into the password field.")
     quick_login_match = re.search(
         r'<section[^>]+aria-labelledby="quick-login-title"[\s\S]*?</section>', login_view
     )
     check(quick_login_match is not None, "Quick demo accounts must be grouped in their own section.")
     if quick_login_match is not None:
         quick_login_section = quick_login_match.group(0)
-        check('grid-cols-1' in quick_login_section and 'sm:grid-cols-2' in quick_login_section,
+        check('grid-cols-1' in quick_login_section and 'min-[560px]:grid-cols-2' in quick_login_section,
               "Quick demo account cards must stay responsive on mobile and desktop.")
+        check('min-h-[62px]' in quick_login_section,
+              "Quick demo account cards must use the compact layout.")
         check('type="button"' in quick_login_section and "executeLogin(" not in quick_login_section and
               "navigate(" not in quick_login_section,
               "Selecting a demo account must not submit login or navigate away.")
@@ -183,7 +189,10 @@ def validate_frontend_contracts():
         check(demo_role in login_view, f"Login demo role {demo_role} must be visible in its quick-fill option.")
     check("document.getElementById('login-password')?.focus()" in login_view,
           "Selecting a demo account must focus the password input.")
-    check("Admin@123" not in login_view, "The demo password must not be hard-coded in the frontend.")
+    check("import.meta.env.DEV && (" in login_view,
+          "The quick demo-login section must only be available in development mode.")
+    check(login_view.count("Admin@123") == 1,
+          "The demo password may only appear in the development-only form-fill constant.")
 
     app_code = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
     check(
