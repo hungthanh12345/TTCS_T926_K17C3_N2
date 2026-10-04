@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+from datetime import date, timedelta
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -17,6 +18,16 @@ STUDENT_EMAIL = os.getenv("VALIDATION_STUDENT_EMAIL")
 STUDENT_PASSWORD = os.getenv("VALIDATION_STUDENT_PASSWORD")
 OTHER_STUDENT_EMAIL = os.getenv("VALIDATION_OTHER_STUDENT_EMAIL")
 OTHER_STUDENT_PASSWORD = os.getenv("VALIDATION_OTHER_STUDENT_PASSWORD")
+WEEKLY_REPORT_TESTS = os.getenv("VALIDATION_WEEKLY_REPORT_TESTS") == "1"
+WEEKLY_REPORT_TEST_DATABASE = os.getenv("VALIDATION_TEST_DATABASE") == "1"
+REPORT_STUDENT_A_EMAIL = os.getenv("VALIDATION_REPORT_STUDENT_A_EMAIL")
+REPORT_STUDENT_A_PASSWORD = os.getenv("VALIDATION_REPORT_STUDENT_A_PASSWORD")
+REPORT_STUDENT_B_EMAIL = os.getenv("VALIDATION_REPORT_STUDENT_B_EMAIL")
+REPORT_STUDENT_B_PASSWORD = os.getenv("VALIDATION_REPORT_STUDENT_B_PASSWORD")
+REPORT_MENTOR_A_EMAIL = os.getenv("VALIDATION_REPORT_MENTOR_A_EMAIL")
+REPORT_MENTOR_A_PASSWORD = os.getenv("VALIDATION_REPORT_MENTOR_A_PASSWORD")
+REPORT_MENTOR_B_EMAIL = os.getenv("VALIDATION_REPORT_MENTOR_B_EMAIL")
+REPORT_MENTOR_B_PASSWORD = os.getenv("VALIDATION_REPORT_MENTOR_B_PASSWORD")
 
 
 def request(method, path, body=None, token=None):
@@ -88,7 +99,127 @@ def run_student_schedule_tests():
         print("[SKIP] US14 cross-account data check: set VALIDATION_OTHER_STUDENT_EMAIL and VALIDATION_OTHER_STUDENT_PASSWORD.")
 
 
+def run_weekly_report_ownership_tests():
+    if not WEEKLY_REPORT_TESTS:
+        print("[SKIP] US17/US18 mutating API checks: set VALIDATION_WEEKLY_REPORT_TESTS=1 to opt in against an isolated test database.")
+        return
+
+    if not WEEKLY_REPORT_TEST_DATABASE:
+        raise AssertionError("US17/US18 checks mutate data; set VALIDATION_TEST_DATABASE=1 only when the API uses a disposable test database.")
+
+    parsed_url = urllib.parse.urlparse(BASE_URL)
+    if parsed_url.hostname not in {"localhost", "127.0.0.1", "::1"}:
+        raise AssertionError("US17/US18 mutating API checks are restricted to a loopback API host.")
+
+    credentials = (
+        REPORT_STUDENT_A_EMAIL, REPORT_STUDENT_A_PASSWORD,
+        REPORT_STUDENT_B_EMAIL, REPORT_STUDENT_B_PASSWORD,
+        REPORT_MENTOR_A_EMAIL, REPORT_MENTOR_A_PASSWORD,
+        REPORT_MENTOR_B_EMAIL, REPORT_MENTOR_B_PASSWORD,
+    )
+    if not all(credentials):
+        raise AssertionError("US17/US18 checks need two student and two mentor test accounts assigned across the two mentors.")
+
+    def available_monday(token):
+        status, response = request("GET", "/api/student/weekly-reports", token=token)
+        check(status == 200 and isinstance(response.get("data"), list),
+              f"Student can list their reports before the test (HTTP {status}).")
+        used_dates = {item.get("weekStartDate") for item in response["data"]}
+        today = date.today()
+        this_monday = today - timedelta(days=today.weekday())
+        for weeks_ago in range(52, 365):
+            candidate = this_monday - timedelta(weeks=weeks_ago)
+            if candidate.isoformat() not in used_dates:
+                return candidate
+        raise AssertionError("No unused historical week was available for the isolated test report.")
+
+    def report_payload(week_start, suffix):
+        return {
+            "weekStartDate": week_start.isoformat(),
+            "workSummary": f"Weekly report ownership test {suffix}",
+            "results": "Integration test result",
+            "challenges": "No test blockers",
+            "nextWeekPlan": "Continue isolated integration checks",
+        }
+
+    status, _ = request("GET", "/api/student/weekly-reports")
+    check(status == 401, f"Anonymous users cannot list weekly reports (HTTP {status}).")
+    status, _ = request("GET", "/api/mentor/weekly-reports")
+    check(status == 401, f"Anonymous users cannot list mentor reports (HTTP {status}).")
+
+    student_a = login(REPORT_STUDENT_A_EMAIL, REPORT_STUDENT_A_PASSWORD, "ROLE_STUDENT")
+    student_b = login(REPORT_STUDENT_B_EMAIL, REPORT_STUDENT_B_PASSWORD, "ROLE_STUDENT")
+    mentor_a = login(REPORT_MENTOR_A_EMAIL, REPORT_MENTOR_A_PASSWORD, "ROLE_MENTOR")
+    mentor_b = login(REPORT_MENTOR_B_EMAIL, REPORT_MENTOR_B_PASSWORD, "ROLE_MENTOR")
+
+    week_a = available_monday(student_a)
+    invalid_payload = report_payload(week_a + timedelta(days=1), "invalid-date")
+    status, _ = request("POST", "/api/student/weekly-reports", invalid_payload, token=student_a)
+    check(status == 400, f"Non-Monday report dates are rejected (HTTP {status}).")
+
+    status, created_a = request("POST", "/api/student/weekly-reports", report_payload(week_a, "student-a"), token=student_a)
+    check(status == 201 and isinstance(created_a.get("data", {}).get("id"), int),
+          f"Student A can submit their own report (HTTP {status}).")
+    report_a_id = created_a["data"]["id"]
+    status, _ = request("POST", "/api/student/weekly-reports", report_payload(week_a, "duplicate"), token=student_a)
+    check(status == 409, f"A student cannot submit two reports for one week (HTTP {status}).")
+    status, _ = request("PUT", f"/api/student/weekly-reports/{report_a_id}", report_payload(week_a, "student-a-updated"), token=student_a)
+    check(status == 200, f"Student A can edit their own unreviewed report (HTTP {status}).")
+
+    week_b = available_monday(student_b)
+    status, created_b = request("POST", "/api/student/weekly-reports", report_payload(week_b, "student-b"), token=student_b)
+    check(status == 201 and isinstance(created_b.get("data", {}).get("id"), int),
+          f"Student B can submit their own report (HTTP {status}).")
+    report_b_id = created_b["data"]["id"]
+    status, _ = request("GET", f"/api/student/weekly-reports/{report_b_id}", token=student_a)
+    check(status == 404, f"Student A cannot view Student B's report (HTTP {status}).")
+    status, _ = request("PUT", f"/api/student/weekly-reports/{report_b_id}", report_payload(week_b, "forged-update"), token=student_a)
+    check(status == 404, f"Student A cannot edit Student B's report (HTTP {status}).")
+    status, student_b_reports = request("GET", "/api/student/weekly-reports", token=student_b)
+    check(status == 200 and report_a_id not in {item.get("id") for item in student_b_reports.get("data", [])},
+          "Student B's report list does not contain Student A's report.")
+
+    status, mentor_a_reports = request("GET", "/api/mentor/weekly-reports", token=mentor_a)
+    check(status == 200 and report_a_id in {item.get("id") for item in mentor_a_reports.get("data", [])},
+          "Mentor A can list reports for their assigned student.")
+    status, mentor_a_detail = request("GET", f"/api/mentor/weekly-reports/{report_a_id}", token=mentor_a)
+    check(status == 200 and mentor_a_detail.get("data", {}).get("id") == report_a_id,
+          "Mentor A can view the assigned student's report detail.")
+    status, mentor_b_reports = request("GET", "/api/mentor/weekly-reports", token=mentor_b)
+    check(status == 200 and report_b_id in {item.get("id") for item in mentor_b_reports.get("data", [])},
+          "Mentor B can list reports for their assigned student.")
+    status, _ = request("GET", f"/api/mentor/weekly-reports/{report_b_id}", token=mentor_a)
+    check(status == 404, f"Mentor A cannot view Student B's report assigned to Mentor B (HTTP {status}).")
+    status, _ = request("POST", f"/api/mentor/weekly-reports/{report_b_id}/feedback", {"content": "Unauthorized mentor test"}, token=mentor_a)
+    check(status == 404, f"Mentor A cannot give feedback on Student B's report (HTTP {status}).")
+
+    status, _ = request("POST", f"/api/mentor/weekly-reports/{report_a_id}/feedback", {"content": "Student cannot impersonate a mentor"}, token=student_a)
+    check(status == 403, f"Student role cannot submit mentor feedback (HTTP {status}).")
+    status, feedback = request("POST", f"/api/mentor/weekly-reports/{report_a_id}/feedback", {"content": "Good weekly progress; keep documenting results."}, token=mentor_a)
+    check(status == 201 and isinstance(feedback.get("data", {}).get("id"), int),
+          f"Mentor A can review their assigned student's report (HTTP {status}).")
+    status, _ = request("POST", f"/api/mentor/weekly-reports/{report_a_id}/feedback", {"content": "Duplicate feedback"}, token=mentor_a)
+    check(status == 409, f"A report cannot receive duplicate feedback (HTTP {status}).")
+    status, updated_feedback = request("PUT", f"/api/mentor/weekly-reports/{report_a_id}/feedback", {"content": "Updated mentor feedback for ownership test."}, token=mentor_a)
+    check(status == 200 and updated_feedback.get("data", {}).get("content") == "Updated mentor feedback for ownership test.",
+          f"The authoring mentor can update feedback (HTTP {status}).")
+    status, _ = request("PUT", f"/api/mentor/weekly-reports/{report_a_id}/feedback", {"content": "Mentor B cannot update this."}, token=mentor_b)
+    check(status == 404, f"Mentor B cannot access or update Mentor A's assigned report (HTTP {status}).")
+
+    status, student_a_detail = request("GET", f"/api/student/weekly-reports/{report_a_id}", token=student_a)
+    report_data = student_a_detail.get("data", {})
+    check(status == 200 and report_data.get("status") == "REVIEWED" and
+          report_data.get("mentorFeedback", {}).get("content") == "Updated mentor feedback for ownership test.",
+          "Student A can read mentor feedback on their own report after it is saved.")
+    status, _ = request("PUT", f"/api/student/weekly-reports/{report_a_id}", report_payload(week_a, "edit-after-review"), token=student_a)
+    check(status == 409, f"Student A cannot edit a report after mentor review (HTTP {status}).")
+    status, _ = request("GET", "/api/student/weekly-reports", token=mentor_a)
+    check(status == 403, f"Mentor role cannot access student-only report routes (HTTP {status}).")
+    print("[PASS] US17/US18 authenticated CRUD, role, feedback, validation, and cross-owner API checks passed.")
+
+
 def run_tests():
+    run_weekly_report_ownership_tests()
     if not ADMIN_EMAIL or not ADMIN_PASSWORD:
         print("[SKIP] API smoke checks are read-only and opt-in. Set VALIDATION_ADMIN_EMAIL and VALIDATION_ADMIN_PASSWORD.")
         run_student_schedule_tests()

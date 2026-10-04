@@ -17,6 +17,8 @@ namespace InternshipManagementApi.Data
         public DbSet<InternshipProgram> InternshipPrograms => Set<InternshipProgram>();
         public DbSet<StudentDocument> StudentDocuments => Set<StudentDocument>();
         public DbSet<InternshipTask> Tasks => Set<InternshipTask>();
+        public DbSet<WeeklyReport> WeeklyReports => Set<WeeklyReport>();
+        public DbSet<MentorFeedback> MentorFeedbacks => Set<MentorFeedback>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -198,6 +200,54 @@ namespace InternshipManagementApi.Data
                     .WithMany()
                     .HasForeignKey(task => task.StudentId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<WeeklyReport>(entity =>
+            {
+                entity.ToTable("weekly_reports");
+                entity.HasKey(report => report.Id);
+                entity.Property(report => report.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(report => report.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(report => report.WeekStartDate).HasColumnName("week_start_date").HasColumnType("date").IsRequired();
+                entity.Property(report => report.WorkSummary).HasColumnName("work_summary").HasColumnType("text").IsRequired();
+                entity.Property(report => report.Results).HasColumnName("results").HasColumnType("text");
+                entity.Property(report => report.Challenges).HasColumnName("challenges").HasColumnType("text");
+                entity.Property(report => report.NextWeekPlan).HasColumnName("next_week_plan").HasColumnType("text");
+                entity.Property(report => report.AttachmentUrl).HasColumnName("attachment_url").HasMaxLength(2048);
+                entity.Property(report => report.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("SUBMITTED").IsRequired();
+                entity.Property(report => report.CreatedAt).HasColumnName("created_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.Property(report => report.UpdatedAt).HasColumnName("updated_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAddOrUpdate();
+                entity.HasIndex(report => new { report.StudentId, report.WeekStartDate }).IsUnique();
+                entity.HasOne(report => report.Student)
+                    .WithMany()
+                    .HasForeignKey(report => report.StudentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(report => report.MentorFeedback)
+                    .WithOne(feedback => feedback.WeeklyReport)
+                    .HasForeignKey<MentorFeedback>(feedback => feedback.WeeklyReportId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<MentorFeedback>(entity =>
+            {
+                entity.ToTable("mentor_feedback");
+                entity.HasKey(feedback => feedback.Id);
+                entity.Property(feedback => feedback.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(feedback => feedback.WeeklyReportId).HasColumnName("weekly_report_id").IsRequired();
+                entity.Property(feedback => feedback.MentorId).HasColumnName("mentor_id").IsRequired();
+                entity.Property(feedback => feedback.Content).HasColumnName("content").HasColumnType("text").IsRequired();
+                entity.Property(feedback => feedback.CreatedAt).HasColumnName("created_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.Property(feedback => feedback.UpdatedAt).HasColumnName("updated_at")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAddOrUpdate();
+                entity.HasIndex(feedback => feedback.WeeklyReportId).IsUnique();
+                entity.HasIndex(feedback => feedback.MentorId);
+                entity.HasOne(feedback => feedback.Mentor)
+                    .WithMany()
+                    .HasForeignKey(feedback => feedback.MentorId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
 
