@@ -718,7 +718,7 @@ export const StudentManagementView = () => {
       />
 
       <EditStudentModal
-        key={selectedStudent?.id ?? 'no-student'}
+        key={`edit-${selectedStudent?.id ?? 'no-student'}`}
         isOpen={isEditModalOpen}
         student={selectedStudent}
         onClose={() => {
@@ -729,7 +729,7 @@ export const StudentManagementView = () => {
       />
 
       <AssignMentorModal
-        key={selectedStudent?.id ?? 'no-student'}
+        key={`assign-${selectedStudent?.id ?? 'no-student'}`}
         isOpen={isAssignModalOpen}
         student={selectedStudent}
         onClose={() => {

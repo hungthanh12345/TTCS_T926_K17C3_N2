@@ -33,8 +33,8 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(50).IsRequired();
                 entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(255);
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
 
                 entity.HasIndex(e => e.Name).IsUnique();
             });
@@ -51,10 +51,10 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.Status)
                       .HasColumnName("status")
                       .HasConversion<string>()
-                      .HasMaxLength(20)
+                      .HasColumnType("enum('ACTIVE','INACTIVE','LOCKED','PENDING_APPROVAL','REJECTED')")
                       .HasDefaultValue(UserStatus.ACTIVE);
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
 
                 entity.HasIndex(e => e.Email).IsUnique();
                 entity.HasIndex(e => e.RoleId);
@@ -76,8 +76,8 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.PhoneNumber).HasColumnName("phone_number").HasMaxLength(20);
                 entity.Property(e => e.Department).HasColumnName("department").HasMaxLength(100).IsRequired();
                 entity.Property(e => e.Specialization).HasColumnName("specialization").HasMaxLength(150);
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
 
                 entity.HasIndex(e => e.UserId).IsUnique();
 
@@ -101,8 +101,8 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.Major).HasColumnName("major").HasMaxLength(100).IsRequired();
                 entity.Property(e => e.MentorId).HasColumnName("mentor_id");
                 entity.Property(e => e.ProgramId).HasColumnName("program_id");
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
 
                 entity.HasIndex(e => e.StudentCode).IsUnique();
                 entity.HasIndex(e => e.UserId).IsUnique();
@@ -134,8 +134,8 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
                 entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
                 entity.HasIndex(e => e.Name).IsUnique();
             });
 
@@ -149,8 +149,8 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.DepartmentId).HasColumnName("department_id").IsRequired();
                 entity.Property(e => e.StartDate).HasColumnName("start_date").HasColumnType("date");
                 entity.Property(e => e.EndDate).HasColumnName("end_date").HasColumnType("date");
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
                 entity.HasIndex(e => new { e.DepartmentId, e.Name }).IsUnique();
                 entity.HasOne(e => e.Department)
                     .WithMany(d => d.Programs)
@@ -164,14 +164,14 @@ namespace InternshipManagementApi.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
                 entity.Property(e => e.StudentId).HasColumnName("student_id").IsRequired();
-                entity.Property(e => e.DocumentType).HasColumnName("document_type").HasMaxLength(40).IsRequired();
+                entity.Property(e => e.DocumentType).HasColumnName("document_type").HasMaxLength(30).IsRequired();
                 entity.Property(e => e.OriginalFileName).HasColumnName("original_file_name").HasMaxLength(255).IsRequired();
-                entity.Property(e => e.StoredFileName).HasColumnName("stored_file_name").HasMaxLength(255);
-                entity.Property(e => e.ContentType).HasColumnName("content_type").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.StoredFileName).HasColumnName("stored_file_name").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.ContentType).HasColumnName("content_type").HasMaxLength(100).IsRequired();
                 entity.Property(e => e.SizeBytes).HasColumnName("size_bytes").IsRequired();
                 entity.Property(e => e.FileContent).HasColumnName("file_content").HasColumnType("longblob");
                 entity.Property(e => e.UploadedAt).HasColumnName("uploaded_at")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                    .HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
                 entity.HasIndex(e => new { e.StudentId, e.UploadedAt });
                 entity.HasOne(e => e.Student)
                     .WithMany()
@@ -193,9 +193,9 @@ namespace InternshipManagementApi.Data
                     .HasColumnName("status")
                     .HasMaxLength(20)
                     .HasDefaultValue("TO_DO");
-                entity.Property(task => task.CreatedAt).HasColumnName("created_at")
+                entity.Property(task => task.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
-                entity.Property(task => task.UpdatedAt).HasColumnName("updated_at")
+                entity.Property(task => task.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
 
                 entity.HasIndex(task => new { task.MentorId, task.StudentId });
