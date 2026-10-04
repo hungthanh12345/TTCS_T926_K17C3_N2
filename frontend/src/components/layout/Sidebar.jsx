@@ -68,6 +68,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       roles: ['ROLE_STUDENT', 'ROLE_ADMIN'],
       badge: null,
     },
+    {
+      title: 'Lịch Thực Tập',
+      path: '/student/schedule',
+      icon: CalendarDays,
+      roles: ['ROLE_STUDENT'],
+      badge: null,
+    },
   ];
 
   const visibleNavItems = navItems.filter(
@@ -118,7 +125,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                 const isActive =
                   location.pathname === item.path ||
                   (item.path === '/mentor/students' && location.pathname.startsWith('/mentor')) ||
-                  (item.path === '/student/profile' && location.pathname.startsWith('/student'));
+                  (item.path === '/student/profile' && location.pathname === '/student/profile');
 
                 return (
                   <NavLink

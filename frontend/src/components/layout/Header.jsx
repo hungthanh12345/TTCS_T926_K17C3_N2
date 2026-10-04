@@ -68,6 +68,13 @@ export const Header = ({ onOpenMobileSidebar, title }) => {
         { label: 'Sinh Viên Phụ Trách' },
       ];
     }
+    if (path === '/student/schedule') {
+      return [
+        { label: 'Hệ Thống', path: '/student/schedule' },
+        { label: 'Sinh Viên', path: '/student/schedule' },
+        { label: 'Lịch Thực Tập' },
+      ];
+    }
     if (path.includes('/student')) {
       return [
         { label: 'Hệ Thống', path: '/student/profile' },
