@@ -19,6 +19,14 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const ROLE_BY_ID = { 1: 'ROLE_ADMIN', 2: 'ROLE_HR', 3: 'ROLE_MENTOR', 4: 'ROLE_STUDENT' };
+const ROLE_ID_BY_NAME = Object.fromEntries(Object.entries(ROLE_BY_ID).map(([id, role]) => [role, Number(id)]));
+const USER_STATUS = {
+  ACTIVE: { label: 'Đang hoạt động', className: 'text-emerald-700', iconClass: 'text-emerald-500' },
+  INACTIVE: { label: 'Tạm khóa', className: 'text-slate-600', iconClass: 'text-slate-400' },
+  LOCKED: { label: 'Đã khóa', className: 'text-rose-700', iconClass: 'text-rose-500' },
+};
+
 export const UserManagementView = () => {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,13 +51,7 @@ export const UserManagementView = () => {
         const role =
           u.roleName ||
           u.role ||
-          (u.roleId === 1
-            ? 'ROLE_ADMIN'
-            : u.roleId === 2
-            ? 'ROLE_HR'
-            : u.roleId === 3
-            ? 'ROLE_MENTOR'
-            : 'ROLE_STUDENT');
+          ROLE_BY_ID[u.roleId] || 'ROLE_UNKNOWN';
         return {
           ...u,
           id: String(u.id),
@@ -58,8 +60,8 @@ export const UserManagementView = () => {
           roleName: role,
           roleId:
             u.roleId ||
-            (role === 'ROLE_ADMIN' ? 1 : role === 'ROLE_HR' ? 2 : role === 'ROLE_MENTOR' ? 3 : 4),
-          status: u.status || 'ACTIVE',
+            ROLE_ID_BY_NAME[role] || null,
+          status: u.status || null,
         };
       });
       setUsers(normalized);
@@ -299,9 +301,6 @@ export const UserManagementView = () => {
                             <span className="font-semibold text-slate-900 block">
                               {u.email}
                             </span>
-                            <span className="text-[11px] text-slate-400">
-                              Xác thực chuẩn JWT Bearer
-                            </span>
                           </div>
                         </div>
                       </td>
@@ -309,10 +308,15 @@ export const UserManagementView = () => {
                         <Badge variant={u.role} roleId={u.roleId} />
                       </td>
                       <td className="py-4 px-6">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                          {u.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm khóa'}
-                        </span>
+                        {(() => {
+                          const status = USER_STATUS[u.status];
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${status?.className || 'text-slate-500'}`}>
+                              {status?.iconClass && <CheckCircle2 className={`h-3.5 w-3.5 ${status.iconClass}`} />}
+                              {status?.label || u.status || 'Chưa xác định'}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-4 px-6 text-xs text-slate-500">
                         <div className="flex items-center gap-1.5">
@@ -324,7 +328,7 @@ export const UserManagementView = () => {
                                   month: '2-digit',
                                   day: '2-digit',
                                 })
-                              : 'Gần đây'}
+                              : '—'}
                           </span>
                         </div>
                       </td>

@@ -1,18 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import {
-  Menu,
-  Bell,
-  ChevronDown,
-  LogOut,
-  User,
-  Settings,
-  ChevronRight,
-} from 'lucide-react';
+import { Menu, ChevronDown, LogOut, LayoutDashboard, ChevronRight } from 'lucide-react';
 import Badge from '../common/Badge';
 
-export const Header = ({ onOpenMobileSidebar, title }) => {
+const ROLE_HOME = {
+  ROLE_ADMIN: '/admin/users',
+  ROLE_HR: '/hr/students',
+  ROLE_MENTOR: '/mentor/students',
+  ROLE_STUDENT: '/student/profile',
+};
+
+export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -26,8 +25,15 @@ export const Header = ({ onOpenMobileSidebar, title }) => {
         setIsDropdownOpen(false);
       }
     };
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setIsDropdownOpen(false);
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
 
   // Dynamic breadcrumb items
@@ -38,6 +44,20 @@ export const Header = ({ onOpenMobileSidebar, title }) => {
         { label: 'Hệ Thống', path: '/hr/programs' },
         { label: 'Nhân Sự', path: '/hr/programs' },
         { label: 'Chương Trình Thực Tập' },
+      ];
+    }
+    if (path.startsWith('/hr/student-registrations')) {
+      return [
+        { label: 'Hệ Thống', path: '/hr/student-registrations' },
+        { label: 'Nhân Sự', path: '/hr/students' },
+        { label: 'Xét Duyệt Đăng Ký' },
+      ];
+    }
+    if (path.startsWith('/hr/internship-summary')) {
+      return [
+        { label: 'Hệ Thống', path: '/hr/internship-summary' },
+        { label: 'Nhân Sự', path: '/hr/students' },
+        { label: 'Tổng Hợp Kết Quả Thực Tập' },
       ];
     }
     if (path.includes('/admin')) {
@@ -88,7 +108,7 @@ export const Header = ({ onOpenMobileSidebar, title }) => {
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-colors">
+    <header className="sticky top-0 z-30 min-h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-2 sm:px-6 lg:px-8 flex items-center justify-between gap-3 transition-colors">
       {/* Left: Mobile hamburger & Breadcrumbs / Title */}
       <div className="flex items-center gap-3 min-w-0">
         <button
@@ -123,28 +143,20 @@ export const Header = ({ onOpenMobileSidebar, title }) => {
           <h1 className="text-base font-bold text-slate-900 tracking-tight leading-tight truncate">
             {title || 'Bảng Điều Khiển'}
           </h1>
+          {subtitle && <p className="hidden max-w-[52vw] truncate text-[11px] leading-4 text-slate-500 sm:block">{subtitle}</p>}
         </div>
       </div>
 
-      {/* Right: Notifications, User Profile Summary & Logout */}
+      {/* Right: signed-in account summary */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Notifications Bell */}
-        <button
-          type="button"
-          className="relative p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-          title="Thông báo mới"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-white" />
-        </button>
-
-        <div className="h-5 w-[1px] bg-slate-200 hidden sm:block" />
-
         {/* User Avatar & Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            aria-label="Mở menu tài khoản"
+            aria-expanded={isDropdownOpen}
+            aria-controls="account-menu"
             className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-sky-500 text-white font-bold text-xs flex items-center justify-center shadow-xs ring-1 ring-slate-200">
@@ -162,7 +174,7 @@ export const Header = ({ onOpenMobileSidebar, title }) => {
           </button>
 
           {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white shadow-2xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div id="account-menu" className="absolute right-0 mt-2 w-60 rounded-2xl bg-white shadow-2xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-3.5 py-2.5 border-b border-slate-100">
                 <p className="text-xs font-bold text-slate-900 truncate">
                   {user?.fullName || user?.email}
@@ -175,29 +187,20 @@ export const Header = ({ onOpenMobileSidebar, title }) => {
 
               <div className="py-1">
                 <Link
-                  to={user?.role === 'ROLE_STUDENT' ? '/student/profile' : '/hr/students'}
+                  to={ROLE_HOME[user?.role] || '/login'}
                   onClick={() => setIsDropdownOpen(false)}
-                  className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Hồ Sơ Của Tôi</span>
+                  <LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Không gian làm việc</span>
                 </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(false)}
-                  className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <Settings className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Cài Đặt Hệ Thống</span>
-                </button>
               </div>
 
               <div className="pt-1 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={logout}
-                  className="w-full text-left px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 font-semibold transition-colors cursor-pointer"
+                  className="w-full text-left px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:bg-rose-50 flex items-center gap-2.5 font-semibold transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Đăng Xuất Khỏi Phiên Làm Việc</span>

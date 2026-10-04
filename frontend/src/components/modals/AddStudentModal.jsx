@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
-import { UserPlus, Hash, User, Phone, School, BookOpen, Mail, Calendar, Loader2 } from 'lucide-react';
+import { UserPlus, Hash, User, Phone, School, BookOpen, Loader2 } from 'lucide-react';
 import studentService from '../../services/studentService';
 import toast from 'react-hot-toast';
 
@@ -9,31 +9,11 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     studentCode: '',
     fullName: '',
     phone: '',
-    email: '',
-    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-    major: 'Kỹ thuật Phần mềm',
-    internshipPeriod: 'Kỳ Thu 2026 (09/2026 - 12/2026)',
+    university: '',
+    major: '',
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const universities = [
-    'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-    'Đại học Bách Khoa Hà Nội (HUST)',
-    'Đại học Công nghệ — ĐHQGHN (VNU-UET)',
-    'Đại học FPT Hà Nội',
-    'Học viện Công nghệ Bưu chính Viễn thông (PTIT)',
-    'Học viện Kỹ thuật Mật mã (ACT)',
-  ];
-
-  const majors = [
-    'Kỹ thuật Phần mềm',
-    'Khoa học Máy tính',
-    'Hệ thống Thông tin Quản lý',
-    'An toàn Thông tin và An ninh Mạng',
-    'Trí tuệ Nhân tạo và Khoa học Dữ liệu',
-    'Mạng Máy tính và Truyền thông Dữ liệu',
-  ];
 
   const validate = () => {
     const errs = {};
@@ -54,11 +34,11 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     }
 
     if (!formData.university.trim()) {
-      errs.university = 'Vui lòng chọn trường đại học';
+      errs.university = 'Vui lòng nhập trường đại học';
     }
 
     if (!formData.major.trim()) {
-      errs.major = 'Vui lòng chọn chuyên ngành đào tạo';
+      errs.major = 'Vui lòng nhập chuyên ngành đào tạo';
     }
 
     setErrors(errs);
@@ -77,10 +57,8 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
         studentCode: '',
         fullName: '',
         phone: '',
-        email: '',
-        university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-        major: 'Kỹ thuật Phần mềm',
-        internshipPeriod: 'Kỳ Thu 2026 (09/2026 - 12/2026)',
+        university: '',
+        major: '',
       });
       setErrors({});
       onClose();
@@ -97,7 +75,7 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Thêm Mới Hồ Sơ Sinh Viên Thực Tập"
-      subtitle="Nhập thông tin ứng viên để quản lý theo dõi và ghép nối Mentor hướng dẫn."
+      subtitle="Biểu mẫu này tạo hồ sơ sinh viên. Tài khoản đăng nhập được tạo qua cổng đăng ký thực tập."
       icon={UserPlus}
       maxWidth="max-w-2xl"
     >
@@ -190,24 +168,6 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
             )}
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Hòm Thư Email Sinh Viên
-            </label>
-            <div className="relative rounded-xl shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Mail className="w-4 h-4" />
-              </div>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="sinhvien@ictu.edu.vn"
-                className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Trường Đại học */}
@@ -219,22 +179,23 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <School className="w-4 h-4" />
             </div>
-            <select
+            <input
+              type="text"
               value={formData.university}
-              onChange={(e) => setFormData({ ...formData, university: e.target.value })}
-              className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
-            >
-              {universities.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
+              onChange={(e) => {
+                setFormData({ ...formData, university: e.target.value });
+                if (errors.university) setErrors({ ...errors, university: null });
+              }}
+              maxLength={150}
+              placeholder="Nhập trường đại học"
+              className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${errors.university ? 'border-rose-300 focus:ring-rose-400 focus:border-rose-400' : 'border-slate-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+            />
           </div>
+          {errors.university && <p className="mt-1 text-xs font-medium text-rose-500">{errors.university}</p>}
         </div>
 
-        {/* Chuyên ngành & Kỳ thực tập */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Chuyên ngành */}
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
               Chuyên Ngành Đào Tạo <span className="text-rose-500">*</span>
@@ -243,36 +204,19 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <BookOpen className="w-4 h-4" />
               </div>
-              <select
-                value={formData.major}
-                onChange={(e) => setFormData({ ...formData, major: e.target.value })}
-                className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
-              >
-                {majors.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Kỳ Thực Tập Sinh
-            </label>
-            <div className="relative rounded-xl shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Calendar className="w-4 h-4" />
-              </div>
               <input
                 type="text"
-                value={formData.internshipPeriod}
-                onChange={(e) => setFormData({ ...formData, internshipPeriod: e.target.value })}
-                placeholder="Kỳ Thu 2026 (09/2026 - 12/2026)"
-                className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
+                value={formData.major}
+                onChange={(e) => {
+                  setFormData({ ...formData, major: e.target.value });
+                  if (errors.major) setErrors({ ...errors, major: null });
+                }}
+                maxLength={100}
+                placeholder="Nhập chuyên ngành"
+                className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${errors.major ? 'border-rose-300 focus:ring-rose-400 focus:border-rose-400' : 'border-slate-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
               />
             </div>
+            {errors.major && <p className="mt-1 text-xs font-medium text-rose-500">{errors.major}</p>}
           </div>
         </div>
 

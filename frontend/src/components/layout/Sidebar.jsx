@@ -180,7 +180,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-sky-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                   {user?.fullName?.charAt(0) || user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-950" />
               </div>
               <div className="truncate">
                 <p className="text-xs font-semibold text-white truncate">
@@ -194,8 +193,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
 
             <button
               onClick={logout}
+              aria-label="Đăng xuất"
               title="Đăng xuất khỏi hệ thống"
-              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>
