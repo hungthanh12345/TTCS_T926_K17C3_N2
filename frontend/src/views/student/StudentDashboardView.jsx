@@ -17,6 +17,7 @@ import TableSkeleton from '../../components/common/TableSkeleton';
 import StudentDocumentsPanel from '../../components/student/StudentDocumentsPanel';
 import StudentTasksPanel from '../../components/student/StudentTasksPanel';
 import StudentWeeklyReportsPanel from '../../components/student/StudentWeeklyReportsPanel';
+import StudentEvaluationPanel from '../../components/student/StudentEvaluationPanel';
 
 export const StudentDashboardView = () => {
   const { user } = useAuth();
@@ -219,6 +220,7 @@ export const StudentDashboardView = () => {
         {user?.role === 'ROLE_STUDENT' && <StudentDocumentsPanel />}
         {user?.role === 'ROLE_STUDENT' && <StudentTasksPanel />}
         {user?.role === 'ROLE_STUDENT' && <StudentWeeklyReportsPanel />}
+        {user?.role === 'ROLE_STUDENT' && <StudentEvaluationPanel />}
       </div>
     </DashboardLayout>
   );
