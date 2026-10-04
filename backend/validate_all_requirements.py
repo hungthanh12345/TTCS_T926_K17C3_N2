@@ -211,6 +211,41 @@ def validate_dashboard_roles_match_api_policies():
     print("[PASS] Mentor and student dashboard routes match their API role policies.")
 
 
+def validate_student_schedule_contract():
+    controller = (BACKEND / "Controllers/StudentScheduleController.cs").read_text(encoding="utf-8")
+    service = (BACKEND / "Services/StudentScheduleService.cs").read_text(encoding="utf-8")
+    app_code = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
+    sidebar = (FRONTEND / "src/components/layout/Sidebar.jsx").read_text(encoding="utf-8")
+    schedule_service = (FRONTEND / "src/services/studentScheduleService.js").read_text(encoding="utf-8")
+    page = (FRONTEND / "src/views/student/StudentScheduleView.jsx").read_text(encoding="utf-8")
+
+    check('[Route("api/student/schedule")]' in controller, "US14 must expose its personal schedule API.")
+    check('[Authorize(Roles = "ROLE_STUDENT")]' in controller, "US14 API must be limited to student accounts.")
+    check("ClaimTypes.NameIdentifier" in controller and 'FindFirstValue("userId")' in controller,
+          "US14 must resolve the owner from the authenticated identity.")
+    check("task.Student.UserId == userId" in service,
+          "US14 schedule queries must be scoped to the authenticated student's user id.")
+    check("task.DueDate.HasValue" in service and "OrderBy(task => task.DueDate)" in service,
+          "US14 must list dated assignments in chronological order.")
+    check("StudentId" not in controller and "studentId" not in controller,
+          "US14 API must not accept a client-supplied student id.")
+
+    route_match = re.search(r'path="/student/schedule"([\s\S]*?)/>', app_code)
+    check(route_match is not None, "US14 student schedule route must exist.")
+    roles_match = re.search(r"allowedRoles=\{\[([^\]]*)\]\}", route_match.group(1))
+    check(roles_match is not None and set(re.findall(r"'([^']+)'", roles_match.group(1))) == {"ROLE_STUDENT"},
+          "US14 frontend route must allow only ROLE_STUDENT.")
+    check("path: '/student/schedule'" in sidebar and "roles: ['ROLE_STUDENT']" in sidebar,
+          "US14 navigation must be visible only to students.")
+    check("api.get('/student/schedule')" in schedule_service,
+          "US14 frontend must call the real schedule API.")
+    check("role=\"status\"" in page and "role=\"alert\"" in page and "events.length === 0" in page,
+          "US14 page must render loading, error, and empty states.")
+    check("api.post(" not in schedule_service and "api.put(" not in schedule_service and "api.delete(" not in schedule_service,
+          "US14 read-only schedule service must not add task mutation actions.")
+    print("[PASS] US14 API ownership, student-only access, frontend route, and read-only states are wired.")
+
+
 def validate_mock_fallback_is_development_only():
     mock_mode = (FRONTEND / "src/services/mockMode.js").read_text(encoding="utf-8")
     check("import.meta.env.DEV" in mock_mode, "Mock mode must be restricted to development builds.")
@@ -391,6 +426,7 @@ def main():
     validate_account_status_enum()
     validate_frontend_contracts()
     validate_dashboard_roles_match_api_policies()
+    validate_student_schedule_contract()
     validate_mock_fallback_is_development_only()
     validate_vite_host_check_is_enabled()
     validate_cors_origins_are_explicit()
