@@ -33,6 +33,7 @@ export const StudentManagementView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [programs, setPrograms] = useState([]);
+  const [accountLinks, setAccountLinks] = useState(null);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,9 +56,13 @@ export const StudentManagementView = () => {
   const fetchStudents = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const data = await studentService.getStudents();
+      const [data, links] = await Promise.all([
+        studentService.getStudents(),
+        studentService.getStudentAccountLinks(),
+      ]);
       const list = Array.isArray(data) ? data : data?.items || [];
       setStudents(list);
+      setAccountLinks(links);
     } catch (err) {
       toast.error(err.message || 'Không thể tải danh sách sinh viên.');
     } finally {
@@ -200,7 +205,7 @@ export const StudentManagementView = () => {
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all group">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Tổng Số Sinh Viên
+                Hồ Sơ Đang Quản Lý
               </span>
               <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <GraduationCap className="w-5 h-5" />
@@ -286,7 +291,7 @@ export const StudentManagementView = () => {
             </div>
             <div className="mt-3 flex items-baseline justify-between">
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                {uniqueUniversities.length || 1}
+                {uniqueUniversities.length}
               </span>
               <span className="text-xs font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
                 {uniqueMajors.length} Ngành
@@ -295,6 +300,26 @@ export const StudentManagementView = () => {
             <p className="text-[11px] text-slate-400 mt-2">Mạng lưới đối tác đào tạo liên kết</p>
           </div>
         </div>
+
+        {accountLinks && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5" aria-labelledby="account-link-summary">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <h2 id="account-link-summary" className="text-sm font-bold text-slate-900">Đối Chiếu Tài Khoản và Hồ Sơ ROLE_STUDENT</h2>
+              <p className="text-xs text-slate-500">Dữ liệu đọc trực tiếp từ Backend/MySQL</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="rounded-xl bg-slate-50 px-3 py-2.5"><p className="text-[11px] text-slate-500">Tài khoản sinh viên</p><p className="mt-1 text-lg font-bold text-slate-900">{accountLinks.accountCount}</p></div>
+              <div className="rounded-xl bg-emerald-50 px-3 py-2.5"><p className="text-[11px] text-emerald-700">Đã liên kết hồ sơ</p><p className="mt-1 text-lg font-bold text-emerald-800">{accountLinks.linkedAccountCount}</p></div>
+              <div className="rounded-xl bg-amber-50 px-3 py-2.5"><p className="text-[11px] text-amber-700">Tài khoản chưa có hồ sơ</p><p className="mt-1 text-lg font-bold text-amber-800">{accountLinks.unlinkedAccountCount}</p></div>
+              <div className="rounded-xl bg-rose-50 px-3 py-2.5"><p className="text-[11px] text-rose-700">Hồ sơ chưa gắn tài khoản</p><p className="mt-1 text-lg font-bold text-rose-800">{accountLinks.unlinkedProfileCount}</p></div>
+            </div>
+            {accountLinks.unlinkedProfileCount > 0 && (
+              <p className="mt-3 text-xs text-rose-700" role="status">
+                Có hồ sơ chưa liên kết tài khoản. Hệ thống giữ nguyên dữ liệu và không tự tạo hoặc xóa hồ sơ để cân bằng số liệu.
+              </p>
+            )}
+          </section>
+        )}
 
         {/* ======================================================== */}
         {/* 2. SEARCH & FILTER TOOLBAR (REFINED LINEAR/STRIPE STYLE)  */}
@@ -351,7 +376,7 @@ export const StudentManagementView = () => {
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 active:scale-95 transition-all shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30 cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>+ Thêm Sinh Viên Mới</span>
+                <span>Liên Kết Tài Khoản Sinh Viên</span>
               </button>
             </div>
           </div>
@@ -443,7 +468,7 @@ export const StudentManagementView = () => {
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                 {isFiltered
                   ? 'Không có kết quả nào khớp với các tiêu chí tìm kiếm hoặc bộ lọc hiện tại của bạn.'
-                  : 'Chưa có hồ sơ sinh viên thực tập nào trong hệ thống. Hãy bắt đầu bằng cách tạo hồ sơ đầu tiên.'}
+                  : 'Chưa có hồ sơ để hiển thị. Chỉ liên kết tài khoản ROLE_STUDENT đã đăng ký.'}
               </p>
               <div className="mt-6 flex items-center justify-center gap-2.5">
                 {isFiltered ? (
@@ -461,7 +486,7 @@ export const StudentManagementView = () => {
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all cursor-pointer"
                   >
                     <UserPlus className="w-4 h-4" />
-                    <span>Thêm Sinh Viên Đầu Tiên</span>
+                    <span>Liên Kết Tài Khoản Sinh Viên</span>
                   </button>
                 )}
               </div>

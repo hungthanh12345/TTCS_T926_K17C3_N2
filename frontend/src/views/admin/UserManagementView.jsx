@@ -2,11 +2,9 @@ import React, { useCallback, useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Badge from '../../components/common/Badge';
 import TableSkeleton from '../../components/common/TableSkeleton';
-import CreateUserModal from '../../components/modals/CreateUserModal';
 import userService from '../../services/userService';
 import {
   Users,
-  UserPlus,
   Search,
   RefreshCw,
   Trash2,
@@ -33,7 +31,6 @@ export const UserManagementView = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState('ALL');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // State cho Modal Xác nhận Xóa Tài khoản
   const [deleteModal, setDeleteModal] = useState({
@@ -213,7 +210,7 @@ export const UserManagementView = () => {
               />
             </div>
 
-            {/* Bộ Lọc & Nút Thêm Mới */}
+            {/* Bộ Lọc */}
             <div className="flex items-center gap-3">
               {/* Lọc theo Vai Trò */}
               <select
@@ -241,15 +238,6 @@ export const UserManagementView = () => {
                 />
               </button>
 
-              {/* Nút Tạo Người Dùng */}
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-98 transition-all shadow-md shadow-indigo-200 cursor-pointer shrink-0"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Tạo Người Dùng Mới</span>
-              </button>
             </div>
           </div>
         </div>
@@ -267,7 +255,7 @@ export const UserManagementView = () => {
               <p className="text-xs text-slate-500 mt-1">
                 {searchQuery || selectedRole !== 'ALL'
                   ? 'Thử điều chỉnh lại từ khóa tìm kiếm hoặc bộ lọc vai trò.'
-                  : 'Bắt đầu bằng việc tạo tài khoản đầu tiên.'}
+                  : 'Chưa có tài khoản trong hệ thống.'}
               </p>
             </div>
           ) : (
@@ -417,12 +405,6 @@ export const UserManagementView = () => {
         </div>
       )}
 
-      {/* Modal Tạo Người Dùng Mới */}
-      <CreateUserModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={fetchUsers}
-      />
     </DashboardLayout>
   );
 };

@@ -24,6 +24,7 @@ namespace InternshipManagementApi.DTOs.Student
         [MaxLength(100, ErrorMessage = "Major cannot exceed 100 characters.")]
         public string Major { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "An existing student account is required.")]
         public int? UserId { get; set; }
 
         public int? MentorId { get; set; }

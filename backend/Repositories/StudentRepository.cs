@@ -14,6 +14,7 @@ namespace InternshipManagementApi.Repositories
         Task<Student?> GetByStudentCodeAsync(string studentCode);
         Task<bool> ExistsByStudentCodeAsync(string studentCode, int? excludeId = null);
         Task<bool> ExistsByUserIdAsync(int userId, int? excludeId = null);
+        Task<StudentAccountLinkSummaryDto> GetStudentAccountLinksAsync();
         Task<PagedResult<Student>> SearchAsync(StudentSearchFilterDto filter);
         Task<Student> AddAsync(Student student);
         Task UpdateAsync(Student student);
@@ -80,6 +81,37 @@ namespace InternshipManagementApi.Repositories
                 query = query.Where(s => s.Id != excludeId.Value);
             }
             return await query.AnyAsync(s => s.UserId == userId);
+        }
+
+        public async Task<StudentAccountLinkSummaryDto> GetStudentAccountLinksAsync()
+        {
+            var accounts = await _context.Users
+                .AsNoTracking()
+                .Where(user => user.Role.Name == "ROLE_STUDENT")
+                .OrderBy(user => user.Email)
+                .Select(user => new StudentAccountLinkOptionDto
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Status = user.Status.ToString(),
+                    CreatedAt = user.CreatedAt,
+                    HasStudentProfile = _context.Students.Any(student => student.UserId == user.Id)
+                })
+                .ToListAsync();
+
+            var profileCount = await _context.Students.CountAsync();
+            var unlinkedProfileCount = await _context.Students.CountAsync(student => student.UserId == null);
+            var linkedAccountCount = accounts.Count(account => account.HasStudentProfile);
+
+            return new StudentAccountLinkSummaryDto
+            {
+                AccountCount = accounts.Count,
+                LinkedAccountCount = linkedAccountCount,
+                UnlinkedAccountCount = accounts.Count - linkedAccountCount,
+                ProfileCount = profileCount,
+                UnlinkedProfileCount = unlinkedProfileCount,
+                Accounts = accounts
+            };
         }
 
         public async Task<PagedResult<Student>> SearchAsync(StudentSearchFilterDto filter)

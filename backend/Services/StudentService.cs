@@ -10,6 +10,7 @@ namespace InternshipManagementApi.Services
     public interface IStudentService
     {
         Task<StudentResponseDto> CreateStudentAsync(CreateStudentRequestDto request);
+        Task<StudentAccountLinkSummaryDto> GetStudentAccountLinksAsync();
         Task<StudentResponseDto> GetStudentByIdAsync(int id);
         Task<StudentResponseDto> GetStudentByUserIdAsync(int userId);
         Task<StudentResponseDto> UpdateStudentAsync(int id, UpdateStudentRequestDto request);
@@ -36,33 +37,31 @@ namespace InternshipManagementApi.Services
 
         public async Task<StudentResponseDto> CreateStudentAsync(CreateStudentRequestDto request)
         {
-            var code = request.StudentCode.Trim().ToUpper();
-
-            bool codeExists = await _studentRepository.ExistsByStudentCodeAsync(code);
-            if (codeExists)
+            if (!request.UserId.HasValue)
             {
-                throw new ConflictException($"Student code '{request.StudentCode}' already exists.");
+                throw new BadRequestException("A student profile must be linked to an existing ROLE_STUDENT account.");
             }
 
-            User? user = null;
-            if (request.UserId.HasValue)
+            var user = await _userRepository.GetByIdWithRoleAsync(request.UserId.Value);
+            if (user == null)
             {
-                user = await _userRepository.GetByIdWithRoleAsync(request.UserId.Value);
-                if (user == null)
-                {
-                    throw new NotFoundException($"User with ID {request.UserId.Value} not found.");
-                }
+                throw new NotFoundException($"User with ID {request.UserId.Value} not found.");
+            }
 
-                if (user.Role == null || !string.Equals(user.Role.Name, "ROLE_STUDENT", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new BadRequestException($"User with ID {request.UserId.Value} has role '{(user.Role?.Name ?? "UNKNOWN")}'. Only users with role 'ROLE_STUDENT' can be linked to a student profile.");
-                }
+            if (user.Role == null || !string.Equals(user.Role.Name, "ROLE_STUDENT", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException($"User with ID {request.UserId.Value} has role '{(user.Role?.Name ?? "UNKNOWN")}'. Only users with role 'ROLE_STUDENT' can be linked to a student profile.");
+            }
 
-                bool userAlreadyLinked = await _studentRepository.ExistsByUserIdAsync(request.UserId.Value);
-                if (userAlreadyLinked)
-                {
-                    throw new ConflictException($"User ID {request.UserId.Value} is already linked to another student profile.");
-                }
+            if (await _studentRepository.ExistsByUserIdAsync(request.UserId.Value))
+            {
+                throw new ConflictException("Tài khoản này đã có hồ sơ sinh viên.");
+            }
+
+            var code = request.StudentCode.Trim().ToUpper();
+            if (await _studentRepository.ExistsByStudentCodeAsync(code))
+            {
+                throw new ConflictException($"Student code '{request.StudentCode}' already exists.");
             }
 
             Mentor? mentor = null;
@@ -91,6 +90,9 @@ namespace InternshipManagementApi.Services
             var createdStudent = await _studentRepository.GetByIdWithDetailsAsync(student.Id);
             return MapToResponseDto(createdStudent ?? student);
         }
+
+        public Task<StudentAccountLinkSummaryDto> GetStudentAccountLinksAsync() =>
+            _studentRepository.GetStudentAccountLinksAsync();
 
         public async Task<StudentResponseDto> GetStudentByIdAsync(int id)
         {

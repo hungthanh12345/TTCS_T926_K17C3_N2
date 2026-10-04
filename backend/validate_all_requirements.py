@@ -490,11 +490,7 @@ def validate_mentor_delete_preserves_work_history():
     print("[PASS] Mentor deletion guards assigned tasks and feedback history.")
 
 
-def validate_mock_fallback_is_development_only():
-    mock_mode = (FRONTEND / "src/services/mockMode.js").read_text(encoding="utf-8")
-    check("import.meta.env.DEV" in mock_mode, "Mock mode must be restricted to development builds.")
-    check("VITE_ENABLE_MOCK_DATA === 'true'" in mock_mode, "Mock mode must require explicit opt-in.")
-
+def validate_business_data_uses_api_only():
     auth_service = (FRONTEND / "src/services/authService.js").read_text(encoding="utf-8")
     check("api.post('/auth/login', { email, password })" in auth_service,
           "Login must authenticate through the existing API.")
@@ -506,9 +502,63 @@ def validate_mock_fallback_is_development_only():
 
     for relative_path in ("src/services/userService.js", "src/services/mentorService.js", "src/services/studentService.js"):
         service = (FRONTEND / relative_path).read_text(encoding="utf-8")
-        check("if (!error.response)" not in service, f"{relative_path} must not silently substitute mock data in production.")
-        check("!error.response && isMockModeEnabled" in service, f"{relative_path} mock behavior must be opt-in.")
-    print("[PASS] Login always uses the API; optional data-service mock fallbacks remain development-only.")
+        check("mockData" not in service and "localStorage" not in service,
+              f"{relative_path} must use the backend for business data without local fake-data fallbacks.")
+    check(not (FRONTEND / "src/services/mockData.js").exists(), "Business mock data must not remain in the frontend service bundle.")
+    check("VITE_ENABLE_MOCK_DATA" not in (FRONTEND / ".env.example").read_text(encoding="utf-8"),
+          "The frontend must not expose an offline business-mock switch.")
+    print("[PASS] Login and account, mentor, and student business data use backend APIs without mock fallbacks.")
+
+
+def validate_student_accounts_link_to_existing_profiles():
+    admin_view = (FRONTEND / "src/views/admin/UserManagementView.jsx").read_text(encoding="utf-8")
+    check("CreateUserModal" not in admin_view and "Tạo Người Dùng Mới" not in admin_view,
+          "Admin user management must not expose account creation.")
+
+    student_view = (FRONTEND / "src/views/hr/StudentManagementView.jsx").read_text(encoding="utf-8")
+    add_student_modal = (FRONTEND / "src/components/modals/AddStudentModal.jsx").read_text(encoding="utf-8")
+    student_service = (BACKEND / "Services/StudentService.cs").read_text(encoding="utf-8")
+    student_dto = (BACKEND / "DTOs/Student/CreateStudentRequestDto.cs").read_text(encoding="utf-8")
+    repository = (BACKEND / "Repositories/StudentRepository.cs").read_text(encoding="utf-8")
+    hr_controller = (BACKEND / "Controllers/HrController.cs").read_text(encoding="utf-8")
+    user_service = (BACKEND / "Services/UserService.cs").read_text(encoding="utf-8")
+    registration = (BACKEND / "Services/StudentRegistrationService.cs").read_text(encoding="utf-8")
+
+    check("Liên Kết Tài Khoản Sinh Viên" in student_view and "Tạo Sinh Viên" not in student_view,
+          "HR student management must describe the workflow as linking an existing account.")
+    check("getStudentAccountLinks" in add_student_modal and "hasStudentProfile" in add_student_modal and
+          "userId" in add_student_modal,
+          "The student profile form must load existing accounts and reject already-linked accounts.")
+    check("[HttpGet(\"student-accounts\")]" in hr_controller and
+          "GetStudentAccountLinksAsync" in hr_controller,
+          "HR/Admin must have a protected endpoint for live student account-link data.")
+    check("HasStudentProfile = _context.Students.Any" in repository and
+          "UserId = user.Id" in repository and "UnlinkedProfileCount" in repository,
+          "Account/profile counts must come from users and students in the database.")
+    check("[Required(ErrorMessage = \"An existing student account is required.\")]" in student_dto and
+          "A student profile must be linked to an existing ROLE_STUDENT account." in student_service and
+          "Tài khoản này đã có hồ sơ sinh viên." in student_service,
+          "The API must require a student account and reject duplicate profile links.")
+    check("Student accounts must be created through student registration" in user_service,
+          "Admin account creation must not create ROLE_STUDENT accounts outside registration.")
+    check("Student = new Student" in registration and "ProgramId = program.Id" in registration,
+          "Registration must atomically create the student account/profile link and retain its program link.")
+    print("[PASS] Admin cannot create student accounts from user management; profiles link to existing ROLE_STUDENT accounts.")
+
+
+def validate_notifications_use_live_work_data():
+    controller = (BACKEND / "Controllers/NotificationsController.cs").read_text(encoding="utf-8")
+    service = (BACKEND / "Services/NotificationService.cs").read_text(encoding="utf-8")
+    header = (FRONTEND / "src/components/layout/Header.jsx").read_text(encoding="utf-8")
+    notification_service = (FRONTEND / "src/services/notificationService.js").read_text(encoding="utf-8")
+    check('[Route("api/notifications")]' in controller and "[Authorize]" in controller,
+          "The notification API must be authenticated.")
+    for entity_query in ("_db.Users", "_db.Students", "_db.Tasks", "_db.WeeklyReports",
+                         "_db.MentorFeedbacks", "_db.InternshipEvaluations"):
+        check(entity_query in service, f"Notifications must be derived from live data in {entity_query}.")
+    check("notificationService.getMine()" in header and "api.get('/notifications')" in notification_service,
+          "The header bell must load notifications from the backend API.")
+    print("[PASS] Header notifications are computed from authenticated, live internship records without a mock table.")
 
 
 def validate_vite_host_check_is_enabled():
@@ -689,7 +739,9 @@ def main():
     validate_student_application_integration()
     validate_program_and_task_flows()
     validate_mentor_delete_preserves_work_history()
-    validate_mock_fallback_is_development_only()
+    validate_business_data_uses_api_only()
+    validate_student_accounts_link_to_existing_profiles()
+    validate_notifications_use_live_work_data()
     validate_vite_host_check_is_enabled()
     validate_cors_origins_are_explicit()
     validate_safe_database_setup()

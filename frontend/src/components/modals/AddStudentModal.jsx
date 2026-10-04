@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Modal from '../common/Modal';
 import { UserPlus, Hash, User, Phone, School, BookOpen, Loader2 } from 'lucide-react';
 import studentService from '../../services/studentService';
@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 
 export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
+    userId: '',
     studentCode: '',
     fullName: '',
     phone: '',
@@ -14,9 +15,32 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [accountLinks, setAccountLinks] = useState(null);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    let active = true;
+    setIsLoadingAccounts(true);
+    studentService.getStudentAccountLinks()
+      .then((summary) => { if (active) setAccountLinks(summary); })
+      .catch((error) => {
+        if (active) {
+          setAccountLinks(null);
+          toast.error(error.message || 'Không thể tải tài khoản sinh viên.');
+        }
+      })
+      .finally(() => { if (active) setIsLoadingAccounts(false); });
+
+    return () => { active = false; };
+  }, [isOpen]);
 
   const validate = () => {
     const errs = {};
+    if (!formData.userId) {
+      errs.userId = 'Vui lòng chọn tài khoản ROLE_STUDENT đã tồn tại';
+    }
     if (!formData.studentCode.trim()) {
       errs.studentCode = 'Mã sinh viên là bắt buộc';
     } else if (formData.studentCode.trim().length < 4) {
@@ -52,8 +76,9 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     setIsSubmitting(true);
     try {
       await studentService.createStudent(formData);
-      toast.success(`Đã thêm mới hồ sơ sinh viên: ${formData.fullName}!`);
+      toast.success(`Đã liên kết tài khoản với hồ sơ sinh viên: ${formData.fullName}!`);
       setFormData({
+        userId: '',
         studentCode: '',
         fullName: '',
         phone: '',
@@ -74,12 +99,52 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Thêm Mới Hồ Sơ Sinh Viên Thực Tập"
-      subtitle="Biểu mẫu này tạo hồ sơ sinh viên. Tài khoản đăng nhập được tạo qua cổng đăng ký thực tập."
+      title="Liên Kết Tài Khoản Sinh Viên"
+      subtitle="Chọn tài khoản ROLE_STUDENT có sẵn rồi bổ sung hồ sơ. Thao tác này không tạo tài khoản mới."
       icon={UserPlus}
       maxWidth="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="student-account" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Tài Khoản Sinh Viên <span className="text-rose-500">*</span>
+          </label>
+          <select
+            id="student-account"
+            value={formData.userId}
+            disabled={isLoadingAccounts || !accountLinks?.accounts?.length}
+            onChange={(event) => {
+              const selected = accountLinks?.accounts?.find((account) => String(account.userId) === event.target.value);
+              if (selected?.hasStudentProfile) {
+                setFormData((current) => ({ ...current, userId: '' }));
+                toast.error('Tài khoản này đã có hồ sơ sinh viên');
+                return;
+              }
+              setFormData((current) => ({ ...current, userId: event.target.value }));
+              if (errors.userId) setErrors((current) => ({ ...current, userId: null }));
+            }}
+            className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 ${errors.userId ? 'border-rose-300 focus:ring-rose-400' : 'border-slate-300 focus:ring-indigo-500'}`}
+          >
+            <option value="">{isLoadingAccounts ? 'Đang tải tài khoản...' : 'Chọn email tài khoản sinh viên'}</option>
+            {(accountLinks?.accounts || []).map((account) => (
+              <option key={account.userId} value={account.userId}>
+                {account.email}{account.hasStudentProfile ? ' — Đã có hồ sơ sinh viên' : ` — ${account.status}`}
+              </option>
+            ))}
+          </select>
+          {errors.userId && <p className="mt-1 text-xs text-rose-500 font-medium">{errors.userId}</p>}
+          {accountLinks && accountLinks.unlinkedAccountCount === 0 && (
+            <p className="mt-1.5 text-xs text-amber-700">
+              Không có tài khoản ROLE_STUDENT nào đang chờ liên kết. Sinh viên cần đăng ký tài khoản trước.
+            </p>
+          )}
+          {accountLinks?.unlinkedAccountCount > 0 && (
+            <p className="mt-1.5 text-xs text-slate-500">
+              {accountLinks.unlinkedAccountCount} tài khoản chưa có hồ sơ; tài khoản đã liên kết sẽ bị từ chối nếu gửi lại.
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Mã sinh viên */}
           <div>
@@ -232,7 +297,7 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoadingAccounts || !formData.userId}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-98 transition-all shadow-md shadow-indigo-200 disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? (

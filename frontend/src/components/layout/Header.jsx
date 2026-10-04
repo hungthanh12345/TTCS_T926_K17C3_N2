@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Menu, ChevronDown, LogOut, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { Menu, ChevronDown, LogOut, LayoutDashboard, ChevronRight, Bell, RefreshCw } from 'lucide-react';
 import Badge from '../common/Badge';
+import notificationService from '../../services/notificationService';
 
 const ROLE_HOME = {
   ROLE_ADMIN: '/admin/users',
@@ -14,19 +15,27 @@ const ROLE_HOME = {
 export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [notificationError, setNotificationError] = useState('');
   const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
 
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setIsDropdownOpen(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsDropdownOpen(false);
+      if (notificationRef.current && !notificationRef.current.contains(e.target)) setIsNotificationsOpen(false);
     };
     const handleEscape = (e) => {
-      if (e.key === 'Escape') setIsDropdownOpen(false);
+      if (e.key === 'Escape') {
+        setIsDropdownOpen(false);
+        setIsNotificationsOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
@@ -35,6 +44,33 @@ export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
       document.removeEventListener('keydown', handleEscape);
     };
   }, []);
+
+  const loadNotifications = async () => {
+    setIsLoadingNotifications(true);
+    setNotificationError('');
+    try {
+      setNotifications(await notificationService.getMine());
+    } catch (error) {
+      setNotifications([]);
+      setNotificationError(error.message || 'Không thể tải thông báo.');
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.email) {
+      setNotifications([]);
+      return undefined;
+    }
+    let active = true;
+    setIsLoadingNotifications(true);
+    notificationService.getMine()
+      .then((items) => { if (active) setNotifications(items); })
+      .catch((error) => { if (active) setNotificationError(error.message || 'Không thể tải thông báo.'); })
+      .finally(() => { if (active) setIsLoadingNotifications(false); });
+    return () => { active = false; };
+  }, [user?.email, user?.role]);
 
   // Dynamic breadcrumb items
   const getBreadcrumbs = () => {
@@ -149,6 +185,68 @@ export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
 
       {/* Right: signed-in account summary */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="relative" ref={notificationRef}>
+          <button
+            type="button"
+            onClick={() => {
+              setIsNotificationsOpen((open) => !open);
+              setIsDropdownOpen(false);
+              if (!isNotificationsOpen) void loadNotifications();
+            }}
+            aria-label={`Thông báo${notifications.length ? `, ${notifications.length} mục` : ''}`}
+            aria-expanded={isNotificationsOpen}
+            aria-controls="notifications-menu"
+            className="relative rounded-xl border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
+          >
+            <Bell className="h-4 w-4" />
+            {notifications.length > 0 && (
+              <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-rose-600 px-1 text-center text-[9px] font-bold leading-4 text-white">
+                {notifications.length > 99 ? '99+' : notifications.length}
+              </span>
+            )}
+          </button>
+
+          {isNotificationsOpen && (
+            <div id="notifications-menu" className="absolute right-0 z-50 mt-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">Thông báo</h2>
+                  <p className="mt-0.5 text-[10px] text-slate-500">Tổng hợp từ dữ liệu nghiệp vụ hiện tại</p>
+                </div>
+                <button type="button" onClick={() => void loadNotifications()} disabled={isLoadingNotifications} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50" aria-label="Làm mới thông báo">
+                  <RefreshCw className={`h-3.5 w-3.5 ${isLoadingNotifications ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              <div className="max-h-[min(24rem,70vh)] overflow-y-auto p-2">
+                {isLoadingNotifications && notifications.length === 0 ? (
+                  <p className="px-3 py-8 text-center text-xs text-slate-500">Đang tải thông báo...</p>
+                ) : notificationError ? (
+                  <div className="px-3 py-6 text-center">
+                    <p className="text-xs text-rose-600">{notificationError}</p>
+                    <button type="button" onClick={() => void loadNotifications()} className="mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-700">Thử lại</button>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <p className="px-3 py-8 text-center text-xs text-slate-500">Hiện không có mục nào cần xử lý.</p>
+                ) : notifications.map((notification) => (
+                  <button
+                    key={notification.id}
+                    type="button"
+                    onClick={() => {
+                      setIsNotificationsOpen(false);
+                      navigate(notification.route);
+                    }}
+                    className="block w-full rounded-xl px-3 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  >
+                    <span className="block text-xs font-semibold text-slate-900">{notification.title}</span>
+                    <span className="mt-1 block text-[11px] leading-4 text-slate-600">{notification.message}</span>
+                    {notification.createdAt && <span className="mt-1.5 block text-[10px] text-slate-400">{new Date(notification.createdAt).toLocaleString('vi-VN')}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* User Avatar & Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
