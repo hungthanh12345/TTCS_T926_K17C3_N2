@@ -11,7 +11,15 @@ import {
   ShieldCheck,
   CheckCircle2,
   Loader2,
+  UserRound,
 } from 'lucide-react';
+
+const DEMO_ACCOUNTS = [
+  { label: 'Quản trị viên', shortLabel: 'Admin', email: 'admin@gmail.com' },
+  { label: 'Nhân sự', shortLabel: 'HR', email: 'customer.hr@company.com' },
+  { label: 'Mentor', shortLabel: 'Mentor', email: 'tung.nk@gmail.com' },
+  { label: 'Sinh viên', shortLabel: 'Sinh viên', email: 'hung.nt@gmail.com' },
+];
 
 export const LoginView = () => {
   const navigate = useNavigate();
@@ -267,6 +275,7 @@ export const LoginView = () => {
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => {
@@ -312,6 +321,40 @@ export const LoginView = () => {
               )}
             </button>
           </form>
+
+          {/* Tài khoản mẫu: điền nhanh email, vẫn xác thực bằng mật khẩu bình thường */}
+          <section className="rounded-2xl border border-slate-700/80 bg-slate-950/40 p-4" aria-labelledby="demo-accounts-title">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-indigo-300" />
+              <h3 id="demo-accounts-title" className="text-sm font-semibold text-slate-200">
+                Tài khoản demo
+              </h3>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-slate-400">
+              Chọn vai trò để điền email. Nhập mật khẩu tài khoản mẫu đã được cấu hình rồi đăng nhập.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    setFormData((current) => ({ ...current, email: account.email }));
+                    setErrors({});
+                    document.getElementById('login-password')?.focus();
+                  }}
+                  aria-label={`Điền email tài khoản demo ${account.label}`}
+                  className="rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-left text-xs font-medium text-slate-300 transition-colors hover:border-indigo-400/70 hover:bg-indigo-500/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="block">{account.shortLabel}</span>
+                  <span className="mt-0.5 block truncate text-[10px] font-normal text-slate-500">
+                    {account.email}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
 
           <p className="text-center text-sm text-slate-400">
             Bạn chưa có tài khoản?{' '}

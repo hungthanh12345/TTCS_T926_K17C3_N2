@@ -345,13 +345,15 @@ SOURCE backend/migrations/20261003_part04_student_registration_approval.sql;
 SOURCE backend/migrations/20261003_part05_mentor_task_assignment.sql;
 SOURCE backend/migrations/20261004_part08_weekly_reports_and_mentor_feedback.sql;
 SOURCE backend/migrations/20261004_part09_internship_evaluations.sql;
+SOURCE backend/migrations/20261004_part10_demo_account_passwords.sql;
 ```
-Part 09 adds one final evaluation per current student profile. The existing data model does not link students to internship programs; the HR summary aggregates evaluations, weekly reports, and mentor feedback from the relationships already present.
+Part 09 adds one final evaluation per current student profile. Part 10 updates only the four existing demo email/role pairs and never creates users. The existing data model does not link students to internship programs; the HR summary aggregates evaluations, weekly reports, and mentor feedback from the relationships already present.
 
 For a disposable development database only, load the shared fixture accounts and data:
 ```sql
 SOURCE backend/seed_data.sql;
 ```
+The Admin, HR, Mentor, and Student demo accounts use the shared development password `Admin@123`. Their database values are stored as BCrypt hashes and authentication still runs through the API. These credentials are only for local development fixtures; do not seed them into production.
 
 ### 3. Configure and Run Backend API
 Local database and JWT settings belong in .NET User Secrets, not committed settings files. From `backend/`, set values for your local MySQL account and generate a unique signing key of at least 32 UTF-8 bytes:

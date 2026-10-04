@@ -1,6 +1,4 @@
 import api from './api';
-import { getStoredUsers } from './mockData';
-import { isMockModeEnabled } from './mockMode';
 
 const saveSession = (token, user) => {
   sessionStorage.setItem('token', token);
@@ -58,52 +56,6 @@ export const authService = {
       saveSession(token, user);
       return { token, user };
     } catch (error) {
-      // An offline demo is opt-in and restricted to Vite development mode.
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        console.info('Backend unreachable, testing against mock credential repository.');
-        const mockUsers = getStoredUsers();
-        const matched = mockUsers.find(
-          (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-        );
-
-        if (matched) {
-          const user = {
-            userId: matched.id,
-            email: matched.email,
-            role: matched.role,
-            fullName: matched.email.split('@')[0].replace('.', ' ').toUpperCase(),
-          };
-          const token = `mock_jwt_token_${matched.role}_${Date.now()}`;
-          saveSession(token, user);
-          return { token, user, isMock: true };
-        }
-
-        // Allow instant role testing for standard test accounts if not matched
-        if (email.includes('admin')) {
-          const user = { userId: 'USR-001', email, role: 'ROLE_ADMIN', fullName: 'Administrator' };
-          const token = `mock_jwt_token_ROLE_ADMIN_${Date.now()}`;
-          saveSession(token, user);
-          return { token, user, isMock: true };
-        } else if (email.includes('hr')) {
-          const user = { userId: 'USR-002', email, role: 'ROLE_HR', fullName: 'HR Specialist' };
-          const token = `mock_jwt_token_ROLE_HR_${Date.now()}`;
-          saveSession(token, user);
-          return { token, user, isMock: true };
-        } else if (email.includes('mentor')) {
-          const user = { userId: 'USR-003', email, role: 'ROLE_MENTOR', fullName: 'Lead Mentor' };
-          const token = `mock_jwt_token_ROLE_MENTOR_${Date.now()}`;
-          saveSession(token, user);
-          return { token, user, isMock: true };
-        } else if (email.includes('student')) {
-          const user = { userId: 'USR-004', email, role: 'ROLE_STUDENT', fullName: 'Sarah Johnson' };
-          const token = `mock_jwt_token_ROLE_STUDENT_${Date.now()}`;
-          saveSession(token, user);
-          return { token, user, isMock: true };
-        }
-
-        throw new Error('Invalid email or password. Please verify your credentials.');
-      }
-
       const message = error.response?.data?.message || error.message || 'Login failed. Please check your credentials.';
       throw new Error(message);
     }

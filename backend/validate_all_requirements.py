@@ -160,6 +160,16 @@ def validate_frontend_contracts():
     check('<form onSubmit={handleSubmit}' in login_view, "Login form must use its validated submit handler.")
     check('type="email"' in login_view, "Login form must expose an email input.")
     check('type={showPassword ?' in login_view, "Login form must preserve the password visibility control.")
+    for demo_email in (
+        "admin@gmail.com",
+        "customer.hr@company.com",
+        "tung.nk@gmail.com",
+        "hung.nt@gmail.com",
+    ):
+        check(demo_email in login_view, f"Login demo account {demo_email} must be available as a quick-fill option.")
+    check("document.getElementById('login-password')?.focus()" in login_view,
+          "Selecting a demo account must focus the password input.")
+    check("Admin@123" not in login_view, "The demo password must not be hard-coded in the frontend.")
 
     app_code = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
     check(
@@ -394,15 +404,19 @@ def validate_mock_fallback_is_development_only():
     check("VITE_ENABLE_MOCK_DATA === 'true'" in mock_mode, "Mock mode must require explicit opt-in.")
 
     auth_service = (FRONTEND / "src/services/authService.js").read_text(encoding="utf-8")
+    check("api.post('/auth/login', { email, password })" in auth_service,
+          "Login must authenticate through the existing API.")
     check("demo_jwt_token_" not in auth_service, "The login API must not fabricate a JWT when the response is incomplete.")
+    check("mock_jwt_token_" not in auth_service and "getStoredUsers" not in auth_service and
+          "isMockModeEnabled" not in auth_service,
+          "Login must not bypass API authentication with a local mock token.")
     check("|| 'ROLE_ADMIN'" not in auth_service, "Login must not default an unknown account to administrator.")
-    check("error.isAxiosError && !error.response && isMockModeEnabled" in auth_service, "Mock login must only handle opted-in network failures.")
 
     for relative_path in ("src/services/userService.js", "src/services/mentorService.js", "src/services/studentService.js"):
         service = (FRONTEND / relative_path).read_text(encoding="utf-8")
         check("if (!error.response)" not in service, f"{relative_path} must not silently substitute mock data in production.")
         check("!error.response && isMockModeEnabled" in service, f"{relative_path} mock behavior must be opt-in.")
-    print("[PASS] Client-side mock login and data fallbacks require explicit development-only opt-in.")
+    print("[PASS] Login always uses the API; optional data-service mock fallbacks remain development-only.")
 
 
 def validate_vite_host_check_is_enabled():
