@@ -1,9 +1,11 @@
 using InternshipManagementApi.Common.Exceptions;
 using InternshipManagementApi.Common.Models;
+using InternshipManagementApi.Data;
 using InternshipManagementApi.Data.Entities;
 using InternshipManagementApi.DTOs.Mentor;
 using InternshipManagementApi.DTOs.Student;
 using InternshipManagementApi.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace InternshipManagementApi.Services
 {
@@ -24,15 +26,21 @@ namespace InternshipManagementApi.Services
         private readonly IStudentRepository _studentRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMentorRepository _mentorRepository;
+        private readonly AppDbContext _db;
+        private readonly INotificationService _notificationService;
 
         public StudentService(
             IStudentRepository studentRepository,
             IUserRepository userRepository,
-            IMentorRepository mentorRepository)
+            IMentorRepository mentorRepository,
+            AppDbContext db,
+            INotificationService notificationService)
         {
             _studentRepository = studentRepository;
             _userRepository = userRepository;
             _mentorRepository = mentorRepository;
+            _db = db;
+            _notificationService = notificationService;
         }
 
         public async Task<StudentResponseDto> CreateStudentAsync(CreateStudentRequestDto request)
@@ -204,6 +212,7 @@ namespace InternshipManagementApi.Services
                 throw new NotFoundException($"Student with ID {studentId} not found.");
             }
 
+            var previousMentorId = student.MentorId;
             if (request.MentorId.HasValue && request.MentorId.Value > 0)
             {
                 var mentor = await _mentorRepository.GetByIdAsync(request.MentorId.Value);
@@ -219,7 +228,19 @@ namespace InternshipManagementApi.Services
                 student.MentorId = null;
             }
 
-            await _studentRepository.UpdateAsync(student);
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                await _studentRepository.UpdateAsync(student);
+                if (student.MentorId.HasValue && student.MentorId != previousMentorId)
+                    await _notificationService.AddMentorAssignedAsync(student);
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             var updatedStudent = await _studentRepository.GetByIdWithDetailsAsync(student.Id);
             return MapToResponseDto(updatedStudent ?? student);

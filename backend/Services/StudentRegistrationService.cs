@@ -23,11 +23,13 @@ namespace InternshipManagementApi.Services
         private const string StudentRoleName = "ROLE_STUDENT";
         private readonly AppDbContext _db;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly INotificationService _notificationService;
 
-        public StudentRegistrationService(AppDbContext db, IPasswordHasher passwordHasher)
+        public StudentRegistrationService(AppDbContext db, IPasswordHasher passwordHasher, INotificationService notificationService)
         {
             _db = db;
             _passwordHasher = passwordHasher;
+            _notificationService = notificationService;
         }
 
         public async Task<StudentRegistrationStatusResponseDto> RegisterAsync(StudentRegistrationRequestDto request)
@@ -231,14 +233,26 @@ namespace InternshipManagementApi.Services
             if (student.User!.Status != UserStatus.PENDING_APPROVAL)
                 throw new ConflictException("This student registration is no longer awaiting approval.");
 
-            var changed = await _db.Users
-                .Where(user => user.Id == student.UserId && user.Status == UserStatus.PENDING_APPROVAL)
-                .ExecuteUpdateAsync(update => update.SetProperty(user => user.Status, targetStatus));
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var changed = await _db.Users
+                    .Where(user => user.Id == student.UserId && user.Status == UserStatus.PENDING_APPROVAL)
+                    .ExecuteUpdateAsync(update => update.SetProperty(user => user.Status, targetStatus));
 
-            if (changed != 1)
-                throw new ConflictException("This student registration has already been reviewed.");
+                if (changed != 1)
+                    throw new ConflictException("This student registration has already been reviewed.");
 
-            student.User.Status = targetStatus;
+                student.User.Status = targetStatus;
+                await _notificationService.AddRegistrationReviewedAsync(student, targetStatus == UserStatus.ACTIVE);
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
             return ToReviewDto(student);
         }
 
@@ -268,9 +282,9 @@ namespace InternshipManagementApi.Services
 
             var message = status switch
             {
-                "APPROVED" => "Your registration has been approved.",
-                "REJECTED" => "Your registration was rejected. Please contact HR.",
-                _ => "Your registration is waiting for HR approval."
+                "APPROVED" => "Hồ sơ đăng ký thực tập của bạn đã được HR xét duyệt.",
+                "REJECTED" => "Hồ sơ đăng ký thực tập của bạn chưa được HR duyệt. Vui lòng liên hệ HR để được hỗ trợ.",
+                _ => "Hồ sơ đăng ký của bạn đang chờ HR xét duyệt."
             };
 
             return new StudentRegistrationStatusResponseDto

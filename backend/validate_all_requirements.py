@@ -561,6 +561,43 @@ def validate_notifications_use_live_work_data():
     print("[PASS] Header notifications are computed from authenticated, live internship records without a mock table.")
 
 
+def validate_persistent_notifications_settings_and_review_ui():
+    notification_entity = (BACKEND / "Data/Entities/UserNotification.cs").read_text(encoding="utf-8")
+    notification_migration = (BACKEND / "migrations/20261005_part12_persistent_notifications.sql").read_text(encoding="utf-8")
+    notification_controller = (BACKEND / "Controllers/NotificationsController.cs").read_text(encoding="utf-8")
+    notification_service = (BACKEND / "Services/NotificationService.cs").read_text(encoding="utf-8")
+    settings_controller = (BACKEND / "Controllers/SystemSettingsController.cs").read_text(encoding="utf-8")
+    settings_view = (FRONTEND / "src/views/admin/SystemSettingsView.jsx").read_text(encoding="utf-8")
+    app = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
+    header = (FRONTEND / "src/components/layout/Header.jsx").read_text(encoding="utf-8")
+    approval = (FRONTEND / "src/views/hr/StudentRegistrationApprovalView.jsx").read_text(encoding="utf-8")
+    registration = (BACKEND / "Services/StudentRegistrationService.cs").read_text(encoding="utf-8")
+    check("ReadAt" in notification_entity and "read_at" in notification_migration and
+          "CREATE TABLE IF NOT EXISTS `notifications`" in notification_migration and
+          "REFERENCES `users` (`id`)" in notification_migration,
+          "Persistent notifications must add read state with an additive, user-scoped migration.")
+    check('HttpPost("{notificationId:long}/read")' in notification_controller and
+          'HttpPost("read-all")' in notification_controller and
+          "item.UserId == userId" in notification_service and
+          "event:registration-reviewed" in notification_service,
+          "Notifications must persist read state per authenticated user and include registration review events.")
+    check('[Authorize(Roles = "ROLE_ADMIN")]' in settings_controller and
+          "_db.InternshipPrograms" in settings_controller and "_db.Users" in settings_controller and
+          'path="/admin/settings"' in app and "Cài Đặt Hệ Thống" in settings_view,
+          "Admin system settings must be role protected and sourced from current database records.")
+    check("notificationFilter" in header and "Chưa đọc" in header and "Đã đọc" in header and
+          "notificationService.markRead" in header,
+          "The header inbox must expose read/unread filters and persist a click as read.")
+    check("<Modal" in approval and "Xác nhận duyệt hồ sơ" in approval and
+          "window.confirm" not in approval and "Đã duyệt hồ sơ thành công." in approval and
+          "Không thể duyệt hồ sơ. Vui lòng thử lại." in approval,
+          "Registration review must use an in-app confirmation modal and localized feedback.")
+    check("Hồ sơ đăng ký của bạn đang chờ HR xét duyệt." in registration and
+          "Hồ sơ đăng ký thực tập của bạn đã được HR xét duyệt." in registration,
+          "Registration status response messages must be localized.")
+    print("[PASS] Persistent notification inbox, Admin system data, role access, and Vietnamese review UI are wired.")
+
+
 def validate_vite_host_check_is_enabled():
     vite_config = (FRONTEND / "vite.config.js").read_text(encoding="utf-8")
     check("allowedHosts: true" not in vite_config,
@@ -742,6 +779,7 @@ def main():
     validate_business_data_uses_api_only()
     validate_student_accounts_link_to_existing_profiles()
     validate_notifications_use_live_work_data()
+    validate_persistent_notifications_settings_and_review_ui()
     validate_vite_host_check_is_enabled()
     validate_cors_origins_are_explicit()
     validate_safe_database_setup()

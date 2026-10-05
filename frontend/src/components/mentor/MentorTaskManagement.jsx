@@ -5,9 +5,9 @@ import mentorTaskService from '../../services/mentorTaskService';
 
 const emptyForm = { studentId: '', title: '', description: '', dueDate: '' };
 const statusLabel = (status) => ({
-  TO_DO: 'To Do',
-  IN_PROGRESS: 'In Progress',
-  DONE: 'Done',
+  TO_DO: 'Cần thực hiện',
+  IN_PROGRESS: 'Đang thực hiện',
+  DONE: 'Hoàn thành',
 }[status] || status);
 
 export const MentorTaskManagement = () => {

@@ -20,6 +20,7 @@ namespace InternshipManagementApi.Data
         public DbSet<WeeklyReport> WeeklyReports => Set<WeeklyReport>();
         public DbSet<MentorFeedback> MentorFeedbacks => Set<MentorFeedback>();
         public DbSet<InternshipEvaluation> InternshipEvaluations => Set<InternshipEvaluation>();
+        public DbSet<UserNotification> Notifications => Set<UserNotification>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -286,6 +287,26 @@ namespace InternshipManagementApi.Data
                     .WithMany()
                     .HasForeignKey(evaluation => evaluation.MentorId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<UserNotification>(entity =>
+            {
+                entity.ToTable("notifications");
+                entity.HasKey(notification => notification.Id);
+                entity.Property(notification => notification.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(notification => notification.UserId).HasColumnName("user_id").IsRequired();
+                entity.Property(notification => notification.SourceKey).HasColumnName("source_key").HasMaxLength(191).IsRequired();
+                entity.Property(notification => notification.Title).HasColumnName("title").HasMaxLength(160).IsRequired();
+                entity.Property(notification => notification.Message).HasColumnName("message").HasMaxLength(1000).IsRequired();
+                entity.Property(notification => notification.Route).HasColumnName("route").HasMaxLength(255).IsRequired();
+                entity.Property(notification => notification.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(notification => notification.ReadAt).HasColumnName("read_at").HasColumnType("datetime(6)");
+                entity.HasIndex(notification => new { notification.UserId, notification.SourceKey }).IsUnique();
+                entity.HasIndex(notification => new { notification.UserId, notification.CreatedAt });
+                entity.HasOne(notification => notification.User)
+                    .WithMany()
+                    .HasForeignKey(notification => notification.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
 

@@ -58,9 +58,29 @@ const STATUS_MAP = {
     dot: 'bg-emerald-500',
   },
   INACTIVE: {
-    label: 'Tạm khóa',
+    label: 'Không hoạt động',
     style: 'bg-slate-100 text-slate-600 border-slate-200 ring-slate-400/10',
     dot: 'bg-slate-400',
+  },
+  PENDING: {
+    label: 'Đang chờ duyệt',
+    style: 'bg-amber-50 text-amber-700 border-amber-200/80 ring-amber-500/10',
+    dot: 'bg-amber-500',
+  },
+  PENDING_APPROVAL: {
+    label: 'Đang chờ duyệt',
+    style: 'bg-amber-50 text-amber-700 border-amber-200/80 ring-amber-500/10',
+    dot: 'bg-amber-500',
+  },
+  APPROVED: {
+    label: 'Đã được duyệt',
+    style: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 ring-emerald-500/10',
+    dot: 'bg-emerald-500',
+  },
+  REJECTED: {
+    label: 'Đã từ chối',
+    style: 'bg-rose-50 text-rose-700 border-rose-200 ring-rose-500/10',
+    dot: 'bg-rose-500',
   },
   LOCKED: {
     label: 'Đã khóa',
@@ -76,6 +96,21 @@ const STATUS_MAP = {
     label: 'Đã hoàn thành',
     style: 'bg-blue-50 text-blue-700 border-blue-200/80 ring-blue-500/10',
     dot: 'bg-blue-500',
+  },
+  TO_DO: {
+    label: 'Cần thực hiện',
+    style: 'bg-slate-100 text-slate-700 border-slate-200 ring-slate-400/10',
+    dot: 'bg-slate-400',
+  },
+  IN_PROGRESS: {
+    label: 'Đang thực hiện',
+    style: 'bg-sky-50 text-sky-700 border-sky-200 ring-sky-500/10',
+    dot: 'bg-sky-500',
+  },
+  DONE: {
+    label: 'Hoàn thành',
+    style: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 ring-emerald-500/10',
+    dot: 'bg-emerald-500',
   },
 };
 

@@ -26,11 +26,11 @@ import studentService from '../../services/studentService';
 import StudentScheduleView from './StudentScheduleView';
 
 const ACCOUNT_STATUS_LABELS = {
-  ACTIVE: 'Tài khoản đang hoạt động',
-  PENDING_APPROVAL: 'Tài khoản chờ duyệt',
-  INACTIVE: 'Tài khoản tạm khóa',
-  LOCKED: 'Tài khoản bị khóa',
-  REJECTED: 'Tài khoản bị từ chối',
+  ACTIVE: 'Đang hoạt động',
+  PENDING_APPROVAL: 'Đang chờ duyệt',
+  INACTIVE: 'Không hoạt động',
+  LOCKED: 'Đã khóa',
+  REJECTED: 'Đã từ chối',
 };
 
 const TABS = [

@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   BarChart3,
+  Settings,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
@@ -26,6 +27,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       icon: Users,
       roles: ['ROLE_ADMIN'],
       badge: 'Admin',
+    },
+    {
+      title: 'Cài Đặt Hệ Thống',
+      path: '/admin/settings',
+      icon: Settings,
+      roles: ['ROLE_ADMIN'],
+      badge: null,
     },
     {
       title: 'Hồ Sơ Sinh Viên',

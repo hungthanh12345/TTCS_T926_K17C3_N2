@@ -15,9 +15,20 @@ const blankRegistration = {
 };
 
 const statusStyles = {
+  PENDING: 'border-amber-300 bg-amber-50 text-amber-800',
   PENDING_APPROVAL: 'border-amber-300 bg-amber-50 text-amber-800',
   APPROVED: 'border-emerald-300 bg-emerald-50 text-emerald-800',
   REJECTED: 'border-rose-300 bg-rose-50 text-rose-800',
+};
+
+const statusLabels = {
+  PENDING: 'Đang chờ duyệt',
+  PENDING_APPROVAL: 'Đang chờ duyệt',
+  APPROVED: 'Đã được duyệt',
+  ACTIVE: 'Đang hoạt động',
+  REJECTED: 'Đã từ chối',
+  INACTIVE: 'Không hoạt động',
+  LOCKED: 'Đã khóa',
 };
 
 export const StudentRegistrationView = () => {
@@ -166,7 +177,7 @@ export const StudentRegistrationView = () => {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 className="font-bold text-slate-900">{result.fullName || 'Hồ sơ sinh viên'}</h2>
                     <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusStyles[result.status] || 'border-slate-300 bg-white text-slate-700'}`}>
-                      {result.status}
+                      {statusLabels[result.status] || 'Không xác định'}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-slate-600">{result.message}</p>

@@ -8,6 +8,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import LoginView from './views/auth/LoginView';
 import StudentRegistrationView from './views/auth/StudentRegistrationView';
 import UserManagementView from './views/admin/UserManagementView';
+import SystemSettingsView from './views/admin/SystemSettingsView';
 import StudentManagementView from './views/hr/StudentManagementView';
 import StudentRegistrationApprovalView from './views/hr/StudentRegistrationApprovalView';
 import MentorManagementView from './views/hr/MentorManagementView';
@@ -65,6 +66,15 @@ export const App = () => {
             element={
               <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
                 <UserManagementView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                <SystemSettingsView />
               </ProtectedRoute>
             }
           />

@@ -4,6 +4,14 @@ import { UserPlus, Hash, User, Phone, School, BookOpen, Loader2 } from 'lucide-r
 import studentService from '../../services/studentService';
 import toast from 'react-hot-toast';
 
+const ACCOUNT_STATUS_LABELS = {
+  ACTIVE: 'Đang hoạt động',
+  INACTIVE: 'Không hoạt động',
+  LOCKED: 'Đã khóa',
+  PENDING_APPROVAL: 'Đang chờ duyệt',
+  REJECTED: 'Đã từ chối',
+};
+
 export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     userId: '',
@@ -128,7 +136,7 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
             <option value="">{isLoadingAccounts ? 'Đang tải tài khoản...' : 'Chọn email tài khoản sinh viên'}</option>
             {(accountLinks?.accounts || []).map((account) => (
               <option key={account.userId} value={account.userId}>
-                {account.email}{account.hasStudentProfile ? ' — Đã có hồ sơ sinh viên' : ` — ${account.status}`}
+                {account.email}{account.hasStudentProfile ? ' — Đã có hồ sơ sinh viên' : ` — ${ACCOUNT_STATUS_LABELS[account.status] || 'Không xác định'}`}
               </option>
             ))}
           </select>

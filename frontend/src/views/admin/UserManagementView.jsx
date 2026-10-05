@@ -21,7 +21,9 @@ const ROLE_BY_ID = { 1: 'ROLE_ADMIN', 2: 'ROLE_HR', 3: 'ROLE_MENTOR', 4: 'ROLE_S
 const ROLE_ID_BY_NAME = Object.fromEntries(Object.entries(ROLE_BY_ID).map(([id, role]) => [role, Number(id)]));
 const USER_STATUS = {
   ACTIVE: { label: 'Đang hoạt động', className: 'text-emerald-700', iconClass: 'text-emerald-500' },
-  INACTIVE: { label: 'Tạm khóa', className: 'text-slate-600', iconClass: 'text-slate-400' },
+  INACTIVE: { label: 'Không hoạt động', className: 'text-slate-600', iconClass: 'text-slate-400' },
+  PENDING_APPROVAL: { label: 'Đang chờ duyệt', className: 'text-amber-700', iconClass: 'text-amber-500' },
+  REJECTED: { label: 'Đã từ chối', className: 'text-rose-700', iconClass: 'text-rose-500' },
   LOCKED: { label: 'Đã khóa', className: 'text-rose-700', iconClass: 'text-rose-500' },
 };
 
