@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Check, ClipboardCheck, GraduationCap, Loader2, RefreshCw, X } from 'lucide-react';
+import { Check, ClipboardCheck, Download, FileText, GraduationCap, Loader2, RefreshCw, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../../components/layout/DashboardLayout';
+import Modal from '../../components/common/Modal';
 import studentRegistrationService from '../../services/studentRegistrationService';
 
 export const StudentRegistrationApprovalView = () => {
@@ -10,6 +11,20 @@ export const StudentRegistrationApprovalView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [action, setAction] = useState('');
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [confirmationKind, setConfirmationKind] = useState('');
+
+  const statusLabels = {
+    PENDING: 'Đang chờ duyệt',
+    PENDING_APPROVAL: 'Đang chờ duyệt',
+    APPROVED: 'Đã được duyệt',
+    ACTIVE: 'Đang hoạt động',
+    REJECTED: 'Đã từ chối',
+    INACTIVE: 'Không hoạt động',
+    LOCKED: 'Đã khóa',
+  };
 
   const loadPending = async (quiet = false) => {
     if (!quiet) setIsRefreshing(true);
@@ -43,26 +58,56 @@ export const StudentRegistrationApprovalView = () => {
 
   const showDetails = async (item) => {
     setSelected(item);
+    setDocuments([]);
+    setDocumentsLoading(true);
     try {
-      setSelected(await studentRegistrationService.getPendingDetails(item.studentId));
+      const [details, files] = await Promise.all([
+        studentRegistrationService.getPendingDetails(item.studentId),
+        studentRegistrationService.getRegistrationDocuments(item.studentId),
+      ]);
+      setSelected(details);
+      setDocuments(files);
     } catch (error) {
       toast.error(error.message || 'Không thể tải chi tiết hồ sơ.');
+    } finally {
+      setDocumentsLoading(false);
     }
   };
 
-  const review = async (kind) => {
+  const downloadDocument = async (document) => {
     if (!selected) return;
-    const prompt = kind === 'approve' ? `Duyệt hồ sơ của ${selected.fullName}?` : `Từ chối hồ sơ của ${selected.fullName}?`;
-    if (!window.confirm(prompt)) return;
+    setDownloadingId(document.id);
+    try {
+      const response = await studentRegistrationService.downloadRegistrationDocument(selected.studentId, document.id);
+      const url = URL.createObjectURL(response.data);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = document.originalFileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(error.message || 'Không thể tải tài liệu.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const review = async () => {
+    if (!selected) return;
+    const kind = confirmationKind;
+    if (!kind) return;
     setAction(kind);
     try {
       if (kind === 'approve') await studentRegistrationService.approve(selected.studentId);
       else await studentRegistrationService.reject(selected.studentId);
-      toast.success(kind === 'approve' ? 'Đã duyệt hồ sơ.' : 'Đã từ chối hồ sơ.');
+      toast.success(kind === 'approve' ? 'Đã duyệt hồ sơ thành công.' : 'Đã từ chối hồ sơ.');
+      setConfirmationKind('');
       setSelected(null);
       await loadPending(true);
-    } catch (error) {
-      toast.error(error.message || 'Không thể cập nhật trạng thái hồ sơ.');
+    } catch {
+      toast.error(kind === 'approve'
+        ? 'Không thể duyệt hồ sơ. Vui lòng thử lại.'
+        : 'Không thể từ chối hồ sơ. Vui lòng thử lại.');
     } finally {
       setAction('');
     }
@@ -99,7 +144,7 @@ export const StudentRegistrationApprovalView = () => {
                     <span className="block truncate text-sm font-semibold text-slate-900">{item.fullName}</span>
                     <span className="mt-1 block truncate text-xs text-slate-500">{item.email} · {item.studentCode}</span>
                   </span>
-                  <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">PENDING</span>
+                  <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">Đang chờ duyệt</span>
                 </button>
               ))}
             </div>
@@ -119,20 +164,34 @@ export const StudentRegistrationApprovalView = () => {
                   <h2 className="text-lg font-bold text-slate-900">{selected.fullName}</h2>
                   <p className="mt-1 text-sm text-slate-500">Mã sinh viên: {selected.studentCode}</p>
                 </div>
-                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">{selected.status}</span>
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">{statusLabels[selected.status] || 'Không xác định'}</span>
               </div>
               <dl className="grid gap-4 py-5 sm:grid-cols-2">
                 <Detail label="Email" value={selected.email} />
                 <Detail label="Số điện thoại" value={selected.phoneNumber || 'Chưa cung cấp'} />
                 <Detail label="Trường" value={selected.university} />
                 <Detail label="Chuyên ngành" value={selected.major} />
+                <Detail label="Chương trình" value={selected.programName || 'Chưa gắn chương trình'} />
                 <Detail label="Ngày gửi" value={selected.submittedAt ? new Date(selected.submittedAt).toLocaleString('vi-VN') : '—'} />
               </dl>
+              <section className="border-t border-slate-100 py-4">
+                <h3 className="text-sm font-bold text-slate-900">Tài liệu hồ sơ</h3>
+                {documentsLoading ? <p role="status" className="mt-3 text-xs text-slate-500">Đang tải danh sách tài liệu...</p> : documents.length === 0 ? <p className="mt-3 text-xs text-slate-500">Hồ sơ chưa có tài liệu đính kèm.</p> : (
+                  <ul className="mt-3 space-y-2">
+                    {documents.map((document) => (
+                      <li key={document.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5">
+                        <span className="flex min-w-0 items-center gap-2 text-xs text-slate-700"><FileText className="h-4 w-4 shrink-0 text-indigo-500" /><span className="min-w-0"><b className="block">{document.documentType === 'CV' ? 'CV' : 'Đơn xin thực tập'}</b><span className="block truncate text-slate-500">{document.originalFileName}</span></span></span>
+                        <button type="button" disabled={downloadingId === document.id} onClick={() => void downloadDocument(document)} className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"><Download className="h-3.5 w-3.5" />{downloadingId === document.id ? 'Đang tải' : 'Tải xuống'}</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
               <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row">
-                <button type="button" disabled={Boolean(action)} onClick={() => review('approve')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50">
+                <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('approve')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50">
                   {action === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Duyệt hồ sơ
                 </button>
-                <button type="button" disabled={Boolean(action)} onClick={() => review('reject')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50">
+                <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('reject')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50">
                   {action === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />} Từ chối
                 </button>
               </div>
@@ -140,6 +199,24 @@ export const StudentRegistrationApprovalView = () => {
           )}
         </section>
       </div>
+      <Modal
+        isOpen={Boolean(confirmationKind) && Boolean(selected)}
+        onClose={() => { if (!action) setConfirmationKind(''); }}
+        title={confirmationKind === 'approve' ? 'Xác nhận duyệt hồ sơ' : 'Xác nhận từ chối hồ sơ'}
+        subtitle="Vui lòng kiểm tra lại trước khi cập nhật trạng thái đăng ký."
+        icon={ClipboardCheck}
+      >
+        <p className="text-sm leading-6 text-slate-700">
+          Bạn có chắc chắn muốn {confirmationKind === 'approve' ? 'duyệt' : 'từ chối'} hồ sơ đăng ký thực tập của <strong>{selected?.fullName}</strong> không?
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('')} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Hủy</button>
+          <button type="button" disabled={Boolean(action)} onClick={() => void review()} className={`inline-flex min-w-32 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${confirmationKind === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'}`}>
+            {action ? <Loader2 className="h-4 w-4 animate-spin" /> : confirmationKind === 'approve' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            {confirmationKind === 'approve' ? 'Duyệt hồ sơ' : 'Từ chối hồ sơ'}
+          </button>
+        </div>
+      </Modal>
     </DashboardLayout>
   );
 };

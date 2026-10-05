@@ -41,6 +41,7 @@ namespace InternshipManagementApi.DTOs.WeeklyReports
         public string? NextWeekPlan { get; init; }
         public string? AttachmentUrl { get; init; }
         public string Status { get; init; } = string.Empty;
+        public bool IsLate { get; init; }
         public DateTime CreatedAt { get; init; }
         public DateTime UpdatedAt { get; init; }
         public bool CanEditFeedback { get; init; }

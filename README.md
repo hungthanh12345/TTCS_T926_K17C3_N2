@@ -1,6 +1,6 @@
 # Hệ Thống Quản Lý Thực Tập Sinh (Internship Management System) - Nhóm 2
 
-Hệ thống quản lý thực tập full-stack cho học phần Thực tập cơ sở (TTCS), gồm **React + Vite**, **ASP.NET Core Web API 8.0 (LTS)**, **Entity Framework Core (Pomelo MySQL Provider)**, **MySQL**, **BCrypt password hashing**, và **JWT Authentication with Role-Based Access Control (RBAC)**. `main` hiện có Sprint 1 và Sprint 2 Part 01–06.
+Hệ thống quản lý thực tập full-stack cho học phần Thực tập cơ sở (TTCS), gồm **React + Vite**, **ASP.NET Core Web API 8.0 (LTS)**, **Entity Framework Core (Pomelo MySQL Provider)**, **MySQL**, **BCrypt password hashing**, và **JWT Authentication with Role-Based Access Control (RBAC)**. Sprint 2 US04, US06, US11, US13–US20 tích hợp trên cùng backend và database `internship_management` với các tài khoản, vai trò, hồ sơ Sprint 1.
 
 ---
 
@@ -32,16 +32,21 @@ Hệ thống quản lý thực tập full-stack cho học phần Thực tập c�
 * **US 29 (HR)**: `POST /api/hr/mentors`, `GET /api/hr/mentors` - HR tạo hồ sơ Mentor liên kết với tài khoản user và xem danh sách Mentor kèm số lượng thực tập sinh hướng dẫn.
 * **US 30 (HR)**: `PUT /api/hr/students/{studentId}/assign-mentor` - HR phân công hoặc đổi Mentor phụ trách thực tập sinh.
 
-### Sprint 2 đã hoàn thành (Part 01–06)
+### Sprint 2 trong repository
 
 * **Part 01 — US11:** HR quản lý phòng ban và chương trình thực tập.
 * **Part 02 — US13:** HR thiết lập ngày bắt đầu và kết thúc của chương trình.
-* **Part 03 — US04:** Sinh viên tải lên, xem, thay thế, tải xuống và xóa tài liệu của chính mình.
-* **Part 04 — US06:** Sinh viên đăng ký; HR xem xét, duyệt hoặc từ chối hồ sơ.
+* **Part 03 — US04:** Student tải lên, xem, thay thế, tải xuống và xóa tài liệu của chính mình; HR được xem/tải CV và đơn trong hồ sơ đăng ký.
+* **Part 04 — US06:** Guest xem chương trình, tạo User + Student Profile trạng thái chờ duyệt, chọn chương trình và nộp CV/đơn; HR xem, duyệt hoặc từ chối.
 * **Part 05 — US15:** Mentor giao và quản lý task cho sinh viên được phân công.
 * **Part 06 — US16:** Sinh viên cập nhật trạng thái tiến độ task.
+* **US14:** Student xem ngày chương trình và task có hạn của hồ sơ đang đăng nhập.
+* **Part 08 — US17/US18:** Student nộp báo cáo tuần; Mentor được phân công xem và phản hồi. Hạn nộp là Chủ nhật 23:59 giờ Việt Nam; API trả `isLate`.
+* **Part 09 — US19/US20:** Mentor đánh giá kỹ năng/thái độ theo thang 1–10; HR tổng hợp dữ liệu thật và lọc theo chương trình.
+* **Part 10:** cập nhật BCrypt hash cho seed accounts development hiện có.
+* **Part 11:** thêm `students.program_id` nullable để liên kết hồ sơ cũ mà không xóa dữ liệu; đăng ký mới bắt buộc chọn chương trình.
 
-Các Part 01–06 đã được merge vào `main`. Part 07–09 chưa nằm trong phạm vi đã triển khai ở repository này.
+Build và kiểm tra mã nguồn không xác nhận trạng thái DB runtime. Cần cấu hình MySQL thật, áp dụng migrations additive rồi chạy API/integration tests trước khi kết luận E2E PASS.
 
 ---
 
@@ -66,7 +71,7 @@ Các Part 01–06 đã được merge vào `main`. Part 07–09 chưa nằm tron
 
 ## 2. Database Schema & Tables
 
-The four Sprint 1 foundation tables are described below. Sprint 2 adds `departments`, `internship_programs`, `student_documents`, and `internship_tasks`; registration approval extends account status. Apply the additive SQL files in `backend/migrations/` in filename order as described in [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md).
+The Sprint 1 foundation tables remain in use. Sprint 2 adds `departments`, `internship_programs`, `student_documents`, `internship_tasks`, `weekly_reports`, `mentor_feedback`, and `internship_evaluations`; registration approval extends account status and Part 11 links students to programs. Apply additive SQL files in `backend/migrations/` in filename order as described in [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md).
 
 ### `roles`
 | Column | Type | Constraints | Description |
@@ -111,6 +116,7 @@ The four Sprint 1 foundation tables are described below. Sprint 2 adds `departme
 | `university` | VARCHAR(150) | NOT NULL | University / Academic institution |
 | `major` | VARCHAR(100) | NOT NULL | Academic major / field of study |
 | `mentor_id` | INT | NULLABLE, FK -> `mentors(id)` (SET NULL) | Assigned mentor supervisor |
+| `program_id` | INT | NULLABLE, FK -> `internship_programs(id)` (SET NULL) | Program assignment; NULL preserves earlier Sprint 1 profiles |
 | `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
 | `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | Record update timestamp |
 
@@ -121,6 +127,10 @@ The four Sprint 1 foundation tables are described below. Sprint 2 adds `departme
 | Endpoint | Method | Allowed Roles | Description |
 |---|---|---|---|
 | `/api/auth/login` | `POST` | *Public (All)* | Authenticate credentials and acquire JWT |
+| `/api/auth/register` | `POST` | *Public (Guest)* | Backward-compatible JSON registration endpoint |
+| `/api/auth/register-application` | `POST` | *Public (Guest)* | Multipart application with program, CV, and internship letter |
+| `/api/auth/registration-status` | `POST` | *Public (registered student)* | Verify credentials and read only the caller's registration status |
+| `/api/programs` | `GET` | *Public (Guest)* | List programs available for the registration form |
 | `/api/admin/users` | `GET` | `ROLE_ADMIN` | List all registered system users and roles |
 | `/api/admin/users` | `POST` | `ROLE_ADMIN` | Create new system account (HR, Mentor, Student) |
 | `/api/hr/mentors` | `GET` | `ROLE_HR`, `ROLE_ADMIN` | List all mentor profiles with student counts |
@@ -130,16 +140,25 @@ The four Sprint 1 foundation tables are described below. Sprint 2 adds `departme
 | `/api/hr/students/{id}` | `PUT` | `ROLE_HR`, `ROLE_ADMIN` | Update student profile information |
 | `/api/hr/students/search` | `GET` | `ROLE_HR`, `ROLE_ADMIN` | Search & filter students with pagination |
 | `/api/hr/students/{studentId}/assign-mentor` | `PUT` | `ROLE_HR`, `ROLE_ADMIN` | Assign or reassign mentor to student |
+| `/api/hr/students/{studentId}/program` | `PUT` | `ROLE_HR`, `ROLE_ADMIN` | Link an existing Sprint 1 profile to a program |
 | `/api/hr/departments`, `/api/hr/programs` | `GET`, `POST` | `ROLE_HR`, `ROLE_ADMIN` | Manage departments and internship programs |
 | `/api/hr/programs/{programId}/dates` | `PUT` | `ROLE_HR`, `ROLE_ADMIN` | Set a program's start and end dates |
 | `/api/hr/student-registrations` | `GET` | `ROLE_HR` | Review pending student registrations |
 | `/api/hr/student-registrations/{studentId}/approve` | `POST` | `ROLE_HR` | Approve a student registration |
 | `/api/hr/student-registrations/{studentId}/reject` | `POST` | `ROLE_HR` | Reject a student registration |
+| `/api/hr/student-registrations/{studentId}/documents` | `GET` | `ROLE_HR`, `ROLE_ADMIN` | List application documents for HR review |
+| `/api/hr/student-registrations/{studentId}/documents/{documentId}/download` | `GET` | `ROLE_HR`, `ROLE_ADMIN` | Download a document belonging to that student profile |
 | `/api/student/profile` | `GET` | `ROLE_STUDENT` | Read only the authenticated student's profile |
 | `/api/student/documents` | `GET`, `POST`, `PUT`, `DELETE` | `ROLE_STUDENT` | Manage documents belonging to the signed-in student |
 | `/api/student/documents/{documentId}/download` | `GET` | `ROLE_STUDENT` | Download a document belonging to the signed-in student |
 | `/api/student/tasks` | `GET` | `ROLE_STUDENT` | List tasks assigned to the signed-in student |
 | `/api/student/tasks/{taskId}/progress` | `PUT` | `ROLE_STUDENT` | Update progress on the signed-in student's task |
+| `/api/student/schedule/overview` | `GET` | `ROLE_STUDENT` | Read the caller's internship period and due-dated tasks |
+| `/api/student/weekly-reports` | `GET`, `POST` | `ROLE_STUDENT` | Create/list only the caller's weekly reports |
+| `/api/mentor/weekly-reports` | `GET` | `ROLE_MENTOR` | List reports for students assigned to the signed-in mentor |
+| `/api/mentor/weekly-reports/{reportId}/feedback` | `POST`, `PUT` | `ROLE_MENTOR` | Review only a report for a student assigned to the mentor |
+| `/api/mentor/evaluations` | `GET`, `POST`, `PUT` | `ROLE_MENTOR` | Evaluate students assigned to the signed-in mentor |
+| `/api/hr/internship-summary` | `GET` | `ROLE_HR`, `ROLE_ADMIN` | Aggregate real reports and evaluations, optionally filtered by `programId` |
 | `/api/mentor/tasks` | `GET`, `POST` | `ROLE_MENTOR` | List tasks or assign one to an assigned student |
 | `/api/mentor/tasks/{taskId}` | `GET`, `PUT`, `DELETE` | `ROLE_MENTOR` | View or manage a task owned by the signed-in mentor |
 
@@ -346,8 +365,9 @@ SOURCE backend/migrations/20261003_part05_mentor_task_assignment.sql;
 SOURCE backend/migrations/20261004_part08_weekly_reports_and_mentor_feedback.sql;
 SOURCE backend/migrations/20261004_part09_internship_evaluations.sql;
 SOURCE backend/migrations/20261004_part10_demo_account_passwords.sql;
+SOURCE backend/migrations/20261004_part11_student_program_link.sql;
 ```
-Part 09 adds one final evaluation per current student profile. Part 10 updates `password_hash` for every row already present in `users`; it does not insert or delete accounts or change their emails, roles, or profiles. Apply it once before using the development database. New student registrations keep the current password registration flow. The existing data model does not link students to internship programs; the HR summary aggregates evaluations, weekly reports, and mentor feedback from the relationships already present.
+Part 09 adds one final evaluation per student profile. Part 10 updates `password_hash` for every existing row in `users` without inserting or deleting accounts. Part 11 adds nullable `students.program_id` and a foreign key; existing students remain unchanged and HR can assign them to a program. New public registrations select a program and save the User, linked Student, CV, and internship letter in one transaction. Student schedule and HR summary use that relationship.
 
 For a disposable development database only, load the shared fixture accounts and data:
 ```sql

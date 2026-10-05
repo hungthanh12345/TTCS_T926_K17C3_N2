@@ -49,6 +49,19 @@ namespace InternshipManagementApi.Controllers
         }
 
         /// <summary>
+        /// Return ROLE_STUDENT accounts and the current account/profile link counts.
+        /// </summary>
+        [HttpGet("student-accounts")]
+        [ProducesResponseType(typeof(ApiResponse<StudentAccountLinkSummaryDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetStudentAccountLinks()
+        {
+            var links = await _studentService.GetStudentAccountLinksAsync();
+            return Ok(ApiResponse<StudentAccountLinkSummaryDto>.Ok(links, "Student account links retrieved successfully."));
+        }
+
+        /// <summary>
         /// Add a new student profile to the students table.
         /// Requires ROLE_HR or ROLE_ADMIN.
         /// </summary>

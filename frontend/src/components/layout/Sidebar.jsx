@@ -14,7 +14,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
+export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -94,16 +94,17 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       {/* Mobile backdrop */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-x-0 top-16 bottom-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Main Sidebar */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 w-64 bg-slate-950 text-slate-300 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 border-r border-slate-800/80 select-none ${
+        id="app-sidebar"
+        className={`fixed top-16 bottom-0 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-slate-950 text-slate-300 flex flex-col transition-transform duration-300 ease-in-out border-r border-slate-800/80 select-none lg:top-0 lg:h-auto ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${isDesktopOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}
       >
         {/* Brand Header */}
         <div className="h-16 flex items-center px-5 border-b border-slate-800/80 bg-slate-950">
@@ -180,7 +181,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-sky-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                   {user?.fullName?.charAt(0) || user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-950" />
               </div>
               <div className="truncate">
                 <p className="text-xs font-semibold text-white truncate">
@@ -194,8 +194,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
 
             <button
               onClick={logout}
+              aria-label="Đăng xuất"
               title="Đăng xuất khỏi hệ thống"
-              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>

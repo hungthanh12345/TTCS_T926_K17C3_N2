@@ -5,21 +5,15 @@ import US13 from '../../services/sprint2/US13';
 
 const dateFieldClass = 'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100';
 
-const nextDate = (value) => {
-  if (!value) return undefined;
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
-};
-
 const ProgramDatesEditor = ({ program, onSaved }) => {
   const [startDate, setStartDate] = useState(program.startDate || '');
   const [endDate, setEndDate] = useState(program.endDate || '');
   const [saving, setSaving] = useState(false);
 
-  const datesValid = Boolean(startDate && endDate && endDate > startDate);
+  const datesValid = Boolean(startDate && endDate && endDate >= startDate);
   const dateWarning = !startDate || !endDate
     ? (startDate || endDate ? 'Cần chọn cả ngày bắt đầu và ngày kết thúc.' : '')
-    : endDate <= startDate ? 'Ngày kết thúc phải sau ngày bắt đầu.' : '';
+    : endDate < startDate ? 'Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.' : '';
 
   const saveDates = async (event) => {
     event.preventDefault();
@@ -57,7 +51,7 @@ const ProgramDatesEditor = ({ program, onSaved }) => {
             type="date"
             className={dateFieldClass}
             value={endDate}
-            min={nextDate(startDate)}
+            min={startDate || undefined}
             onChange={(event) => setEndDate(event.target.value)}
             aria-label={`Ngày kết thúc ${program.name}`}
             required
@@ -66,7 +60,7 @@ const ProgramDatesEditor = ({ program, onSaved }) => {
       </div>
       <div className="flex items-center justify-between gap-3">
         <p className={`text-xs ${dateWarning ? 'text-rose-600' : 'text-slate-500'}`} aria-live="polite">
-          {dateWarning || 'Ngày kết thúc phải sau ngày bắt đầu.'}
+          {dateWarning || 'Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.'}
         </p>
         <button
           type="submit"

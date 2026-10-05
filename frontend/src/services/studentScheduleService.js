@@ -6,8 +6,11 @@ const errorMessage = (error) => error.response?.data?.message || error.message |
 const studentScheduleService = {
   async getMySchedule() {
     try {
-      const result = unwrap(await api.get('/student/schedule'));
-      return Array.isArray(result) ? result : [];
+      const result = unwrap(await api.get('/student/schedule/overview'));
+      return {
+        program: result?.program || null,
+        events: Array.isArray(result?.events) ? result.events : [],
+      };
     } catch (error) {
       throw new Error(errorMessage(error));
     }

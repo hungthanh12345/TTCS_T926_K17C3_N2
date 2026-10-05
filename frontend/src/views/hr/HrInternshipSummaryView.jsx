@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Award, BarChart3, Loader2, Search, Users } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import hrInternshipSummaryService from '../../services/hrInternshipSummaryService';
+import US11 from '../../services/sprint2/US11';
 
 const formatWeek = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN') : '—';
 
@@ -10,15 +11,25 @@ export const HrInternshipSummaryView = () => {
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [programs, setPrograms] = useState([]);
+  const [selectedProgramId, setSelectedProgramId] = useState('');
 
   useEffect(() => {
     let isActive = true;
-    hrInternshipSummaryService.getSummary()
+    US11.getHrPrograms()
+      .then((items) => { if (isActive) setPrograms(Array.isArray(items) ? items : []); })
+      .catch(() => { if (isActive) setPrograms([]); });
+    return () => { isActive = false; };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    hrInternshipSummaryService.getSummary(selectedProgramId || undefined)
       .then((data) => { if (isActive) setSummary(data); })
       .catch((loadError) => { if (isActive) setError(loadError.message || 'Không thể tải báo cáo tổng hợp.'); })
       .finally(() => { if (isActive) setIsLoading(false); });
     return () => { isActive = false; };
-  }, []);
+  }, [selectedProgramId]);
 
   const rows = useMemo(() => {
     const query = search.trim().toLocaleLowerCase('vi');
@@ -45,21 +56,28 @@ export const HrInternshipSummaryView = () => {
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5">
                 <div><h2 className="text-sm font-bold text-slate-900">Kết quả theo thực tập sinh</h2><p className="mt-1 text-xs text-slate-500">Dữ liệu tổng hợp trực tiếp từ hồ sơ, báo cáo tuần và đánh giá hiện có.</p></div>
-                <label className="relative block w-full sm:max-w-xs">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm sinh viên, trường, Mentor..." className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-xs outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
-                </label>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <select aria-label="Lọc theo chương trình" value={selectedProgramId} onChange={(event) => { setError(''); setIsLoading(true); setSelectedProgramId(event.target.value); }} className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100">
+                    <option value="">Tất cả chương trình</option>
+                    {programs.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
+                  </select>
+                  <label className="relative block w-full sm:max-w-xs">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm sinh viên, trường, Mentor..." className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-xs outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+                  </label>
+                </div>
               </div>
               {rows.length === 0 ? <p role="status" className="p-8 text-center text-sm text-slate-500">{summary?.items?.length ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có hồ sơ thực tập sinh để tổng hợp.'}</p> : (
                 <div className="overflow-x-auto">
                   <table className="min-w-[1050px] w-full text-left text-xs">
                     <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
-                      <tr><th className="px-4 py-3">Thực tập sinh</th><th className="px-4 py-3">Mentor</th><th className="px-4 py-3">Báo cáo tuần</th><th className="px-4 py-3">Feedback</th><th className="px-4 py-3">Kỹ năng</th><th className="px-4 py-3">Thái độ</th><th className="px-4 py-3">Tổng điểm</th><th className="px-4 py-3">Ngày đánh giá</th><th className="px-4 py-3">Trạng thái</th></tr>
+                      <tr><th className="px-4 py-3">Thực tập sinh</th><th className="px-4 py-3">Chương trình</th><th className="px-4 py-3">Mentor</th><th className="px-4 py-3">Báo cáo tuần</th><th className="px-4 py-3">Feedback</th><th className="px-4 py-3">Kỹ năng</th><th className="px-4 py-3">Thái độ</th><th className="px-4 py-3">Tổng điểm</th><th className="px-4 py-3">Ngày đánh giá</th><th className="px-4 py-3">Trạng thái</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {rows.map((item) => (
                         <tr key={item.studentId} className="align-top hover:bg-slate-50/70">
                           <td className="px-4 py-4"><p className="font-bold text-slate-900">{item.studentName}</p><p className="mt-1 text-slate-500">{item.studentCode} · {item.major}</p><p className="mt-1 text-slate-400">{item.university}</p></td>
+                          <td className="px-4 py-4 text-slate-700">{item.programName || 'Chưa gán'}</td>
                           <td className="px-4 py-4 text-slate-700">{item.mentorName || 'Chưa phân công'}<p className="mt-1 text-slate-400">{item.mentorDepartment || ''}</p></td>
                           <td className="px-4 py-4 text-slate-700">{item.weeklyReportCount}<p className="mt-1 text-slate-400">Tuần mới nhất: {formatWeek(item.latestReportWeek)}</p></td>
                           <td className="px-4 py-4 text-slate-700">{item.mentorFeedbackCount}</td>

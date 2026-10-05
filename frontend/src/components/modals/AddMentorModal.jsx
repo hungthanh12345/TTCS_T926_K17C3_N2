@@ -10,20 +10,11 @@ export const AddMentorModal = ({ isOpen, onClose, onSuccess }) => {
     phone: '',
     email: '',
     password: '',
-    department: 'Kỹ thuật Phần mềm & Cloud',
+    department: '',
     specialization: '',
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const departments = [
-    'Kỹ thuật Phần mềm & Cloud',
-    'Trí tuệ Nhân tạo & Xử lý Dữ liệu lớn (AI/ML)',
-    'Kiến trúc Frontend & Trải nghiệm Người dùng (UI/UX)',
-    'An toàn Thông tin & Bảo mật Hạ tầng',
-    'DevOps & Hệ thống Đám mây (AWS/Azure)',
-    'Phát triển Ứng dụng Di động (Mobile App)',
-  ];
 
   const validate = () => {
     const errs = {};
@@ -31,7 +22,7 @@ export const AddMentorModal = ({ isOpen, onClose, onSuccess }) => {
     if (!formData.phone.trim()) errs.phone = 'Số điện thoại liên hệ là bắt buộc';
     if (formData.password.length < 12) errs.password = 'Mật khẩu ban đầu cần ít nhất 12 ký tự';
     if (new TextEncoder().encode(formData.password).length > 72) errs.password = 'Mật khẩu ban đầu không được vượt quá 72 byte UTF-8';
-    if (!formData.department.trim()) errs.department = 'Vui lòng chọn phòng ban chuyên môn';
+    if (!formData.department.trim()) errs.department = 'Vui lòng nhập phòng ban chuyên môn';
     if (!formData.specialization.trim()) {
       errs.specialization = 'Vui lòng nhập định hướng chuyên môn hoặc công nghệ thành thạo';
     }
@@ -53,7 +44,7 @@ export const AddMentorModal = ({ isOpen, onClose, onSuccess }) => {
         phone: '',
         email: '',
         password: '',
-        department: 'Kỹ thuật Phần mềm & Cloud',
+        department: '',
         specialization: '',
       });
       setErrors({});
@@ -194,18 +185,18 @@ export const AddMentorModal = ({ isOpen, onClose, onSuccess }) => {
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <Building className="w-4 h-4" />
             </div>
-            <select
+            <input
+              type="text"
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
-            >
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              maxLength={100}
+              placeholder="Nhập phòng ban"
+              className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
+            />
           </div>
+          {errors.department && (
+            <p className="mt-1 text-xs font-medium text-rose-500">{errors.department}</p>
+          )}
         </div>
 
         {/* Chuyên môn / Tech Stack */}

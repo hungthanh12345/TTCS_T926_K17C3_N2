@@ -1,15 +1,18 @@
 using InternshipManagementApi.Common.Exceptions;
 using InternshipManagementApi.Common.Models;
+using InternshipManagementApi.Data;
 using InternshipManagementApi.Data.Entities;
 using InternshipManagementApi.DTOs.Mentor;
 using InternshipManagementApi.DTOs.Student;
 using InternshipManagementApi.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace InternshipManagementApi.Services
 {
     public interface IStudentService
     {
         Task<StudentResponseDto> CreateStudentAsync(CreateStudentRequestDto request);
+        Task<StudentAccountLinkSummaryDto> GetStudentAccountLinksAsync();
         Task<StudentResponseDto> GetStudentByIdAsync(int id);
         Task<StudentResponseDto> GetStudentByUserIdAsync(int userId);
         Task<StudentResponseDto> UpdateStudentAsync(int id, UpdateStudentRequestDto request);
@@ -23,46 +26,50 @@ namespace InternshipManagementApi.Services
         private readonly IStudentRepository _studentRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMentorRepository _mentorRepository;
+        private readonly AppDbContext _db;
+        private readonly INotificationService _notificationService;
 
         public StudentService(
             IStudentRepository studentRepository,
             IUserRepository userRepository,
-            IMentorRepository mentorRepository)
+            IMentorRepository mentorRepository,
+            AppDbContext db,
+            INotificationService notificationService)
         {
             _studentRepository = studentRepository;
             _userRepository = userRepository;
             _mentorRepository = mentorRepository;
+            _db = db;
+            _notificationService = notificationService;
         }
 
         public async Task<StudentResponseDto> CreateStudentAsync(CreateStudentRequestDto request)
         {
-            var code = request.StudentCode.Trim().ToUpper();
-
-            bool codeExists = await _studentRepository.ExistsByStudentCodeAsync(code);
-            if (codeExists)
+            if (!request.UserId.HasValue)
             {
-                throw new ConflictException($"Student code '{request.StudentCode}' already exists.");
+                throw new BadRequestException("A student profile must be linked to an existing ROLE_STUDENT account.");
             }
 
-            User? user = null;
-            if (request.UserId.HasValue)
+            var user = await _userRepository.GetByIdWithRoleAsync(request.UserId.Value);
+            if (user == null)
             {
-                user = await _userRepository.GetByIdWithRoleAsync(request.UserId.Value);
-                if (user == null)
-                {
-                    throw new NotFoundException($"User with ID {request.UserId.Value} not found.");
-                }
+                throw new NotFoundException($"User with ID {request.UserId.Value} not found.");
+            }
 
-                if (user.Role == null || !string.Equals(user.Role.Name, "ROLE_STUDENT", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new BadRequestException($"User with ID {request.UserId.Value} has role '{(user.Role?.Name ?? "UNKNOWN")}'. Only users with role 'ROLE_STUDENT' can be linked to a student profile.");
-                }
+            if (user.Role == null || !string.Equals(user.Role.Name, "ROLE_STUDENT", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException($"User with ID {request.UserId.Value} has role '{(user.Role?.Name ?? "UNKNOWN")}'. Only users with role 'ROLE_STUDENT' can be linked to a student profile.");
+            }
 
-                bool userAlreadyLinked = await _studentRepository.ExistsByUserIdAsync(request.UserId.Value);
-                if (userAlreadyLinked)
-                {
-                    throw new ConflictException($"User ID {request.UserId.Value} is already linked to another student profile.");
-                }
+            if (await _studentRepository.ExistsByUserIdAsync(request.UserId.Value))
+            {
+                throw new ConflictException("Tài khoản này đã có hồ sơ sinh viên.");
+            }
+
+            var code = request.StudentCode.Trim().ToUpper();
+            if (await _studentRepository.ExistsByStudentCodeAsync(code))
+            {
+                throw new ConflictException($"Student code '{request.StudentCode}' already exists.");
             }
 
             Mentor? mentor = null;
@@ -91,6 +98,9 @@ namespace InternshipManagementApi.Services
             var createdStudent = await _studentRepository.GetByIdWithDetailsAsync(student.Id);
             return MapToResponseDto(createdStudent ?? student);
         }
+
+        public Task<StudentAccountLinkSummaryDto> GetStudentAccountLinksAsync() =>
+            _studentRepository.GetStudentAccountLinksAsync();
 
         public async Task<StudentResponseDto> GetStudentByIdAsync(int id)
         {
@@ -202,6 +212,7 @@ namespace InternshipManagementApi.Services
                 throw new NotFoundException($"Student with ID {studentId} not found.");
             }
 
+            var previousMentorId = student.MentorId;
             if (request.MentorId.HasValue && request.MentorId.Value > 0)
             {
                 var mentor = await _mentorRepository.GetByIdAsync(request.MentorId.Value);
@@ -217,7 +228,19 @@ namespace InternshipManagementApi.Services
                 student.MentorId = null;
             }
 
-            await _studentRepository.UpdateAsync(student);
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                await _studentRepository.UpdateAsync(student);
+                if (student.MentorId.HasValue && student.MentorId != previousMentorId)
+                    await _notificationService.AddMentorAssignedAsync(student);
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             var updatedStudent = await _studentRepository.GetByIdWithDetailsAsync(student.Id);
             return MapToResponseDto(updatedStudent ?? student);
@@ -246,6 +269,8 @@ namespace InternshipManagementApi.Services
                 University = student.University,
                 Major = student.Major,
                 MentorId = student.MentorId,
+                ProgramId = student.ProgramId,
+                ProgramName = student.Program?.Name,
                 Mentor = student.Mentor != null ? new MentorSummaryDto
                 {
                     Id = student.Mentor.Id,

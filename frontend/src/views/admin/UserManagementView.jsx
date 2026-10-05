@@ -2,11 +2,9 @@ import React, { useCallback, useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Badge from '../../components/common/Badge';
 import TableSkeleton from '../../components/common/TableSkeleton';
-import CreateUserModal from '../../components/modals/CreateUserModal';
 import userService from '../../services/userService';
 import {
   Users,
-  UserPlus,
   Search,
   RefreshCw,
   Trash2,
@@ -19,13 +17,22 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const ROLE_BY_ID = { 1: 'ROLE_ADMIN', 2: 'ROLE_HR', 3: 'ROLE_MENTOR', 4: 'ROLE_STUDENT' };
+const ROLE_ID_BY_NAME = Object.fromEntries(Object.entries(ROLE_BY_ID).map(([id, role]) => [role, Number(id)]));
+const USER_STATUS = {
+  ACTIVE: { label: 'Đang hoạt động', className: 'text-emerald-700', iconClass: 'text-emerald-500' },
+  INACTIVE: { label: 'Không hoạt động', className: 'text-slate-600', iconClass: 'text-slate-400' },
+  PENDING_APPROVAL: { label: 'Đang chờ duyệt', className: 'text-amber-700', iconClass: 'text-amber-500' },
+  REJECTED: { label: 'Đã từ chối', className: 'text-rose-700', iconClass: 'text-rose-500' },
+  LOCKED: { label: 'Đã khóa', className: 'text-rose-700', iconClass: 'text-rose-500' },
+};
+
 export const UserManagementView = () => {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState('ALL');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // State cho Modal Xác nhận Xóa Tài khoản
   const [deleteModal, setDeleteModal] = useState({
@@ -43,13 +50,7 @@ export const UserManagementView = () => {
         const role =
           u.roleName ||
           u.role ||
-          (u.roleId === 1
-            ? 'ROLE_ADMIN'
-            : u.roleId === 2
-            ? 'ROLE_HR'
-            : u.roleId === 3
-            ? 'ROLE_MENTOR'
-            : 'ROLE_STUDENT');
+          ROLE_BY_ID[u.roleId] || 'ROLE_UNKNOWN';
         return {
           ...u,
           id: String(u.id),
@@ -58,8 +59,8 @@ export const UserManagementView = () => {
           roleName: role,
           roleId:
             u.roleId ||
-            (role === 'ROLE_ADMIN' ? 1 : role === 'ROLE_HR' ? 2 : role === 'ROLE_MENTOR' ? 3 : 4),
-          status: u.status || 'ACTIVE',
+            ROLE_ID_BY_NAME[role] || null,
+          status: u.status || null,
         };
       });
       setUsers(normalized);
@@ -211,7 +212,7 @@ export const UserManagementView = () => {
               />
             </div>
 
-            {/* Bộ Lọc & Nút Thêm Mới */}
+            {/* Bộ Lọc */}
             <div className="flex items-center gap-3">
               {/* Lọc theo Vai Trò */}
               <select
@@ -239,15 +240,6 @@ export const UserManagementView = () => {
                 />
               </button>
 
-              {/* Nút Tạo Người Dùng */}
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-98 transition-all shadow-md shadow-indigo-200 cursor-pointer shrink-0"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Tạo Người Dùng Mới</span>
-              </button>
             </div>
           </div>
         </div>
@@ -265,7 +257,7 @@ export const UserManagementView = () => {
               <p className="text-xs text-slate-500 mt-1">
                 {searchQuery || selectedRole !== 'ALL'
                   ? 'Thử điều chỉnh lại từ khóa tìm kiếm hoặc bộ lọc vai trò.'
-                  : 'Bắt đầu bằng việc tạo tài khoản đầu tiên.'}
+                  : 'Chưa có tài khoản trong hệ thống.'}
               </p>
             </div>
           ) : (
@@ -299,9 +291,6 @@ export const UserManagementView = () => {
                             <span className="font-semibold text-slate-900 block">
                               {u.email}
                             </span>
-                            <span className="text-[11px] text-slate-400">
-                              Xác thực chuẩn JWT Bearer
-                            </span>
                           </div>
                         </div>
                       </td>
@@ -309,10 +298,15 @@ export const UserManagementView = () => {
                         <Badge variant={u.role} roleId={u.roleId} />
                       </td>
                       <td className="py-4 px-6">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                          {u.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm khóa'}
-                        </span>
+                        {(() => {
+                          const status = USER_STATUS[u.status];
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${status?.className || 'text-slate-500'}`}>
+                              {status?.iconClass && <CheckCircle2 className={`h-3.5 w-3.5 ${status.iconClass}`} />}
+                              {status?.label || u.status || 'Chưa xác định'}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-4 px-6 text-xs text-slate-500">
                         <div className="flex items-center gap-1.5">
@@ -324,7 +318,7 @@ export const UserManagementView = () => {
                                   month: '2-digit',
                                   day: '2-digit',
                                 })
-                              : 'Gần đây'}
+                              : '—'}
                           </span>
                         </div>
                       </td>
@@ -413,12 +407,6 @@ export const UserManagementView = () => {
         </div>
       )}
 
-      {/* Modal Tạo Người Dùng Mới */}
-      <CreateUserModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={fetchUsers}
-      />
     </DashboardLayout>
   );
 };

@@ -1,12 +1,14 @@
 using InternshipManagementApi.Data;
+using InternshipManagementApi.Data.Entities;
 using InternshipManagementApi.DTOs.Evaluations;
+using InternshipManagementApi.Common.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace InternshipManagementApi.Services
 {
     public interface IHrInternshipSummaryService
     {
-        Task<HrInternshipSummaryResponseDto> GetSummaryAsync();
+        Task<HrInternshipSummaryResponseDto> GetSummaryAsync(int? programId = null);
     }
 
     public sealed class HrInternshipSummaryService : IHrInternshipSummaryService
@@ -15,13 +17,25 @@ namespace InternshipManagementApi.Services
 
         public HrInternshipSummaryService(AppDbContext db) => _db = db;
 
-        public async Task<HrInternshipSummaryResponseDto> GetSummaryAsync()
+        public async Task<HrInternshipSummaryResponseDto> GetSummaryAsync(int? programId = null)
         {
+            var selectedProgram = programId.HasValue
+                ? await _db.InternshipPrograms.AsNoTracking().SingleOrDefaultAsync(program => program.Id == programId.Value)
+                : null;
+            if (programId.HasValue && selectedProgram == null)
+                throw new NotFoundException("Internship program was not found.");
+
             var students = await _db.Students.AsNoTracking()
+                .Where(student => student.User != null &&
+                                  student.User.Role.Name == "ROLE_STUDENT" &&
+                                  student.User.Status == UserStatus.ACTIVE &&
+                                  (!programId.HasValue || student.ProgramId == programId.Value))
                 .OrderBy(student => student.FullName)
                 .Select(student => new
                 {
                     student.Id,
+                    student.ProgramId,
+                    ProgramName = student.Program == null ? null : student.Program.Name,
                     student.StudentCode,
                     student.FullName,
                     student.University,
@@ -64,6 +78,8 @@ namespace InternshipManagementApi.Services
                 return new HrInternshipSummaryItemDto
                 {
                     StudentId = student.Id,
+                    ProgramId = student.ProgramId,
+                    ProgramName = student.ProgramName,
                     StudentCode = student.StudentCode,
                     StudentName = student.FullName,
                     University = student.University,
@@ -90,6 +106,8 @@ namespace InternshipManagementApi.Services
 
             return new HrInternshipSummaryResponseDto
             {
+                ProgramId = selectedProgram?.Id,
+                ProgramName = selectedProgram?.Name,
                 TotalStudents = items.Length,
                 EvaluatedStudents = evaluatedScores.Length,
                 PendingEvaluations = items.Length - evaluatedScores.Length,

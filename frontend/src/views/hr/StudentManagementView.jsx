@@ -6,6 +6,7 @@ import EditStudentModal from '../../components/modals/EditStudentModal';
 import AssignMentorModal from '../../components/modals/AssignMentorModal';
 import Modal from '../../components/common/Modal';
 import studentService from '../../services/studentService';
+import US11 from '../../services/sprint2/US11';
 import {
   GraduationCap,
   UserPlus,
@@ -31,6 +32,8 @@ export const StudentManagementView = () => {
   const [students, setStudents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [programs, setPrograms] = useState([]);
+  const [accountLinks, setAccountLinks] = useState(null);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,9 +56,13 @@ export const StudentManagementView = () => {
   const fetchStudents = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const data = await studentService.getStudents();
+      const [data, links] = await Promise.all([
+        studentService.getStudents(),
+        studentService.getStudentAccountLinks(),
+      ]);
       const list = Array.isArray(data) ? data : data?.items || [];
       setStudents(list);
+      setAccountLinks(links);
     } catch (err) {
       toast.error(err.message || 'Không thể tải danh sách sinh viên.');
     } finally {
@@ -67,6 +74,26 @@ export const StudentManagementView = () => {
   useEffect(() => {
     void fetchStudents();
   }, [fetchStudents]);
+
+  useEffect(() => {
+    let active = true;
+    US11.getHrPrograms()
+      .then((items) => { if (active) setPrograms(Array.isArray(items) ? items : []); })
+      .catch((error) => toast.error(error.message || 'Không thể tải danh sách chương trình.'));
+    return () => { active = false; };
+  }, []);
+
+  const assignProgram = async (student, value) => {
+    try {
+      const assignment = await US11.assignStudentProgram(student.id, value ? Number(value) : null);
+      setStudents((items) => items.map((item) => (item.id === student.id
+        ? { ...item, programId: assignment.programId, programName: assignment.programName }
+        : item)));
+      toast.success('Đã cập nhật chương trình thực tập.');
+    } catch (error) {
+      toast.error(error.message || 'Không thể cập nhật chương trình thực tập.');
+    }
+  };
 
   const handleDeleteStudent = async (id, name) => {
     setStudentPendingDelete({ id, name });
@@ -178,7 +205,7 @@ export const StudentManagementView = () => {
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all group">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Tổng Số Sinh Viên
+                Hồ Sơ Đang Quản Lý
               </span>
               <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <GraduationCap className="w-5 h-5" />
@@ -189,7 +216,7 @@ export const StudentManagementView = () => {
                 {totalStudents}
               </span>
               <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                Kỳ 2026
+                Hồ sơ hiện có
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-2">Dữ liệu thực tập sinh toàn hệ thống</p>
@@ -264,7 +291,7 @@ export const StudentManagementView = () => {
             </div>
             <div className="mt-3 flex items-baseline justify-between">
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                {uniqueUniversities.length || 1}
+                {uniqueUniversities.length}
               </span>
               <span className="text-xs font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
                 {uniqueMajors.length} Ngành
@@ -273,6 +300,26 @@ export const StudentManagementView = () => {
             <p className="text-[11px] text-slate-400 mt-2">Mạng lưới đối tác đào tạo liên kết</p>
           </div>
         </div>
+
+        {accountLinks && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5" aria-labelledby="account-link-summary">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <h2 id="account-link-summary" className="text-sm font-bold text-slate-900">Đối Chiếu Tài Khoản và Hồ Sơ ROLE_STUDENT</h2>
+              <p className="text-xs text-slate-500">Dữ liệu đọc trực tiếp từ Backend/MySQL</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="rounded-xl bg-slate-50 px-3 py-2.5"><p className="text-[11px] text-slate-500">Tài khoản sinh viên</p><p className="mt-1 text-lg font-bold text-slate-900">{accountLinks.accountCount}</p></div>
+              <div className="rounded-xl bg-emerald-50 px-3 py-2.5"><p className="text-[11px] text-emerald-700">Đã liên kết hồ sơ</p><p className="mt-1 text-lg font-bold text-emerald-800">{accountLinks.linkedAccountCount}</p></div>
+              <div className="rounded-xl bg-amber-50 px-3 py-2.5"><p className="text-[11px] text-amber-700">Tài khoản chưa có hồ sơ</p><p className="mt-1 text-lg font-bold text-amber-800">{accountLinks.unlinkedAccountCount}</p></div>
+              <div className="rounded-xl bg-rose-50 px-3 py-2.5"><p className="text-[11px] text-rose-700">Hồ sơ chưa gắn tài khoản</p><p className="mt-1 text-lg font-bold text-rose-800">{accountLinks.unlinkedProfileCount}</p></div>
+            </div>
+            {accountLinks.unlinkedProfileCount > 0 && (
+              <p className="mt-3 text-xs text-rose-700" role="status">
+                Có hồ sơ chưa liên kết tài khoản. Hệ thống giữ nguyên dữ liệu và không tự tạo hoặc xóa hồ sơ để cân bằng số liệu.
+              </p>
+            )}
+          </section>
+        )}
 
         {/* ======================================================== */}
         {/* 2. SEARCH & FILTER TOOLBAR (REFINED LINEAR/STRIPE STYLE)  */}
@@ -329,7 +376,7 @@ export const StudentManagementView = () => {
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 active:scale-95 transition-all shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30 cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>+ Thêm Sinh Viên Mới</span>
+                <span>Liên Kết Tài Khoản Sinh Viên</span>
               </button>
             </div>
           </div>
@@ -421,7 +468,7 @@ export const StudentManagementView = () => {
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                 {isFiltered
                   ? 'Không có kết quả nào khớp với các tiêu chí tìm kiếm hoặc bộ lọc hiện tại của bạn.'
-                  : 'Chưa có hồ sơ sinh viên thực tập nào trong hệ thống. Hãy bắt đầu bằng cách tạo hồ sơ đầu tiên.'}
+                  : 'Chưa có hồ sơ để hiển thị. Chỉ liên kết tài khoản ROLE_STUDENT đã đăng ký.'}
               </p>
               <div className="mt-6 flex items-center justify-center gap-2.5">
                 {isFiltered ? (
@@ -439,7 +486,7 @@ export const StudentManagementView = () => {
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all cursor-pointer"
                   >
                     <UserPlus className="w-4 h-4" />
-                    <span>Thêm Sinh Viên Đầu Tiên</span>
+                    <span>Liên Kết Tài Khoản Sinh Viên</span>
                   </button>
                 )}
               </div>
@@ -454,6 +501,7 @@ export const StudentManagementView = () => {
                     <th className="py-3.5 px-6">Họ Tên và Liên Hệ</th>
                     <th className="py-3.5 px-6">Trường Đại Học</th>
                     <th className="py-3.5 px-6">Chuyên Ngành</th>
+                    <th className="py-3.5 px-6">Chương trình</th>
                     <th className="py-3.5 px-6">Mentor Phụ Trách</th>
                     <th className="py-3.5 px-6 text-right">Thao Tác</th>
                   </tr>
@@ -519,6 +567,18 @@ export const StudentManagementView = () => {
                             <BookOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                             <span className="truncate max-w-[160px]">{s.major}</span>
                           </div>
+                        </td>
+
+                        <td className="py-4 px-6 align-middle">
+                          <select
+                            aria-label={`Chương trình của ${s.fullName}`}
+                            value={s.programId || ''}
+                            onChange={(event) => void assignProgram(s, event.target.value)}
+                            className="max-w-52 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                          >
+                            <option value="">Chưa gán chương trình</option>
+                            {programs.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
+                          </select>
                         </td>
 
                         {/* Assigned Mentor Status */}
@@ -683,7 +743,7 @@ export const StudentManagementView = () => {
       />
 
       <EditStudentModal
-        key={selectedStudent?.id ?? 'no-student'}
+        key={`edit-${selectedStudent?.id ?? 'no-student'}`}
         isOpen={isEditModalOpen}
         student={selectedStudent}
         onClose={() => {
@@ -694,7 +754,7 @@ export const StudentManagementView = () => {
       />
 
       <AssignMentorModal
-        key={selectedStudent?.id ?? 'no-student'}
+        key={`assign-${selectedStudent?.id ?? 'no-student'}`}
         isOpen={isAssignModalOpen}
         student={selectedStudent}
         onClose={() => {

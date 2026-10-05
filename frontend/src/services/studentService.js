@@ -1,33 +1,38 @@
 import api from './api';
-import { getStoredStudents, saveStoredStudents, getStoredMentors } from './mockData';
-import { isMockModeEnabled } from './mockMode';
+
+const unwrap = (response) => response.data?.data || response.data;
+const errorMessage = (error, fallback) => error.response?.data?.message || error.message || fallback;
+
+const normalizeStudent = (student) => ({
+  ...student,
+  id: student.id,
+  studentCode: student.studentCode,
+  fullName: student.fullName,
+  phone: student.phoneNumber || student.phone || '',
+  phoneNumber: student.phoneNumber || student.phone || '',
+  email: student.user?.email || student.email || '',
+  userId: student.userId ?? student.user?.id ?? null,
+  accountStatus: student.user?.status || null,
+  university: student.university,
+  major: student.major,
+  programId: student.programId,
+  programName: student.programName,
+  mentorId: student.mentorId,
+  assignedMentor: student.mentor || student.assignedMentor || null,
+  mentor: student.mentor || student.assignedMentor || null,
+  status: student.mentorId ? 'ACTIVE' : 'PENDING_ASSIGNMENT',
+});
 
 export const studentService = {
-  /**
-   * Get the profile linked to the authenticated student account.
-   * GET /api/student/profile
-   */
   async getMyProfile() {
     try {
-      const response = await api.get('/student/profile');
-      const student = response.data?.data || response.data;
-      return {
-        ...student,
-        phone: student.phoneNumber || student.phone || '',
-        phoneNumber: student.phoneNumber || student.phone || '',
-        email: student.user?.email || student.email || '',
-        assignedMentor: student.mentor || student.assignedMentor || null,
-        mentor: student.mentor || student.assignedMentor || null,
-      };
+      const student = unwrap(await api.get('/student/profile'));
+      return normalizeStudent(student);
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Không thể tải hồ sơ sinh viên của bạn.');
+      throw new Error(errorMessage(error, 'Không thể tải hồ sơ sinh viên của bạn.'));
     }
   },
 
-  /**
-   * Get all students with filtering, search, and pagination
-   * GET /api/hr/students
-   */
   async getStudents(params = {}) {
     try {
       const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 100));
@@ -37,105 +42,41 @@ export const studentService = {
       const response = await api.get('/hr/students', {
         params: { ...params, page: firstPage, pageSize },
       });
-      const payload = response.data?.data || response.data;
-      let rawList = Array.isArray(payload) ? payload : (payload?.items || []);
+      const payload = unwrap(response);
+      let students = Array.isArray(payload) ? payload : (payload?.items || []);
 
       if (shouldLoadAllPages && !Array.isArray(payload)) {
-        const totalPages = payload?.totalPages || Math.ceil((payload?.totalItems || rawList.length) / pageSize);
+        const totalPages = payload?.totalPages || Math.ceil((payload?.totalItems || students.length) / pageSize);
         for (let page = 2; page <= totalPages; page += 1) {
-          const nextResponse = await api.get('/hr/students', {
-            params: { ...params, page, pageSize },
-          });
-          const nextPayload = nextResponse.data?.data || nextResponse.data;
-          rawList = rawList.concat(Array.isArray(nextPayload) ? nextPayload : (nextPayload?.items || []));
+          const nextPayload = unwrap(await api.get('/hr/students', { params: { ...params, page, pageSize } }));
+          students = students.concat(Array.isArray(nextPayload) ? nextPayload : (nextPayload?.items || []));
         }
       }
 
-      return rawList.map((s) => ({
-        ...s,
-        id: s.id,
-        studentCode: s.studentCode,
-        fullName: s.fullName,
-        phone: s.phoneNumber || s.phone || '',
-        phoneNumber: s.phoneNumber || s.phone || '',
-        email: s.user?.email || s.email || `${s.studentCode?.toLowerCase()}@ictu.edu.vn`,
-        university: s.university,
-        major: s.major,
-        mentorId: s.mentorId,
-        assignedMentor: s.mentor || s.assignedMentor || null,
-        mentor: s.mentor || s.assignedMentor || null,
-        status: s.mentorId ? 'ACTIVE' : 'PENDING_ASSIGNMENT',
-      }));
+      return students.map(normalizeStudent);
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        let students = getStoredStudents();
-
-        if (params.search) {
-          const q = params.search.toLowerCase().trim();
-          students = students.filter(
-            (s) =>
-              s.fullName.toLowerCase().includes(q) ||
-              s.studentCode.toLowerCase().includes(q) ||
-              (s.email && s.email.toLowerCase().includes(q))
-          );
-        }
-
-        if (params.university && params.university !== 'ALL') {
-          students = students.filter((s) => s.university === params.university);
-        }
-
-        if (params.major && params.major !== 'ALL') {
-          students = students.filter((s) => s.major === params.major);
-        }
-
-        if (params.status && params.status !== 'ALL') {
-          students = students.filter((s) => s.status === params.status);
-        }
-
-        return students;
-      }
-      throw new Error(error.response?.data?.message || 'Không thể tải danh sách sinh viên.');
+      throw new Error(errorMessage(error, 'Không thể tải danh sách sinh viên.'));
     }
   },
 
-  /**
-   * Get student details by ID
-   * GET /api/hr/students/{id}
-   */
+  async getStudentAccountLinks() {
+    try {
+      return unwrap(await api.get('/hr/student-accounts'));
+    } catch (error) {
+      throw new Error(errorMessage(error, 'Không thể tải trạng thái liên kết tài khoản sinh viên.'));
+    }
+  },
+
   async getStudentById(id) {
     try {
-      const response = await api.get(`/hr/students/${id}`);
-      const s = response.data?.data || response.data;
-      return {
-        ...s,
-        id: s.id,
-        studentCode: s.studentCode,
-        fullName: s.fullName,
-        phone: s.phoneNumber || s.phone || '',
-        phoneNumber: s.phoneNumber || s.phone || '',
-        email: s.user?.email || s.email || `${s.studentCode?.toLowerCase()}@ictu.edu.vn`,
-        university: s.university,
-        major: s.major,
-        mentorId: s.mentorId,
-        assignedMentor: s.mentor || s.assignedMentor || null,
-        mentor: s.mentor || s.assignedMentor || null,
-      };
+      return normalizeStudent(unwrap(await api.get(`/hr/students/${id}`)));
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        const students = getStoredStudents();
-        const found = students.find((s) => s.id === id);
-        if (!found) throw new Error('Student not found');
-        return found;
-      }
-      throw new Error(error.response?.data?.message || 'Không thể tải chi tiết sinh viên.');
+      throw new Error(errorMessage(error, 'Không thể tải chi tiết sinh viên.'));
     }
   },
 
-  /**
-   * Create a new student
-   * POST /api/hr/students
-   */
   async createStudent(studentData) {
+    if (!studentData.userId) throw new Error('Vui lòng chọn tài khoản ROLE_STUDENT đã tồn tại.');
     try {
       const payload = {
         studentCode: studentData.studentCode?.trim().toUpperCase(),
@@ -143,46 +84,15 @@ export const studentService = {
         phoneNumber: studentData.phoneNumber || studentData.phone || null,
         university: studentData.university?.trim(),
         major: studentData.major?.trim(),
-        userId: studentData.userId ? parseInt(studentData.userId, 10) : null,
-        mentorId: studentData.mentorId ? parseInt(studentData.mentorId, 10) : null,
+        userId: Number(studentData.userId),
+        mentorId: studentData.mentorId ? Number(studentData.mentorId) : null,
       };
-      const response = await api.post('/hr/students', payload);
-      return response.data?.data || response.data;
+      return unwrap(await api.post('/hr/students', payload));
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        const students = getStoredStudents();
-        
-        if (students.some((s) => s.studentCode.toLowerCase() === studentData.studentCode.trim().toLowerCase())) {
-          throw new Error('Mã sinh viên này đã tồn tại trong hệ thống.');
-        }
-
-        const newStudent = {
-          id: `STD-${Date.now().toString().slice(-4)}`,
-          studentCode: studentData.studentCode.trim().toUpperCase(),
-          fullName: studentData.fullName.trim(),
-          email: studentData.email ? studentData.email.trim() : `${studentData.studentCode.toLowerCase()}@ictu.edu.vn`,
-          phone: studentData.phone.trim(),
-          phoneNumber: studentData.phone.trim(),
-          university: studentData.university.trim(),
-          major: studentData.major.trim(),
-          status: 'PENDING_ASSIGNMENT',
-          mentorId: null,
-          assignedMentor: null,
-          createdAt: new Date().toISOString(),
-        };
-
-        const updated = [newStudent, ...students];
-        saveStoredStudents(updated);
-        return newStudent;
-      }
-      throw new Error(error.response?.data?.message || 'Không thể tạo mới sinh viên.');
+      throw new Error(errorMessage(error, 'Không thể liên kết hồ sơ sinh viên.'));
     }
   },
 
-  /**
-   * Update existing student profile
-   * PUT /api/hr/students/{id}
-   */
   async updateStudent(id, studentData) {
     try {
       const payload = {
@@ -195,102 +105,39 @@ export const studentService = {
         userId: studentData.userId !== undefined ? studentData.userId : studentData.user?.id,
         mentorId: studentData.mentorId !== undefined ? studentData.mentorId : studentData.mentor?.id,
       };
-      const response = await api.put(`/hr/students/${id}`, payload);
-      const resData = response.data?.data || response.data;
+      const result = unwrap(await api.put(`/hr/students/${id}`, payload));
       return {
-        ...resData,
-        phone: resData.phoneNumber || resData.phone,
-        email: resData.user?.email || resData.email,
-        assignedMentor: resData.mentor || resData.assignedMentor,
+        ...result,
+        phone: result.phoneNumber || result.phone,
+        email: result.user?.email || result.email,
+        assignedMentor: result.mentor || result.assignedMentor,
       };
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        const students = getStoredStudents();
-        const index = students.findIndex((s) => s.id === id);
-        if (index === -1) throw new Error('Không tìm thấy sinh viên');
-
-        const updatedStudent = {
-          ...students[index],
-          ...studentData,
-          studentCode: studentData.studentCode || students[index].studentCode,
-          fullName: studentData.fullName || students[index].fullName,
-          phone: studentData.phone || students[index].phone,
-          university: studentData.university || students[index].university,
-          major: studentData.major || students[index].major,
-          updatedAt: new Date().toISOString(),
-        };
-
-        students[index] = updatedStudent;
-        saveStoredStudents(students);
-        return updatedStudent;
-      }
-      throw new Error(error.response?.data?.message || 'Không thể cập nhật hồ sơ sinh viên.');
+      throw new Error(errorMessage(error, 'Không thể cập nhật hồ sơ sinh viên.'));
     }
   },
 
-  /**
-   * Assign a Mentor to a Student
-   * PUT /api/hr/students/{id}/assign-mentor
-   * Payload: { mentorId }
-   */
   async assignMentor(studentId, mentorId) {
     try {
-      const parsedId = mentorId ? parseInt(mentorId, 10) : null;
-      const response = await api.put(`/hr/students/${studentId}/assign-mentor`, { mentorId: parsedId });
-      const resData = response.data?.data || response.data;
+      const result = unwrap(await api.put(`/hr/students/${studentId}/assign-mentor`, {
+        mentorId: mentorId ? Number(mentorId) : null,
+      }));
       return {
-        ...resData,
-        phone: resData.phoneNumber || resData.phone,
-        email: resData.user?.email || resData.email,
-        assignedMentor: resData.mentor || resData.assignedMentor,
+        ...result,
+        phone: result.phoneNumber || result.phone,
+        email: result.user?.email || result.email,
+        assignedMentor: result.mentor || result.assignedMentor,
       };
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        const students = getStoredStudents();
-        const mentors = getStoredMentors();
-
-        const sIndex = students.findIndex((s) => s.id === studentId);
-        if (sIndex === -1) throw new Error('Không tìm thấy bản ghi sinh viên.');
-
-        const mentor = mentors.find((m) => m.id === mentorId);
-        if (!mentor && mentorId) throw new Error('Mentor được chọn không tồn tại.');
-
-        students[sIndex] = {
-          ...students[sIndex],
-          mentorId: mentor ? mentor.id : null,
-          assignedMentor: mentor
-            ? {
-                id: mentor.id,
-                fullName: mentor.fullName,
-                department: mentor.department,
-              }
-            : null,
-          status: mentor ? 'ACTIVE' : 'PENDING_ASSIGNMENT',
-        };
-
-        saveStoredStudents(students);
-        return students[sIndex];
-      }
-      throw new Error(error.response?.data?.message || 'Không thể phân công Mentor.');
+      throw new Error(errorMessage(error, 'Không thể phân công Mentor.'));
     }
   },
 
-  /**
-   * Delete student record
-   * DELETE /api/hr/students/{id}
-   */
   async deleteStudent(id) {
     try {
-      const response = await api.delete(`/hr/students/${id}`);
-      return response.data;
+      return (await api.delete(`/hr/students/${id}`)).data;
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        const students = getStoredStudents();
-        const updated = students.filter((s) => s.id !== id);
-        saveStoredStudents(updated);
-        return { success: true };
-      }
-      throw new Error(error.response?.data?.message || 'Không thể xóa hồ sơ sinh viên.');
+      throw new Error(errorMessage(error, 'Không thể xóa hồ sơ sinh viên.'));
     }
   },
 };

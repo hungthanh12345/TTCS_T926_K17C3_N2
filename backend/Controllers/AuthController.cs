@@ -43,6 +43,7 @@ namespace InternshipManagementApi.Controllers
         }
 
         [HttpPost("register")]
+        [Consumes("application/json")]
         [AllowAnonymous]
         [ProducesResponseType(typeof(ApiResponse<StudentRegistrationStatusResponseDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
@@ -52,6 +53,21 @@ namespace InternshipManagementApi.Controllers
             var response = await _registrationService.RegisterAsync(request);
             return StatusCode(StatusCodes.Status201Created,
                 ApiResponse<StudentRegistrationStatusResponseDto>.Created(response, "Registration submitted for HR approval."));
+        }
+
+        [HttpPost("register-application")]
+        [Consumes("multipart/form-data")]
+        [AllowAnonymous]
+        [RequestSizeLimit(20 * 1024 * 1024 + 512 * 1024)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20 * 1024 * 1024 + 512 * 1024)]
+        [ProducesResponseType(typeof(ApiResponse<StudentRegistrationStatusResponseDto>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> RegisterStudentWithApplication([FromForm] StudentRegistrationApplicationRequestDto request)
+        {
+            var response = await _registrationService.RegisterWithApplicationAsync(request);
+            return StatusCode(StatusCodes.Status201Created,
+                ApiResponse<StudentRegistrationStatusResponseDto>.Created(response, "Registration and application submitted for HR approval."));
         }
 
         [HttpPost("registration-status")]

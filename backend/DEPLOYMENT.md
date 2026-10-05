@@ -36,21 +36,21 @@ Vì gói Free của Render chỉ cung cấp PostgreSQL, bạn có thể lựa ch
 2. Chọn **Create Service** -> Chọn **MySQL** -> Chọn gói **Free** (5GB Storage, 1 CPU).
 3. Chọn Region gần Việt Nam nhất (ví dụ: `ap-southeast-1` Singapore).
 4. Nhấn **Create Service**.
-5. Sau 1-2 phút, trạng thái chuyển sang **Running**. Bạn sao chép **Service URI** (dạng `mysql://avnadmin:password@mysql-xxx.aivencloud.com:12345/defaultdb?ssl-mode=REQUIRED`) hoặc các thông số:
+5. Sau 1-2 phút, trạng thái chuyển sang **Running**. Tạo/chọn schema ứng dụng có tên chính xác `internship_management`; dùng service URI trỏ tới schema đó hoặc các thông số:
    * **Host**: `mysql-xxx.aivencloud.com`
    * **Port**: `12345`
    * **User**: `avnadmin`
    * **Password**: `******`
-   * **Database**: `defaultdb`
+   * **Database**: `internship_management`
 6. Kết nối bằng DBeaver hoặc MySQL Workbench hoặc Drizzle Studio bằng Service URI:
    * Chọn một database mới, trống và riêng cho ứng dụng.
-   * Áp dụng `migrations/000_initial_core_schema.sql`, sau đó các migration Sprint 2 còn lại theo thứ tự tên file.
+   * Áp dụng `migrations/000_initial_core_schema.sql`, sau đó mọi migration trong `backend/migrations/` theo thứ tự tên file.
    * Không chạy `schema.sql` hoặc `seed_data.sql` trên cloud: đây là script reset/xóa dữ liệu mẫu dành cho database local dùng một lần.
 
 ### Lựa chọn B: TiDB Cloud Serverless (MySQL Compatible - 25GB Free Forever)
 1. Đăng ký tài khoản tại [TiDB Cloud](https://tidbcloud.com/).
 2. Tạo cụm **Serverless Tier** (Miễn phí 25GB, tương thích 100% chuẩn MySQL 8.0).
-3. Lấy chuỗi kết nối, tạo database ứng dụng mới và áp dụng baseline cùng các migration theo thứ tự như trên. Không nạp seed tài khoản mẫu lên cloud.
+3. Lấy chuỗi kết nối trỏ đến schema `internship_management` và áp dụng baseline cùng các migration theo thứ tự như trên. Không tạo schema khác cho Sprint 2 hoặc theo từng role. Không nạp seed tài khoản mẫu lên cloud.
 
 ### Lựa chọn C: Railway MySQL
 1. Đăng ký tài khoản tại [Railway.app](https://railway.app/).
@@ -75,7 +75,7 @@ Vì gói Free của Render chỉ cung cấp PostgreSQL, bạn có thể lựa ch
 5. Trong mục **Environment Variables**, thêm các biến sau:
    | Key | Value | Ghi chú |
    |---|---|---|
-   | `ConnectionStrings__DefaultConnection` | `Server=host;Port=port;Database=defaultdb;User=user;Password=pass;CharSet=utf8mb4;SslMode=Required;AllowPublicKeyRetrieval=True;` *(hoặc URI `mysql://...` từ Aiven; production backend luôn bắt buộc TLS)* | Kết nối MySQL |
+   | `ConnectionStrings__DefaultConnection` | `Server=host;Port=port;Database=internship_management;User=user;Password=pass;CharSet=utf8mb4;SslMode=Required;AllowPublicKeyRetrieval=True;` *(hoặc URI MySQL trỏ tới `internship_management`; production backend luôn bắt buộc TLS)* | Kết nối MySQL |
    | `CORS_ALLOWED_ORIGINS` | `https://your-project.vercel.app` | Danh sách chính xác các origin, phân tách bằng dấu phẩy; thêm từng domain preview riêng nếu cần. Không dùng wildcard. |
    | `ASPNETCORE_ENVIRONMENT` | `Production` | Chế độ Production |
    | `PORT` | `8080` | Port container |

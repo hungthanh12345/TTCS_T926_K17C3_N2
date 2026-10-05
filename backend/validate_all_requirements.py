@@ -196,8 +196,9 @@ def validate_frontend_contracts():
 
     app_code = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
     check(
-        '<Route path="/" element={<Navigate to="/login" replace />} />' in app_code,
-        "The root route must navigate to the login page.",
+        '<Route path="/" element={<LandingView />} />' in app_code and
+        (FRONTEND / "src/views/common/LandingView.jsx").is_file(),
+        "The public landing page must remain available at the root route.",
     )
 
     auth_context = (FRONTEND / "src/context/AuthContext.jsx").read_text(encoding="utf-8")
@@ -292,7 +293,8 @@ def validate_student_schedule_contract():
           "US14 frontend route must allow only ROLE_STUDENT.")
     check("path: '/student/schedule'" in sidebar and "roles: ['ROLE_STUDENT']" in sidebar,
           "US14 navigation must be visible only to students.")
-    check("api.get('/student/schedule')" in schedule_service,
+    check("api.get('/student/schedule/overview')" in schedule_service and
+          "program" in schedule_service and "events" in schedule_service,
           "US14 frontend must call the real schedule API.")
     check("role=\"status\"" in page and "role=\"alert\"" in page and "events.length === 0" in page,
           "US14 page must render loading, error, and empty states.")
@@ -329,6 +331,9 @@ def validate_weekly_report_contract():
           "Mentor report access and feedback updates must be limited to assigned students and the author.")
     check("WeekStartDate" in dto and "WorkSummary" in dto and "NextWeekPlan" in dto and "StringLength" in dto,
           "Weekly report DTOs must expose the report fields with bounded input validation.")
+    check("IsLate = IsLate(report)" in report_service and "AddHours(-7)" in report_service and
+          "report.isLate" in student_panel and "report.isLate" in mentor_panel,
+          "US17 must expose and render on-time/late submission from the persisted submission timestamp.")
     check("WeeklyReports" in db_context and "MentorFeedbacks" in db_context and
           "IsUnique()" in db_context and "fk_weekly_reports_student" in migration and
           "fk_mentor_feedback_weekly_report" in migration and "fk_mentor_feedback_mentor" in migration and
@@ -386,13 +391,17 @@ def validate_part09_contract():
           "CHECK" in migration and "DROP TABLE" not in migration.upper(),
           "Evaluation persistence must be additive with score, uniqueness, and foreign-key constraints.")
     student_model = (BACKEND / "Data/Entities/Student.cs").read_text(encoding="utf-8")
-    check("InternshipProgramId" not in student_model and "internship_program_id" not in migration,
-          "Part 09 must not invent a Student–InternshipProgram assignment absent from the current model.")
+    program_link = (BACKEND / "migrations/20261004_part11_student_program_link.sql").read_text(encoding="utf-8")
+    check("ProgramId" in student_model and "fk_students_program" in program_link and
+          "ADD COLUMN `program_id` INT NULL" in program_link and "DROP TABLE" not in program_link.upper(),
+          "Student-program integration must be additive and preserve existing unassigned student profiles.")
     check("GroupBy(report => report.StudentId)" in summary_service and "MentorFeedbacks" in summary_service and
           "InternshipEvaluations" in summary_service and "WeeklyReportCount" in summary_service,
           "HR summary must aggregate existing reports, feedback, and evaluations without persisting duplicate summary data.")
+    check("GetSummaryAsync(int? programId" in summary_service and "student.ProgramId == programId.Value" in summary_service,
+          "US20 summary must be filterable by the live student-program relationship.")
     check("api.get('/mentor/evaluations')" in mentor_api and "api.post(`/mentor/evaluations/students/${studentId}`" in mentor_api and
-          "api.get('/student/evaluations')" in mentor_api and "api.get('/hr/internship-summary')" in hr_api,
+          "api.get('/student/evaluations')" in mentor_api and "'/hr/internship-summary'" in hr_api,
           "US19/US20 frontend services must call the live backend APIs.")
     check('role="status"' in mentor_panel and 'role="alert"' in mentor_panel and
           'role="status"' in student_panel and 'role="alert"' in student_panel and
@@ -406,7 +415,67 @@ def validate_part09_contract():
     check(route_match is not None and "ROLE_HR" in route_match.group(1) and "ROLE_ADMIN" in route_match.group(1) and
           "path: '/hr/internship-summary'" in sidebar and "ROLE_HR" in sidebar and "ROLE_ADMIN" in sidebar,
           "HR summary route and navigation must be available only to HR/Admin roles.")
-    print("[PASS] US19/US20 roles, ownership, score validation, data aggregation, and UI wiring are present.")
+    print("[PASS] US19/US20 roles, ownership, score validation, program-scoped data aggregation, and UI wiring are present.")
+
+
+def validate_student_application_integration():
+    auth_controller = (BACKEND / "Controllers/AuthController.cs").read_text(encoding="utf-8")
+    registration = (BACKEND / "Services/StudentRegistrationService.cs").read_text(encoding="utf-8")
+    programs_controller = (BACKEND / "Controllers/PublicInternshipProgramsController.cs").read_text(encoding="utf-8")
+    hr_documents = (BACKEND / "Controllers/HrStudentDocumentsController.cs").read_text(encoding="utf-8")
+    registration_view = (FRONTEND / "src/views/auth/StudentRegistrationView.jsx").read_text(encoding="utf-8")
+    registration_api = (FRONTEND / "src/services/studentRegistrationService.js").read_text(encoding="utf-8")
+    approval_view = (FRONTEND / "src/views/hr/StudentRegistrationApprovalView.jsx").read_text(encoding="utf-8")
+    db_context = (BACKEND / "Data/AppDbContext.cs").read_text(encoding="utf-8")
+    schedule_service = (BACKEND / "Services/StudentScheduleService.cs").read_text(encoding="utf-8")
+
+    check('[HttpPost("register")]' in auth_controller and '[HttpPost("register-application")]' in auth_controller and
+          '[Consumes("application/json")]' in auth_controller and
+          '[Consumes("multipart/form-data")]' in auth_controller,
+          "US06 must preserve the JSON registration API and provide a separate multipart application flow.")
+    check("Status = UserStatus.PENDING_APPROVAL" in registration and "_passwordHasher.Hash(request.Password)" in registration and
+          "ProgramId = program.Id" in registration and "BeginTransactionAsync" in registration and
+          '"CV"' in registration and '"INTERNSHIP_LETTER"' in registration,
+          "Registration must atomically create a pending Sprint 1 user/profile linked to a program and both documents.")
+    check('[Route("api/programs")]' in programs_controller and "[AllowAnonymous]" in programs_controller,
+          "Guest registration must load real internship programs through a public read-only API.")
+    check('[Authorize(Roles = "ROLE_HR,ROLE_ADMIN")]' in hr_documents and "item.StudentId == studentId" in hr_documents,
+          "HR document access must be role protected and scoped to the selected student profile.")
+    check("getPrograms()" in registration_view and "internshipLetter" in registration_view and
+          "api.post('/auth/register-application', form" in registration_api and "getRegistrationDocuments" in approval_view,
+          "Frontend application must select a program, upload both documents, and expose them in HR review.")
+    check("e => e.ProgramId" in db_context and "GetMyScheduleOverviewAsync" in schedule_service,
+          "Student-program linkage must flow into the authenticated personal schedule.")
+    print("[PASS] US04/US06 application, documents, program linkage, HR review access, and schedule integration are wired.")
+
+
+def validate_program_and_task_flows():
+    program_controller = (BACKEND / "Controllers/InternshipProgramsController.cs").read_text(encoding="utf-8")
+    dates_dto = (BACKEND / "DTOs/Sprint2Part02Dtos.cs").read_text(encoding="utf-8")
+    dates_view = (FRONTEND / "src/views/hr/ProgramDatesEditor.jsx").read_text(encoding="utf-8")
+    mentor_controller = (BACKEND / "Controllers/MentorTasksController.cs").read_text(encoding="utf-8")
+    student_controller = (BACKEND / "Controllers/StudentTasksController.cs").read_text(encoding="utf-8")
+    task_service = (BACKEND / "Services/MentorTaskService.cs").read_text(encoding="utf-8")
+    mentor_ui = (FRONTEND / "src/components/mentor/MentorTaskManagement.jsx").read_text(encoding="utf-8")
+    student_ui = (FRONTEND / "src/components/student/StudentTasksPanel.jsx").read_text(encoding="utf-8")
+    task_api = (FRONTEND / "src/services/mentorTaskService.js").read_text(encoding="utf-8")
+
+    check('[Authorize(Roles = "ROLE_HR,ROLE_ADMIN")]' in program_controller and
+          '[HttpPost("programs")]' in program_controller and '[HttpGet("programs")]' in program_controller and
+          '[HttpPut("programs/{programId:int}/dates")]' in program_controller,
+          "US11/US13 program creation, listing, and date updates must remain HR/Admin protected.")
+    check("EndDate.Value < StartDate.Value" in dates_dto and "endDate >= startDate" in dates_view,
+          "US13 must allow equal start/end dates and reject dates ending before the start.")
+    check('[Authorize(Roles = "ROLE_MENTOR")]' in mentor_controller and
+          '[Authorize(Roles = "ROLE_STUDENT")]' in student_controller and
+          "item.Id == request.StudentId && item.MentorId == mentor.Id" in task_service and
+          "task.Student.UserId != userId" in task_service,
+          "US15/US16 must enforce mentor assignment and student ownership in the backend.")
+    check('"TO_DO"' in task_service and '"IN_PROGRESS"' in task_service and '"DONE"' in task_service and
+          "mentorTaskService.createTask" in mentor_ui and "updateMyTaskProgress" in student_ui and
+          "api.put(`/student/tasks/${taskId}/progress`" in task_api,
+          "US15/US16 task creation and progress choices must be connected to the real task API.")
+    print("[PASS] US11/US13 role policies, date validation, and US15/US16 ownership-backed task flows are wired.")
 
 
 def validate_mentor_delete_preserves_work_history():
@@ -421,11 +490,7 @@ def validate_mentor_delete_preserves_work_history():
     print("[PASS] Mentor deletion guards assigned tasks and feedback history.")
 
 
-def validate_mock_fallback_is_development_only():
-    mock_mode = (FRONTEND / "src/services/mockMode.js").read_text(encoding="utf-8")
-    check("import.meta.env.DEV" in mock_mode, "Mock mode must be restricted to development builds.")
-    check("VITE_ENABLE_MOCK_DATA === 'true'" in mock_mode, "Mock mode must require explicit opt-in.")
-
+def validate_business_data_uses_api_only():
     auth_service = (FRONTEND / "src/services/authService.js").read_text(encoding="utf-8")
     check("api.post('/auth/login', { email, password })" in auth_service,
           "Login must authenticate through the existing API.")
@@ -437,9 +502,100 @@ def validate_mock_fallback_is_development_only():
 
     for relative_path in ("src/services/userService.js", "src/services/mentorService.js", "src/services/studentService.js"):
         service = (FRONTEND / relative_path).read_text(encoding="utf-8")
-        check("if (!error.response)" not in service, f"{relative_path} must not silently substitute mock data in production.")
-        check("!error.response && isMockModeEnabled" in service, f"{relative_path} mock behavior must be opt-in.")
-    print("[PASS] Login always uses the API; optional data-service mock fallbacks remain development-only.")
+        check("mockData" not in service and "localStorage" not in service,
+              f"{relative_path} must use the backend for business data without local fake-data fallbacks.")
+    check(not (FRONTEND / "src/services/mockData.js").exists(), "Business mock data must not remain in the frontend service bundle.")
+    check("VITE_ENABLE_MOCK_DATA" not in (FRONTEND / ".env.example").read_text(encoding="utf-8"),
+          "The frontend must not expose an offline business-mock switch.")
+    print("[PASS] Login and account, mentor, and student business data use backend APIs without mock fallbacks.")
+
+
+def validate_student_accounts_link_to_existing_profiles():
+    admin_view = (FRONTEND / "src/views/admin/UserManagementView.jsx").read_text(encoding="utf-8")
+    check("CreateUserModal" not in admin_view and "Tạo Người Dùng Mới" not in admin_view,
+          "Admin user management must not expose account creation.")
+
+    student_view = (FRONTEND / "src/views/hr/StudentManagementView.jsx").read_text(encoding="utf-8")
+    add_student_modal = (FRONTEND / "src/components/modals/AddStudentModal.jsx").read_text(encoding="utf-8")
+    student_service = (BACKEND / "Services/StudentService.cs").read_text(encoding="utf-8")
+    student_dto = (BACKEND / "DTOs/Student/CreateStudentRequestDto.cs").read_text(encoding="utf-8")
+    repository = (BACKEND / "Repositories/StudentRepository.cs").read_text(encoding="utf-8")
+    hr_controller = (BACKEND / "Controllers/HrController.cs").read_text(encoding="utf-8")
+    user_service = (BACKEND / "Services/UserService.cs").read_text(encoding="utf-8")
+    registration = (BACKEND / "Services/StudentRegistrationService.cs").read_text(encoding="utf-8")
+
+    check("Liên Kết Tài Khoản Sinh Viên" in student_view and "Tạo Sinh Viên" not in student_view,
+          "HR student management must describe the workflow as linking an existing account.")
+    check("getStudentAccountLinks" in add_student_modal and "hasStudentProfile" in add_student_modal and
+          "userId" in add_student_modal,
+          "The student profile form must load existing accounts and reject already-linked accounts.")
+    check("[HttpGet(\"student-accounts\")]" in hr_controller and
+          "GetStudentAccountLinksAsync" in hr_controller,
+          "HR/Admin must have a protected endpoint for live student account-link data.")
+    check("HasStudentProfile = _context.Students.Any" in repository and
+          "UserId = user.Id" in repository and "UnlinkedProfileCount" in repository,
+          "Account/profile counts must come from users and students in the database.")
+    check("[Required(ErrorMessage = \"An existing student account is required.\")]" in student_dto and
+          "A student profile must be linked to an existing ROLE_STUDENT account." in student_service and
+          "Tài khoản này đã có hồ sơ sinh viên." in student_service,
+          "The API must require a student account and reject duplicate profile links.")
+    check("Student accounts must be created through student registration" in user_service,
+          "Admin account creation must not create ROLE_STUDENT accounts outside registration.")
+    check("Student = new Student" in registration and "ProgramId = program.Id" in registration,
+          "Registration must atomically create the student account/profile link and retain its program link.")
+    print("[PASS] Admin cannot create student accounts from user management; profiles link to existing ROLE_STUDENT accounts.")
+
+
+def validate_notifications_use_live_work_data():
+    controller = (BACKEND / "Controllers/NotificationsController.cs").read_text(encoding="utf-8")
+    service = (BACKEND / "Services/NotificationService.cs").read_text(encoding="utf-8")
+    header = (FRONTEND / "src/components/layout/Header.jsx").read_text(encoding="utf-8")
+    notification_service = (FRONTEND / "src/services/notificationService.js").read_text(encoding="utf-8")
+    check('[Route("api/notifications")]' in controller and "[Authorize]" in controller,
+          "The notification API must be authenticated.")
+    for entity_query in ("_db.Users", "_db.Students", "_db.Tasks", "_db.WeeklyReports",
+                         "_db.MentorFeedbacks", "_db.InternshipEvaluations"):
+        check(entity_query in service, f"Notifications must be derived from live data in {entity_query}.")
+    check("notificationService.getMine()" in header and "api.get('/notifications')" in notification_service,
+          "The header bell must load notifications from the backend API.")
+    print("[PASS] Header notifications are computed from authenticated, live internship records without a mock table.")
+
+
+def validate_persistent_notifications_settings_and_review_ui():
+    notification_entity = (BACKEND / "Data/Entities/UserNotification.cs").read_text(encoding="utf-8")
+    notification_migration = (BACKEND / "migrations/20261005_part12_persistent_notifications.sql").read_text(encoding="utf-8")
+    notification_controller = (BACKEND / "Controllers/NotificationsController.cs").read_text(encoding="utf-8")
+    notification_service = (BACKEND / "Services/NotificationService.cs").read_text(encoding="utf-8")
+    settings_controller = (BACKEND / "Controllers/SystemSettingsController.cs").read_text(encoding="utf-8")
+    settings_view = (FRONTEND / "src/views/admin/SystemSettingsView.jsx").read_text(encoding="utf-8")
+    app = (FRONTEND / "src/App.jsx").read_text(encoding="utf-8")
+    header = (FRONTEND / "src/components/layout/Header.jsx").read_text(encoding="utf-8")
+    approval = (FRONTEND / "src/views/hr/StudentRegistrationApprovalView.jsx").read_text(encoding="utf-8")
+    registration = (BACKEND / "Services/StudentRegistrationService.cs").read_text(encoding="utf-8")
+    check("ReadAt" in notification_entity and "read_at" in notification_migration and
+          "CREATE TABLE IF NOT EXISTS `notifications`" in notification_migration and
+          "REFERENCES `users` (`id`)" in notification_migration,
+          "Persistent notifications must add read state with an additive, user-scoped migration.")
+    check('HttpPost("{notificationId:long}/read")' in notification_controller and
+          'HttpPost("read-all")' in notification_controller and
+          "item.UserId == userId" in notification_service and
+          "event:registration-reviewed" in notification_service,
+          "Notifications must persist read state per authenticated user and include registration review events.")
+    check('[Authorize(Roles = "ROLE_ADMIN")]' in settings_controller and
+          "_db.InternshipPrograms" in settings_controller and "_db.Users" in settings_controller and
+          'path="/admin/settings"' in app and "Cài Đặt Hệ Thống" in settings_view,
+          "Admin system settings must be role protected and sourced from current database records.")
+    check("notificationFilter" in header and "Chưa đọc" in header and "Đã đọc" in header and
+          "notificationService.markRead" in header,
+          "The header inbox must expose read/unread filters and persist a click as read.")
+    check("<Modal" in approval and "Xác nhận duyệt hồ sơ" in approval and
+          "window.confirm" not in approval and "Đã duyệt hồ sơ thành công." in approval and
+          "Không thể duyệt hồ sơ. Vui lòng thử lại." in approval,
+          "Registration review must use an in-app confirmation modal and localized feedback.")
+    check("Hồ sơ đăng ký của bạn đang chờ HR xét duyệt." in registration and
+          "Hồ sơ đăng ký thực tập của bạn đã được HR xét duyệt." in registration,
+          "Registration status response messages must be localized.")
+    print("[PASS] Persistent notification inbox, Admin system data, role access, and Vietnamese review UI are wired.")
 
 
 def validate_vite_host_check_is_enabled():
@@ -617,8 +773,13 @@ def main():
     validate_student_schedule_contract()
     validate_weekly_report_contract()
     validate_part09_contract()
+    validate_student_application_integration()
+    validate_program_and_task_flows()
     validate_mentor_delete_preserves_work_history()
-    validate_mock_fallback_is_development_only()
+    validate_business_data_uses_api_only()
+    validate_student_accounts_link_to_existing_profiles()
+    validate_notifications_use_live_work_data()
+    validate_persistent_notifications_settings_and_review_ui()
     validate_vite_host_check_is_enabled()
     validate_cors_origins_are_explicit()
     validate_safe_database_setup()

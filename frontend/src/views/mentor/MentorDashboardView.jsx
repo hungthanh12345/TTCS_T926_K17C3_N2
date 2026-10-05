@@ -1,30 +1,46 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import mentorTaskService from '../../services/mentorTaskService';
+import {
+  AlertCircle,
+  Award,
+  BookOpen,
+  Building2,
+  ClipboardList,
+  Mail,
+  Phone,
+  RefreshCw,
+  School,
+  UserRound,
+} from 'lucide-react';
+import DashboardLayout from '../../components/layout/DashboardLayout';
+import WorkspaceTabs from '../../components/common/WorkspaceTabs';
 import MentorTaskManagement from '../../components/mentor/MentorTaskManagement';
 import MentorWeeklyReportsPanel from '../../components/mentor/MentorWeeklyReportsPanel';
 import MentorEvaluationPanel from '../../components/mentor/MentorEvaluationPanel';
-import {
-  Phone,
-  Mail,
-  School,
-  BookOpen,
-  CheckCircle2,
-} from 'lucide-react';
 import TableSkeleton from '../../components/common/TableSkeleton';
+import mentorTaskService from '../../services/mentorTaskService';
+
+const TABS = [
+  { id: 'students', label: 'Sinh viên', icon: UserRound },
+  { id: 'tasks', label: 'Công việc', icon: ClipboardList },
+  { id: 'reports', label: 'Báo cáo tuần', icon: BookOpen },
+  { id: 'evaluations', label: 'Đánh giá', icon: Award },
+];
 
 export const MentorDashboardView = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('students');
   const [students, setStudents] = useState([]);
+  const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const loadMentees = useCallback(async () => {
     try {
       const assignedStudents = await mentorTaskService.getAssignedStudents();
       setStudents(assignedStudents);
-    } catch (err) {
-      console.error(err);
+      setLoadError('');
+    } catch (error) {
+      setLoadError(error.message || 'Không thể tải danh sách sinh viên được phân công.');
     } finally {
       setIsLoading(false);
     }
@@ -34,104 +50,109 @@ export const MentorDashboardView = () => {
     void loadMentees();
   }, [loadMentees]);
 
+  const refreshMentees = () => {
+    setIsLoading(true);
+    setLoadError('');
+    void loadMentees();
+  };
+
   return (
     <DashboardLayout
-      title="Cổng Thông Tin Hướng Dẫn Mentor"
-      subtitle="Theo dõi ứng viên thực tập được phân công, hướng dẫn kỹ thuật và đánh giá tiến độ"
+      title="Không gian Mentor"
+      subtitle="Sinh viên được phân công, công việc, báo cáo và đánh giá"
     >
-      <div className="space-y-6">
-        {/* Banner Chào Mừng Mentor */}
-        <div className="rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-950 p-6 sm:p-8 text-white relative overflow-hidden shadow-xl border border-purple-500/20">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="space-y-5">
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 p-5 text-white shadow-lg sm:p-7">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-56 w-56 rounded-full bg-purple-400/20 blur-3xl" />
           <div className="relative z-10 max-w-2xl">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-purple-200 border border-white/15 mb-3 backdrop-blur-xs">
-              Chuyên Gia Kỹ Thuật Hướng Dẫn
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Xin chào, {user?.fullName || 'Mentor'}!
-            </h2>
-            <p className="text-slate-300 text-sm mt-2 leading-relaxed">
-              Bạn đang phụ trách định hướng chuyên môn cho sinh viên thực tập thuộc Kỳ Thu 2026. Hãy duy trì trao đổi định kỳ, hỗ trợ review code và theo sát tiến độ các bài toán thực tế.
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-purple-200">Không gian hướng dẫn</p>
+            <h2 className="mt-2 text-2xl font-bold">Xin chào, {user?.fullName || 'Mentor'}!</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-300">
+              Xem danh sách sinh viên được HR phân công, giao nhiệm vụ, phản hồi báo cáo tuần và ghi nhận đánh giá.
             </p>
           </div>
-        </div>
+        </section>
 
-        {/* Danh Sách Mentees */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Sinh Viên Đang Trực Tiếp Hướng Dẫn ({students.length})
-              </h3>
-              <p className="text-xs text-slate-500">
-                Hồ sơ sinh viên do Phòng Nhân sự (HR) ghép nối với chuyên môn của bạn
-              </p>
+        <WorkspaceTabs
+          label="Các mục trong không gian mentor"
+          tabs={TABS.map((tab) => ({ ...tab, count: tab.id === 'students' && !isLoading && !loadError ? students.length : undefined }))}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
+
+        {activeTab === 'students' && (
+          <section className="space-y-4" aria-label="Sinh viên được phân công">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Sinh viên được phân công</h3>
+                <p className="mt-1 text-xs text-slate-500">Danh sách lấy từ hồ sơ mentor trong hệ thống.</p>
+              </div>
+              <button
+                type="button"
+                onClick={refreshMentees}
+                disabled={isLoading}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} /> Làm mới
+              </button>
             </div>
-          </div>
 
-          {isLoading ? (
-            <TableSkeleton rows={3} cols={4} />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {students.map((student) => (
-                <div
-                  key={student.id}
-                  className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all p-5 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-start justify-between">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center justify-center border border-indigo-100">
-                        {student.fullName.charAt(0)}
-                      </div>
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
-                        {student.studentCode}
-                      </span>
-                    </div>
-
-                    <h4 className="text-base font-bold text-slate-900 mt-3">
-                      {student.fullName}
-                    </h4>
-
-                    <div className="mt-3 space-y-1.5 text-xs text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <School className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{student.university}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                        <span className="font-semibold text-slate-800">{student.major}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>{student.phone}</span>
-                      </div>
-                      {student.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{student.email}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Tiến Độ Tốt
-                    </span>
-
-                    <span className="text-slate-500 text-[11px] font-medium">
-                      {student.internshipPeriod || 'Kỳ Thu 2026'}
-                    </span>
+            {isLoading ? (
+              <TableSkeleton rows={3} cols={3} />
+            ) : loadError ? (
+              <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">Không thể tải danh sách sinh viên</p>
+                    <p className="mt-1 break-words">{loadError}</p>
+                    <button type="button" onClick={refreshMentees} className="mt-3 rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold hover:bg-rose-100">Thử lại</button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <MentorTaskManagement />
-        <MentorWeeklyReportsPanel />
-        <MentorEvaluationPanel />
+              </div>
+            ) : students.length === 0 ? (
+              <div role="status" className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
+                <UserRound className="mx-auto h-8 w-8 text-slate-300" />
+                <h4 className="mt-3 text-sm font-bold text-slate-800">Chưa có sinh viên được phân công</h4>
+                <p className="mt-1 text-sm text-slate-500">Khi HR liên kết sinh viên với tài khoản mentor này, hồ sơ sẽ xuất hiện tại đây.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {students.map((student) => (
+                  <article key={student.id} className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 font-bold text-indigo-700">
+                        {student.fullName?.trim()?.charAt(0)?.toUpperCase() || '?'}
+                      </span>
+                      <span className="max-w-[65%] truncate rounded-md bg-slate-100 px-2 py-1 font-mono text-[10px] font-bold text-slate-600">
+                        {student.studentCode || 'Chưa có mã'}
+                      </span>
+                    </div>
+                    <h4 className="mt-3 truncate text-sm font-bold text-slate-900">{student.fullName || 'Chưa có họ tên'}</h4>
+                    <div className="mt-3 space-y-2 text-xs text-slate-600">
+                      {student.university && <p className="flex items-start gap-2"><School className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span>{student.university}</span></p>}
+                      {student.major && <p className="flex items-start gap-2"><Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" /><span>{student.major}</span></p>}
+                      {student.email && <p className="flex items-start gap-2"><Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="break-all">{student.email}</span></p>}
+                      {(student.phoneNumber || student.phone) && <p className="flex items-start gap-2"><Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span>{student.phoneNumber || student.phone}</span></p>}
+                      {student.programName && <p className="border-t border-slate-100 pt-2 text-slate-500">Chương trình: {student.programName}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('tasks')}
+                      className="mt-4 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                    >
+                      Mở công việc
+                    </button>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'tasks' && <MentorTaskManagement />}
+        {activeTab === 'reports' && <MentorWeeklyReportsPanel />}
+        {activeTab === 'evaluations' && <MentorEvaluationPanel />}
       </div>
     </DashboardLayout>
   );

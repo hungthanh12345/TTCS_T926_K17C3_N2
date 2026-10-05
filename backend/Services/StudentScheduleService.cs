@@ -10,6 +10,9 @@ namespace InternshipManagementApi.Services
         Task<IReadOnlyList<StudentScheduleEventDto>> GetMyScheduleAsync(
             int userId,
             CancellationToken cancellationToken = default);
+        Task<StudentScheduleResponseDto> GetMyScheduleOverviewAsync(
+            int userId,
+            CancellationToken cancellationToken = default);
     }
 
     public sealed class StudentScheduleService : IStudentScheduleService
@@ -43,6 +46,40 @@ namespace InternshipManagementApi.Services
                     Status = task.Status
                 })
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<StudentScheduleResponseDto> GetMyScheduleOverviewAsync(
+            int userId,
+            CancellationToken cancellationToken = default)
+        {
+            var student = await _db.Students.AsNoTracking()
+                .Include(item => item.Program)
+                    .ThenInclude(program => program!.Department)
+                .SingleOrDefaultAsync(item => item.UserId == userId, cancellationToken);
+            if (student == null)
+                throw new NotFoundException("No student profile is linked to this account.");
+
+            var events = await _db.Tasks.AsNoTracking()
+                .Where(task => task.StudentId == student.Id && task.DueDate.HasValue)
+                .OrderBy(task => task.DueDate)
+                .ThenBy(task => task.Id)
+                .Select(task => new StudentScheduleEventDto
+                {
+                    TaskId = task.Id,
+                    Title = task.Title,
+                    Description = task.Description,
+                    DueDate = task.DueDate!.Value,
+                    Status = task.Status
+                })
+                .ToListAsync(cancellationToken);
+
+            var program = student.Program;
+            return new StudentScheduleResponseDto
+            {
+                Program = program == null ? null : new StudentProgramPeriodDto(
+                    program.Id, program.Name, program.Department.Name, program.StartDate, program.EndDate),
+                Events = events
+            };
         }
     }
 }

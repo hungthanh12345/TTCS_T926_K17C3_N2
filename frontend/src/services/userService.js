@@ -1,129 +1,50 @@
 import api from './api';
-import { getStoredUsers, saveStoredUsers } from './mockData';
-import { isMockModeEnabled } from './mockMode';
+
+const errorMessage = (error, fallback) => error.response?.data?.message || error.message || fallback;
 
 export const userService = {
-  /**
-   * Fetch all users for Admin User Management View
-   * GET /api/admin/users
-   */
   async getUsers(params = {}) {
     try {
       const response = await api.get('/admin/users', { params });
       return response.data?.data || response.data;
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        // Fallback to local storage persistence
-        let users = getStoredUsers();
-        if (params.role) {
-          users = users.filter((u) => u.role === params.role);
-        }
-        if (params.search) {
-          const q = params.search.toLowerCase();
-          users = users.filter((u) => u.email.toLowerCase().includes(q));
-        }
-        return users;
-      }
-      throw new Error(error.response?.data?.message || 'Không thể tải danh sách tài khoản');
+      throw new Error(errorMessage(error, 'Không thể tải danh sách tài khoản.'));
     }
   },
 
-  /**
-   * Create a new user
-   * POST /api/admin/users
-   * Payload: { email, password, roleId, roleName }
-   */
+  // Retained for existing API clients; the Admin user-management screen does not expose account creation.
   async createUser(userData) {
-    // Keep this restriction in the service as well as the form so callers
-    // cannot bypass it by submitting a crafted request from the UI.
-    const rawRoleId = userData.roleId ?? userData.role_id;
-    const roleId = rawRoleId ? parseInt(rawRoleId, 10) : undefined;
-    const roleName =
-      userData.roleName ??
-      userData.role_name ??
-      (typeof userData.role === 'string' && isNaN(userData.role) ? userData.role : undefined);
+    const roleId = Number(userData.roleId ?? userData.role_id ?? 0) || undefined;
+    const roleName = userData.roleName ?? userData.role_name ??
+      (typeof userData.role === 'string' && Number.isNaN(Number(userData.role)) ? userData.role : undefined);
     if (roleId === 1 || String(roleName || '').trim().toUpperCase() === 'ROLE_ADMIN') {
       throw new Error('Không thể tạo thêm tài khoản quản trị viên.');
     }
+    if (roleId === 4 || String(roleName || '').trim().toUpperCase() === 'ROLE_STUDENT') {
+      throw new Error('Tài khoản sinh viên phải được tạo qua luồng đăng ký để liên kết hồ sơ.');
+    }
 
     try {
-      // Normalize role payload to match CreateUserRequestDto exactly
-      const payload = {
+      const response = await api.post('/admin/users', {
         email: userData.email.trim(),
         password: userData.password,
-        roleId:
-          roleId ||
-          (roleName === 'ROLE_ADMIN'
-            ? 1
-            : roleName === 'ROLE_HR'
-            ? 2
-            : roleName === 'ROLE_MENTOR'
-            ? 3
-            : roleName === 'ROLE_STUDENT'
-            ? 4
-            : undefined),
-        roleName:
-          roleName ||
-          (roleId === 1
-            ? 'ROLE_ADMIN'
-            : roleId === 2
-            ? 'ROLE_HR'
-            : roleId === 3
-            ? 'ROLE_MENTOR'
-            : roleId === 4
-            ? 'ROLE_STUDENT'
-            : undefined),
-      };
-
-      const response = await api.post('/admin/users', payload);
+        roleId: roleId || (roleName === 'ROLE_HR' ? 2 : roleName === 'ROLE_MENTOR' ? 3 : roleName === 'ROLE_STUDENT' ? 4 : undefined),
+        roleName: roleName || (roleId === 2 ? 'ROLE_HR' : roleId === 3 ? 'ROLE_MENTOR' : roleId === 4 ? 'ROLE_STUDENT' : undefined),
+      });
       return response.data?.data || response.data;
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        // Local fallback creation
-        const users = getStoredUsers();
-        
-        // Check uniqueness
-        if (users.some((u) => u.email.toLowerCase() === userData.email.trim().toLowerCase())) {
-          throw new Error('Email này đã tồn tại trên hệ thống hoặc thông tin không hợp lệ.');
-        }
-
-        const fallbackRole = userData.roleName || userData.role || 'ROLE_HR';
-        const newUser = {
-          id: `USR-00${users.length + 1}`,
-          email: userData.email.trim(),
-          role: fallbackRole,
-          roleName: fallbackRole,
-          roleId: userData.roleId || (fallbackRole === 'ROLE_ADMIN' ? 1 : fallbackRole === 'ROLE_HR' ? 2 : fallbackRole === 'ROLE_MENTOR' ? 3 : 4),
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-        };
-
-        const updatedUsers = [newUser, ...users];
-        saveStoredUsers(updatedUsers);
-        return newUser;
-      }
-      throw error;
+      throw new Error(errorMessage(error, 'Không thể tạo tài khoản.'));
     }
   },
 
-  /**
-   * Delete or deactivate user
-   * DELETE /api/admin/users/{id}
-   */
   async deleteUser(id) {
     try {
       const response = await api.delete(`/admin/users/${id}`);
       return response.data;
     } catch (error) {
-      if (error.isAxiosError && !error.response && isMockModeEnabled) {
-        const users = getStoredUsers();
-        const updated = users.filter((u) => String(u.id) !== String(id));
-        saveStoredUsers(updated);
-        return { success: true };
-      }
-      throw error;
+      throw new Error(errorMessage(error, 'Không thể xóa tài khoản.'));
     }
-  }
+  },
 };
 
 export default userService;

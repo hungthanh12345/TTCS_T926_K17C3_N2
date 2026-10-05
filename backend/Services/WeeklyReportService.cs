@@ -171,6 +171,7 @@ namespace InternshipManagementApi.Services
             NextWeekPlan = report.NextWeekPlan,
             AttachmentUrl = report.AttachmentUrl,
             Status = report.Status,
+            IsLate = IsLate(report),
             CreatedAt = report.CreatedAt,
             UpdatedAt = report.UpdatedAt,
             CanEditFeedback = viewerMentorId.HasValue && report.MentorFeedback?.MentorId == viewerMentorId.Value,
@@ -183,6 +184,13 @@ namespace InternshipManagementApi.Services
                 UpdatedAt = report.MentorFeedback.UpdatedAt
             }
         };
+
+        private static bool IsLate(WeeklyReport report)
+        {
+            // Weekly reports are due by Sunday 23:59 in Vietnam (UTC+07:00).
+            var deadlineUtc = report.WeekStartDate.AddDays(7).ToDateTime(TimeOnly.MinValue).AddHours(-7);
+            return DateTime.SpecifyKind(report.CreatedAt, DateTimeKind.Utc) >= deadlineUtc;
+        }
 
         private static void ValidateRequest(WeeklyReportRequestDto request)
         {

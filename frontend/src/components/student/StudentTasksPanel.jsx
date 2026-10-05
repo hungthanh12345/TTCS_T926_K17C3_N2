@@ -4,9 +4,9 @@ import toast from 'react-hot-toast';
 import mentorTaskService from '../../services/mentorTaskService';
 
 const STATUS_OPTIONS = [
-  { value: 'TO_DO', label: 'To Do' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'DONE', label: 'Done' },
+  { value: 'TO_DO', label: 'Cần thực hiện' },
+  { value: 'IN_PROGRESS', label: 'Đang thực hiện' },
+  { value: 'DONE', label: 'Hoàn thành' },
 ];
 
 const statusLabel = (status) => STATUS_OPTIONS.find((option) => option.value === status)?.label || status;

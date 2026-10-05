@@ -28,6 +28,18 @@ const DEMO_ACCOUNTS = import.meta.env.DEV
     ]
   : [];
 
+const ROLE_ACCESS_PATHS = {
+  ROLE_ADMIN: ['/admin/users', '/hr/students', '/hr/mentors', '/hr/programs', '/hr/internship-summary'],
+  ROLE_HR: ['/hr/'],
+  ROLE_MENTOR: ['/mentor/'],
+  ROLE_STUDENT: ['/student/'],
+};
+
+const canRoleAccessPath = (role, path) =>
+  (ROLE_ACCESS_PATHS[role] || []).some((allowedPath) =>
+    allowedPath.endsWith('/') ? path.startsWith(allowedPath) : path === allowedPath || path.startsWith(`${allowedPath}/`)
+  );
+
 export const LoginView = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,14 +66,9 @@ export const LoginView = () => {
       const from = location.state?.from?.pathname;
       const role = loggedUser?.role;
 
-      // Check if previous redirected route is authorized for this role
-      let canUseFrom = false;
-      if (from && from !== '/login' && from !== '/') {
-        if (role === 'ROLE_ADMIN') canUseFrom = true;
-        else if (role === 'ROLE_HR' && from.startsWith('/hr')) canUseFrom = true;
-        else if (role === 'ROLE_MENTOR' && from.startsWith('/mentor')) canUseFrom = true;
-        else if (role === 'ROLE_STUDENT' && from.startsWith('/student')) canUseFrom = true;
-      }
+      const canUseFrom = Boolean(
+        from && from !== '/login' && from !== '/' && canRoleAccessPath(role, from)
+      );
 
       if (canUseFrom) {
         navigate(from, { replace: true });
@@ -233,7 +240,7 @@ export const LoginView = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email Field */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label htmlFor="login-email" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                 Email
               </label>
               <div className="relative rounded-xl">
@@ -241,7 +248,9 @@ export const LoginView = () => {
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
+                  id="login-email"
                   type="email"
+                  autoComplete="username"
                   value={formData.email}
                   onChange={(e) => {
                     setFormData({ ...formData, email: e.target.value });
@@ -263,19 +272,9 @@ export const LoginView = () => {
             {/* Password Field */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <label htmlFor="login-password" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
                   MẬT KHẨU
                 </label>
-                <a
-                  href="#forgot"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert('Tính năng khôi phục mật khẩu sẽ được hỗ trợ trong Sprint tiếp theo!');
-                  }}
-                  className="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
-                >
-                  Quên mật khẩu?
-                </a>
               </div>
               <div className="relative rounded-xl">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -284,6 +283,7 @@ export const LoginView = () => {
                 <input
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   value={formData.password}
                   onChange={(e) => {
                     setFormData({ ...formData, password: e.target.value });
@@ -298,6 +298,8 @@ export const LoginView = () => {
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
                 >
