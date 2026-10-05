@@ -19,7 +19,7 @@ const ROLE_LABELS = {
   ROLE_STUDENT: 'Sinh viên',
 };
 
-export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
+export const Header = ({ onToggleSidebar, isDesktopViewport, isDesktopSidebarOpen, isMobileSidebarOpen, title, subtitle }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,6 +32,7 @@ export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
   const [notificationFilter, setNotificationFilter] = useState('all');
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
+  const isSidebarOpen = isDesktopViewport ? isDesktopSidebarOpen : isMobileSidebarOpen;
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -160,13 +161,6 @@ export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
     return true;
   });
 
-  const openNotificationsPanel = () => {
-    setIsDropdownOpen(false);
-    setIsNotificationsOpen(true);
-    setNotificationFilter('all');
-    void loadNotifications();
-  };
-
   const handleNotificationClick = async (notification) => {
     if (!notification.isRead) {
       try {
@@ -190,14 +184,17 @@ export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 min-h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-2 sm:px-6 lg:px-8 flex items-center justify-between gap-3 transition-colors">
+    <header className="sticky top-0 z-50 min-h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-2 sm:px-6 lg:px-8 flex items-center justify-between gap-3 transition-colors">
       {/* Left: Mobile hamburger & Breadcrumbs / Title */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
-          onClick={onOpenMobileSidebar}
-          className="p-2 -ml-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg lg:hidden transition-colors cursor-pointer"
-          aria-label="Open mobile menu"
+          onClick={onToggleSidebar}
+          className="p-2 -ml-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          aria-label={isSidebarOpen ? 'Thu gọn thanh điều hướng' : 'Mở thanh điều hướng'}
+          title={isSidebarOpen ? 'Thu gọn thanh điều hướng' : 'Mở thanh điều hướng'}
+          aria-expanded={Boolean(isSidebarOpen)}
+          aria-controls="app-sidebar"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -355,10 +352,6 @@ export const Header = ({ onOpenMobileSidebar, title, subtitle }) => {
                     <span>Cài Đặt Hệ Thống</span>
                   </Link>
                 )}
-                <button type="button" onClick={openNotificationsPanel} className="w-full px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors">
-                  <Bell className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Thông Báo{unreadCount > 0 ? ` · ${unreadCount} chưa đọc` : ''}</span>
-                </button>
               </div>
 
               <div className="pt-1 border-t border-slate-100">

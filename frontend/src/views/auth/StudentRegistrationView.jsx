@@ -140,6 +140,9 @@ export const StudentRegistrationView = () => {
                 </select>
                 {programs.length === 0 && !isLoadingPrograms && <span className="block text-xs text-amber-700">Hiện chưa có chương trình để đăng ký. Vui lòng liên hệ HR.</span>}
               </label>
+              <p className="text-xs leading-5 text-slate-500 sm:col-span-2">
+                CV và đơn xin thực tập sẽ được gửi cho HR xét duyệt, đồng thời lưu vào mục Hồ sơ &amp; tài liệu trong tài khoản sinh viên sau khi hồ sơ được duyệt. Bạn không cần tải lại các tệp này.
+              </p>
               <FileField label="CV" required value={documents.cv} onChange={(file) => setDocuments((current) => ({ ...current, cv: file }))} />
               <FileField label="Đơn xin thực tập" required value={documents.internshipLetter} onChange={(file) => setDocuments((current) => ({ ...current, internshipLetter: file }))} />
               <button

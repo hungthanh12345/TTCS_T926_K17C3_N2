@@ -47,6 +47,7 @@ export const StudentDocumentsPanel = () => {
   const fileInputRef = useRef(null);
   const replacementInputRef = useRef(null);
   const replacementTargetRef = useRef(null);
+  const existingTypeDocument = documents.find((document) => document.documentType === documentType);
 
   const loadDocuments = async () => {
     setIsLoading(true);
@@ -103,9 +104,13 @@ export const StudentDocumentsPanel = () => {
 
     setIsUploading(true);
     try {
-      await studentDocumentService.upload(documentType, selectedFile);
+      if (existingTypeDocument) {
+        await studentDocumentService.replace(existingTypeDocument.id, selectedFile);
+      } else {
+        await studentDocumentService.upload(documentType, selectedFile);
+      }
       setSelectedFile(null);
-      toast.success('Tải tài liệu lên thành công.');
+      toast.success(existingTypeDocument ? 'Đã cập nhật tài liệu hiện có.' : 'Tải tài liệu lên thành công.');
       await loadDocuments();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -181,7 +186,7 @@ export const StudentDocumentsPanel = () => {
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900">Tài liệu thực tập</h3>
-            <p className="mt-0.5 text-xs text-slate-500">Quản lý CV và đơn xin thực tập của bạn</p>
+            <p className="mt-0.5 text-xs text-slate-500">CV và đơn đã nộp khi đăng ký sẽ hiển thị tại đây; bạn chỉ cần thay thế nếu muốn cập nhật.</p>
           </div>
         </div>
         <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
@@ -256,7 +261,7 @@ export const StudentDocumentsPanel = () => {
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isUploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
-            {isUploading ? 'Đang tải lên…' : 'Tải tài liệu lên'}
+            {isUploading ? 'Đang lưu…' : existingTypeDocument ? 'Cập nhật tài liệu hiện có' : 'Tải tài liệu lên'}
           </button>
         </form>
 

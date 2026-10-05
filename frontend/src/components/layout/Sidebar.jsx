@@ -12,10 +12,9 @@ import {
   CalendarDays,
   ClipboardCheck,
   BarChart3,
-  Settings,
 } from 'lucide-react';
 
-export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
+export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -27,13 +26,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       icon: Users,
       roles: ['ROLE_ADMIN'],
       badge: 'Admin',
-    },
-    {
-      title: 'Cài Đặt Hệ Thống',
-      path: '/admin/settings',
-      icon: Settings,
-      roles: ['ROLE_ADMIN'],
-      badge: null,
     },
     {
       title: 'Hồ Sơ Sinh Viên',
@@ -102,16 +94,17 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       {/* Mobile backdrop */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-x-0 top-16 bottom-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Main Sidebar */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 w-64 bg-slate-950 text-slate-300 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 border-r border-slate-800/80 select-none ${
+        id="app-sidebar"
+        className={`fixed top-16 bottom-0 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-slate-950 text-slate-300 flex flex-col transition-transform duration-300 ease-in-out border-r border-slate-800/80 select-none lg:top-0 lg:h-auto ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${isDesktopOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}
       >
         {/* Brand Header */}
         <div className="h-16 flex items-center px-5 border-b border-slate-800/80 bg-slate-950">
