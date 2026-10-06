@@ -155,22 +155,49 @@ CREATE INDEX `idx_students_university_major` ON `students` (`university`, `major
 CREATE INDEX `idx_students_mentor_id` ON `students` (`mentor_id`);
 CREATE INDEX `idx_users_role_id` ON `users` (`role_id`);
 
--- Part 5 (US15): mentor-assigned tasks; the only initial state is TO_DO.
-CREATE TABLE `internship_tasks` (
-    `id` INT NOT NULL AUTO_INCREMENT,
-    `mentor_id` INT NOT NULL,
+-- ----------------------------------------------------------------------------
+-- Table: weekly_reports
+-- Description: Stores weekly internship reports submitted by students
+-- ----------------------------------------------------------------------------
+CREATE TABLE `weekly_reports` (
+    `id` INT AUTO_INCREMENT,
     `student_id` INT NOT NULL,
+    `week_number` INT NOT NULL,
+    `start_date` DATE NOT NULL,
+    `end_date` DATE NOT NULL,
     `title` VARCHAR(200) NOT NULL,
-    `description` VARCHAR(2000) NULL,
-    `due_date` DATE NULL,
-    `status` VARCHAR(20) NOT NULL DEFAULT 'TO_DO',
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT `pk_sprint2_internship_tasks` PRIMARY KEY (`id`),
-    CONSTRAINT `fk_sprint2_internship_tasks_mentor` FOREIGN KEY (`mentor_id`) REFERENCES `mentors` (`id`)
-        ON UPDATE CASCADE ON DELETE CASCADE,
-    CONSTRAINT `fk_sprint2_internship_tasks_student` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`)
-        ON UPDATE CASCADE ON DELETE CASCADE,
-    KEY `idx_sprint2_internship_tasks_mentor_student` (`mentor_id`, `student_id`),
-    KEY `idx_sprint2_internship_tasks_due_date` (`due_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `content` TEXT NOT NULL,
+    `achievements` TEXT NULL,
+    `difficulties` TEXT NULL,
+    `next_week_plan` TEXT NULL,
+    `attachment_url` VARCHAR(500) NULL,
+
+    `status` ENUM(
+        'DRAFT',
+        'SUBMITTED',
+        'REVIEWED',
+        'REJECTED'
+    ) NOT NULL DEFAULT 'DRAFT',
+
+    `mentor_comment` TEXT NULL,
+    `submitted_at` DATETIME NULL,
+    `reviewed_at` DATETIME NULL,
+
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT `pk_weekly_reports` PRIMARY KEY (`id`),
+
+    CONSTRAINT `fk_weekly_reports_student`
+        FOREIGN KEY (`student_id`)
+        REFERENCES `students` (`id`)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT `uk_weekly_reports_student_week`
+        UNIQUE (`student_id`, `week_number`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = 'Weekly internship reports submitted by students';
