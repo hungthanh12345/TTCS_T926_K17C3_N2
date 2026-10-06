@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+target/
+.idea/
+*.iml
+.vscode/
+*.log
+=======
 # ==========================================
 # Root .gitignore for TTCS_T926_K17C3_N2
 # Backend: ASP.NET Core (.NET 8)
@@ -76,3 +83,6 @@ TestResults/
 **/.gemini/
 .impeccable/
 **/.impeccable/
+>>>>>>> 808dd51faf89a8caf3593494e6cb0b023fa13368
+
+apache-maven-3.9.6/
