@@ -4,6 +4,8 @@ namespace InternshipManagementApi.Data.Entities
     {
         ACTIVE,
         INACTIVE,
-        LOCKED
+        LOCKED,
+        PENDING_APPROVAL,
+        REJECTED
     }
 }

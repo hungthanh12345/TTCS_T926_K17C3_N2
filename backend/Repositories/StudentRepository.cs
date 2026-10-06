@@ -10,9 +10,11 @@ namespace InternshipManagementApi.Repositories
     {
         Task<Student?> GetByIdAsync(int id);
         Task<Student?> GetByIdWithDetailsAsync(int id);
+        Task<Student?> GetByUserIdWithDetailsAsync(int userId);
         Task<Student?> GetByStudentCodeAsync(string studentCode);
         Task<bool> ExistsByStudentCodeAsync(string studentCode, int? excludeId = null);
         Task<bool> ExistsByUserIdAsync(int userId, int? excludeId = null);
+        Task<StudentAccountLinkSummaryDto> GetStudentAccountLinksAsync();
         Task<PagedResult<Student>> SearchAsync(StudentSearchFilterDto filter);
         Task<Student> AddAsync(Student student);
         Task UpdateAsync(Student student);
@@ -38,7 +40,18 @@ namespace InternshipManagementApi.Repositories
             return await _context.Students
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
+                .Include(s => s.Program)
                 .FirstOrDefaultAsync(s => s.Id == id);
+        }
+
+        public async Task<Student?> GetByUserIdWithDetailsAsync(int userId)
+        {
+            return await _context.Students
+                .AsNoTracking()
+                .Include(s => s.User)
+                .Include(s => s.Mentor)
+                .Include(s => s.Program)
+                .FirstOrDefaultAsync(student => student.UserId == userId);
         }
 
         public async Task<Student?> GetByStudentCodeAsync(string studentCode)
@@ -46,6 +59,7 @@ namespace InternshipManagementApi.Repositories
             return await _context.Students
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
+                .Include(s => s.Program)
                 .FirstOrDefaultAsync(s => s.StudentCode.ToLower() == studentCode.Trim().ToLower());
         }
 
@@ -69,12 +83,47 @@ namespace InternshipManagementApi.Repositories
             return await query.AnyAsync(s => s.UserId == userId);
         }
 
+        public async Task<StudentAccountLinkSummaryDto> GetStudentAccountLinksAsync()
+        {
+            var accounts = await _context.Users
+                .AsNoTracking()
+                .Where(user => user.Role.Name == "ROLE_STUDENT")
+                .OrderBy(user => user.Email)
+                .Select(user => new StudentAccountLinkOptionDto
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Status = user.Status.ToString(),
+                    CreatedAt = user.CreatedAt,
+                    HasStudentProfile = _context.Students.Any(student => student.UserId == user.Id)
+                })
+                .ToListAsync();
+
+            var profileCount = await _context.Students.CountAsync();
+            var unlinkedProfileCount = await _context.Students.CountAsync(student => student.UserId == null);
+            var linkedAccountCount = accounts.Count(account => account.HasStudentProfile);
+
+            return new StudentAccountLinkSummaryDto
+            {
+                AccountCount = accounts.Count,
+                LinkedAccountCount = linkedAccountCount,
+                UnlinkedAccountCount = accounts.Count - linkedAccountCount,
+                ProfileCount = profileCount,
+                UnlinkedProfileCount = unlinkedProfileCount,
+                Accounts = accounts
+            };
+        }
+
         public async Task<PagedResult<Student>> SearchAsync(StudentSearchFilterDto filter)
         {
             var query = _context.Students
                 .Include(s => s.User)
                 .Include(s => s.Mentor)
+                .Include(s => s.Program)
                 .AsNoTracking()
+                // Registration profiles are visible in the approval queue until HR accepts them.
+                .Where(s => s.User == null ||
+                            (s.User.Status != UserStatus.PENDING_APPROVAL && s.User.Status != UserStatus.REJECTED))
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filter.University) && !string.Equals(filter.University, "ALL", StringComparison.OrdinalIgnoreCase))

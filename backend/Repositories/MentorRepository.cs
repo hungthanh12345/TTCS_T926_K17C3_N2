@@ -10,6 +10,7 @@ namespace InternshipManagementApi.Repositories
         Task<Mentor?> GetByIdWithDetailsAsync(int id);
         Task<Mentor?> GetByUserIdAsync(int userId);
         Task<bool> ExistsByUserIdAsync(int userId, int? excludeId = null);
+        Task<bool> HasWorkReferencesAsync(int mentorId);
         Task<IEnumerable<Mentor>> GetAllWithDetailsAsync();
         Task<Mentor> AddAsync(Mentor mentor);
         Task UpdateAsync(Mentor mentor);
@@ -53,6 +54,14 @@ namespace InternshipManagementApi.Repositories
                 query = query.Where(m => m.Id != excludeId.Value);
             }
             return await query.AnyAsync(m => m.UserId == userId);
+        }
+
+        public async Task<bool> HasWorkReferencesAsync(int mentorId)
+        {
+            if (await _context.Tasks.AnyAsync(task => task.MentorId == mentorId))
+                return true;
+
+            return await _context.MentorFeedbacks.AnyAsync(feedback => feedback.MentorId == mentorId);
         }
 
         public async Task<IEnumerable<Mentor>> GetAllWithDetailsAsync()

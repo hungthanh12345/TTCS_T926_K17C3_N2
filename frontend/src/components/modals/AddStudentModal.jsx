@@ -1,42 +1,54 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Modal from '../common/Modal';
-import { UserPlus, Hash, User, Phone, School, BookOpen, Mail, Calendar, Loader2 } from 'lucide-react';
+import { UserPlus, Hash, User, Phone, School, BookOpen, Loader2 } from 'lucide-react';
 import studentService from '../../services/studentService';
 import toast from 'react-hot-toast';
 
+const ACCOUNT_STATUS_LABELS = {
+  ACTIVE: 'Đang hoạt động',
+  INACTIVE: 'Không hoạt động',
+  LOCKED: 'Đã khóa',
+  PENDING_APPROVAL: 'Đang chờ duyệt',
+  REJECTED: 'Đã từ chối',
+};
+
 export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
+    userId: '',
     studentCode: '',
     fullName: '',
     phone: '',
-    email: '',
-    university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-    major: 'Kỹ thuật Phần mềm',
-    internshipPeriod: 'Kỳ Thu 2026 (09/2026 - 12/2026)',
+    university: '',
+    major: '',
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [accountLinks, setAccountLinks] = useState(null);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
 
-  const universities = [
-    'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-    'Đại học Bách Khoa Hà Nội (HUST)',
-    'Đại học Công nghệ — ĐHQGHN (VNU-UET)',
-    'Đại học FPT Hà Nội',
-    'Học viện Công nghệ Bưu chính Viễn thông (PTIT)',
-    'Học viện Kỹ thuật Mật mã (ACT)',
-  ];
+  useEffect(() => {
+    if (!isOpen) return undefined;
 
-  const majors = [
-    'Kỹ thuật Phần mềm',
-    'Khoa học Máy tính',
-    'Hệ thống Thông tin Quản lý',
-    'An toàn Thông tin và An ninh Mạng',
-    'Trí tuệ Nhân tạo và Khoa học Dữ liệu',
-    'Mạng Máy tính và Truyền thông Dữ liệu',
-  ];
+    let active = true;
+    setIsLoadingAccounts(true);
+    studentService.getStudentAccountLinks()
+      .then((summary) => { if (active) setAccountLinks(summary); })
+      .catch((error) => {
+        if (active) {
+          setAccountLinks(null);
+          toast.error(error.message || 'Không thể tải tài khoản sinh viên.');
+        }
+      })
+      .finally(() => { if (active) setIsLoadingAccounts(false); });
+
+    return () => { active = false; };
+  }, [isOpen]);
 
   const validate = () => {
     const errs = {};
+    if (!formData.userId) {
+      errs.userId = 'Vui lòng chọn tài khoản ROLE_STUDENT đã tồn tại';
+    }
     if (!formData.studentCode.trim()) {
       errs.studentCode = 'Mã sinh viên là bắt buộc';
     } else if (formData.studentCode.trim().length < 4) {
@@ -54,11 +66,11 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     }
 
     if (!formData.university.trim()) {
-      errs.university = 'Vui lòng chọn trường đại học';
+      errs.university = 'Vui lòng nhập trường đại học';
     }
 
     if (!formData.major.trim()) {
-      errs.major = 'Vui lòng chọn chuyên ngành đào tạo';
+      errs.major = 'Vui lòng nhập chuyên ngành đào tạo';
     }
 
     setErrors(errs);
@@ -72,15 +84,14 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     setIsSubmitting(true);
     try {
       await studentService.createStudent(formData);
-      toast.success(`Đã thêm mới hồ sơ sinh viên: ${formData.fullName}!`);
+      toast.success(`Đã liên kết tài khoản với hồ sơ sinh viên: ${formData.fullName}!`);
       setFormData({
+        userId: '',
         studentCode: '',
         fullName: '',
         phone: '',
-        email: '',
-        university: 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-        major: 'Kỹ thuật Phần mềm',
-        internshipPeriod: 'Kỳ Thu 2026 (09/2026 - 12/2026)',
+        university: '',
+        major: '',
       });
       setErrors({});
       onClose();
@@ -96,12 +107,52 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Thêm Mới Hồ Sơ Sinh Viên Thực Tập"
-      subtitle="Nhập thông tin ứng viên để quản lý theo dõi và ghép nối Mentor hướng dẫn."
+      title="Liên Kết Tài Khoản Sinh Viên"
+      subtitle="Chọn tài khoản ROLE_STUDENT có sẵn rồi bổ sung hồ sơ. Thao tác này không tạo tài khoản mới."
       icon={UserPlus}
       maxWidth="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="student-account" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Tài Khoản Sinh Viên <span className="text-rose-500">*</span>
+          </label>
+          <select
+            id="student-account"
+            value={formData.userId}
+            disabled={isLoadingAccounts || !accountLinks?.accounts?.length}
+            onChange={(event) => {
+              const selected = accountLinks?.accounts?.find((account) => String(account.userId) === event.target.value);
+              if (selected?.hasStudentProfile) {
+                setFormData((current) => ({ ...current, userId: '' }));
+                toast.error('Tài khoản này đã có hồ sơ sinh viên');
+                return;
+              }
+              setFormData((current) => ({ ...current, userId: event.target.value }));
+              if (errors.userId) setErrors((current) => ({ ...current, userId: null }));
+            }}
+            className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 ${errors.userId ? 'border-rose-300 focus:ring-rose-400' : 'border-slate-300 focus:ring-indigo-500'}`}
+          >
+            <option value="">{isLoadingAccounts ? 'Đang tải tài khoản...' : 'Chọn email tài khoản sinh viên'}</option>
+            {(accountLinks?.accounts || []).map((account) => (
+              <option key={account.userId} value={account.userId}>
+                {account.email}{account.hasStudentProfile ? ' — Đã có hồ sơ sinh viên' : ` — ${ACCOUNT_STATUS_LABELS[account.status] || 'Không xác định'}`}
+              </option>
+            ))}
+          </select>
+          {errors.userId && <p className="mt-1 text-xs text-rose-500 font-medium">{errors.userId}</p>}
+          {accountLinks && accountLinks.unlinkedAccountCount === 0 && (
+            <p className="mt-1.5 text-xs text-amber-700">
+              Không có tài khoản ROLE_STUDENT nào đang chờ liên kết. Sinh viên cần đăng ký tài khoản trước.
+            </p>
+          )}
+          {accountLinks?.unlinkedAccountCount > 0 && (
+            <p className="mt-1.5 text-xs text-slate-500">
+              {accountLinks.unlinkedAccountCount} tài khoản chưa có hồ sơ; tài khoản đã liên kết sẽ bị từ chối nếu gửi lại.
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Mã sinh viên */}
           <div>
@@ -190,24 +241,6 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
             )}
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Hòm Thư Email Sinh Viên
-            </label>
-            <div className="relative rounded-xl shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Mail className="w-4 h-4" />
-              </div>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="sinhvien@ictu.edu.vn"
-                className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Trường Đại học */}
@@ -219,22 +252,23 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <School className="w-4 h-4" />
             </div>
-            <select
+            <input
+              type="text"
               value={formData.university}
-              onChange={(e) => setFormData({ ...formData, university: e.target.value })}
-              className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
-            >
-              {universities.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
+              onChange={(e) => {
+                setFormData({ ...formData, university: e.target.value });
+                if (errors.university) setErrors({ ...errors, university: null });
+              }}
+              maxLength={150}
+              placeholder="Nhập trường đại học"
+              className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${errors.university ? 'border-rose-300 focus:ring-rose-400 focus:border-rose-400' : 'border-slate-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+            />
           </div>
+          {errors.university && <p className="mt-1 text-xs font-medium text-rose-500">{errors.university}</p>}
         </div>
 
-        {/* Chuyên ngành & Kỳ thực tập */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Chuyên ngành */}
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
               Chuyên Ngành Đào Tạo <span className="text-rose-500">*</span>
@@ -243,36 +277,19 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <BookOpen className="w-4 h-4" />
               </div>
-              <select
-                value={formData.major}
-                onChange={(e) => setFormData({ ...formData, major: e.target.value })}
-                className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
-              >
-                {majors.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Kỳ Thực Tập Sinh
-            </label>
-            <div className="relative rounded-xl shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Calendar className="w-4 h-4" />
-              </div>
               <input
                 type="text"
-                value={formData.internshipPeriod}
-                onChange={(e) => setFormData({ ...formData, internshipPeriod: e.target.value })}
-                placeholder="Kỳ Thu 2026 (09/2026 - 12/2026)"
-                className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
+                value={formData.major}
+                onChange={(e) => {
+                  setFormData({ ...formData, major: e.target.value });
+                  if (errors.major) setErrors({ ...errors, major: null });
+                }}
+                maxLength={100}
+                placeholder="Nhập chuyên ngành"
+                className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${errors.major ? 'border-rose-300 focus:ring-rose-400 focus:border-rose-400' : 'border-slate-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
               />
             </div>
+            {errors.major && <p className="mt-1 text-xs font-medium text-rose-500">{errors.major}</p>}
           </div>
         </div>
 
@@ -288,7 +305,7 @@ export const AddStudentModal = ({ isOpen, onClose, onSuccess }) => {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoadingAccounts || !formData.userId}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-98 transition-all shadow-md shadow-indigo-200 disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? (

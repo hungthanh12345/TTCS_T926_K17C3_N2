@@ -21,6 +21,8 @@ namespace InternshipManagementApi.Data.Entities
 
         public int? MentorId { get; set; }
 
+        public int? ProgramId { get; set; }
+
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
@@ -29,5 +31,7 @@ namespace InternshipManagementApi.Data.Entities
         public virtual User? User { get; set; }
 
         public virtual Mentor? Mentor { get; set; }
+
+        public virtual InternshipProgram? Program { get; set; }
     }
 }

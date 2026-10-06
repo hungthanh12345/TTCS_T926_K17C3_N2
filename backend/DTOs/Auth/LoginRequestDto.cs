@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using InternshipManagementApi.Common;
 
 namespace InternshipManagementApi.DTOs.Auth
 {
@@ -11,6 +12,7 @@ namespace InternshipManagementApi.DTOs.Auth
 
         [Required(ErrorMessage = "Password is required.")]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
+        [MaxUtf8ByteLength(72)]
         public string Password { get; set; } = string.Empty;
     }
 }

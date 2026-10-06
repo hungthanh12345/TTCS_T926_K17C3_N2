@@ -4,6 +4,8 @@
 -- Target DBMS: MySQL 8.0+
 -- Storage Engine: InnoDB
 -- Character Set: utf8mb4 (Collation: utf8mb4_unicode_ci)
+-- DESTRUCTIVE LOCAL RESET: this script drops existing core tables before recreating them.
+-- Use only against a disposable local database. Use migrations for upgrades and deployments.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -19,6 +21,7 @@ USE `internship_management`;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- Drop tables if they already exist (in reverse dependency order)
+DROP TABLE IF EXISTS `internship_tasks`;
 DROP TABLE IF EXISTS `students`;
 DROP TABLE IF EXISTS `mentors`;
 DROP TABLE IF EXISTS `users`;
@@ -60,7 +63,7 @@ CREATE TABLE `users` (
     `email` VARCHAR(150) NOT NULL,
     `password_hash` VARCHAR(255) NOT NULL,
     `role_id` INT NOT NULL,
-    `status` ENUM('ACTIVE', 'INACTIVE', 'LOCKED') NOT NULL DEFAULT 'ACTIVE',
+    `status` ENUM('ACTIVE', 'INACTIVE', 'LOCKED', 'PENDING_APPROVAL', 'REJECTED') NOT NULL DEFAULT 'ACTIVE',
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
