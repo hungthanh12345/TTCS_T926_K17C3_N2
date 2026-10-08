@@ -1,26 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import Modal from '../common/Modal';
-import { UserCheck, User, Building, Award, Users, AlertCircle, Loader2 } from 'lucide-react';
+import { UserCheck, Building, Award, AlertCircle, Loader2 } from 'lucide-react';
 import mentorService from '../../services/mentorService';
 import studentService from '../../services/studentService';
 import toast from 'react-hot-toast';
 
 export const AssignMentorModal = ({ isOpen, onClose, student, onSuccess }) => {
   const [mentors, setMentors] = useState([]);
-  const [selectedMentorId, setSelectedMentorId] = useState('');
+  const [selectedMentorId, setSelectedMentorId] = useState(() => String(student?.mentorId ?? ''));
   const [isLoadingMentors, setIsLoadingMentors] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadMentors();
-      setSelectedMentorId(student?.mentorId || '');
-      setError(null);
-    }
-  }, [isOpen, student]);
-
-  const loadMentors = async () => {
+  const loadMentors = useCallback(async () => {
     setIsLoadingMentors(true);
     try {
       const data = await mentorService.getMentors();
@@ -31,7 +23,11 @@ export const AssignMentorModal = ({ isOpen, onClose, student, onSuccess }) => {
     } finally {
       setIsLoadingMentors(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) void loadMentors();
+  }, [isOpen, loadMentors]);
 
   const handleAssign = async (e) => {
     e.preventDefault();

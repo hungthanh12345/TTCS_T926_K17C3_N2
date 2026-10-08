@@ -65,6 +65,11 @@ namespace InternshipManagementApi.Services
                 throw new BadRequestException("Creating additional administrator accounts is not allowed.");
             }
 
+            if (string.Equals(role.Name, "ROLE_STUDENT", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException("Student accounts must be created through student registration so the profile is linked.");
+            }
+
             var passwordHash = _passwordHasher.Hash(request.Password);
 
             var user = new User

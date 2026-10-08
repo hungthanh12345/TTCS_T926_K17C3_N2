@@ -12,10 +12,10 @@ namespace InternshipManagementApi.DTOs.Sprint2
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (StartDate.HasValue && EndDate.HasValue && EndDate.Value <= StartDate.Value)
+            if (StartDate.HasValue && EndDate.HasValue && EndDate.Value < StartDate.Value)
             {
                 yield return new ValidationResult(
-                    "Ngày kết thúc phải sau ngày bắt đầu.",
+                    "Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.",
                     new[] { nameof(EndDate) });
             }
         }

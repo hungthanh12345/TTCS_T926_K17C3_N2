@@ -4,6 +4,8 @@
 -- Target DBMS: MySQL 8.0+
 -- Storage Engine: InnoDB
 -- Character Set: utf8mb4 (Collation: utf8mb4_unicode_ci)
+-- DESTRUCTIVE LOCAL RESET: this script drops existing core tables before recreating them.
+-- Use only against a disposable local database. Use migrations for upgrades and deployments.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -19,6 +21,7 @@ USE `internship_management`;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- Drop tables if they already exist (in reverse dependency order)
+DROP TABLE IF EXISTS `internship_tasks`;
 DROP TABLE IF EXISTS `students`;
 DROP TABLE IF EXISTS `mentors`;
 DROP TABLE IF EXISTS `users`;
@@ -60,7 +63,7 @@ CREATE TABLE `users` (
     `email` VARCHAR(150) NOT NULL,
     `password_hash` VARCHAR(255) NOT NULL,
     `role_id` INT NOT NULL,
-    `status` ENUM('ACTIVE', 'INACTIVE', 'LOCKED') NOT NULL DEFAULT 'ACTIVE',
+    `status` ENUM('ACTIVE', 'INACTIVE', 'LOCKED', 'PENDING_APPROVAL', 'REJECTED') NOT NULL DEFAULT 'ACTIVE',
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -151,3 +154,50 @@ CREATE INDEX `idx_students_university_major` ON `students` (`university`, `major
 -- Foreign key lookup indexes
 CREATE INDEX `idx_students_mentor_id` ON `students` (`mentor_id`);
 CREATE INDEX `idx_users_role_id` ON `users` (`role_id`);
+
+-- ----------------------------------------------------------------------------
+-- Table: weekly_reports
+-- Description: Stores weekly internship reports submitted by students
+-- ----------------------------------------------------------------------------
+CREATE TABLE `weekly_reports` (
+    `id` INT AUTO_INCREMENT,
+    `student_id` INT NOT NULL,
+    `week_number` INT NOT NULL,
+    `start_date` DATE NOT NULL,
+    `end_date` DATE NOT NULL,
+    `title` VARCHAR(200) NOT NULL,
+    `content` TEXT NOT NULL,
+    `achievements` TEXT NULL,
+    `difficulties` TEXT NULL,
+    `next_week_plan` TEXT NULL,
+    `attachment_url` VARCHAR(500) NULL,
+
+    `status` ENUM(
+        'DRAFT',
+        'SUBMITTED',
+        'REVIEWED',
+        'REJECTED'
+    ) NOT NULL DEFAULT 'DRAFT',
+
+    `mentor_comment` TEXT NULL,
+    `submitted_at` DATETIME NULL,
+    `reviewed_at` DATETIME NULL,
+
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT `pk_weekly_reports` PRIMARY KEY (`id`),
+
+    CONSTRAINT `fk_weekly_reports_student`
+        FOREIGN KEY (`student_id`)
+        REFERENCES `students` (`id`)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT `uk_weekly_reports_student_week`
+        UNIQUE (`student_id`, `week_number`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = 'Weekly internship reports submitted by students';

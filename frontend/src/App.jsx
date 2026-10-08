@@ -6,13 +6,19 @@ import ProtectedRoute from './routes/ProtectedRoute';
 
 // Views
 import LoginView from './views/auth/LoginView';
+import StudentRegistrationView from './views/auth/StudentRegistrationView';
 import UserManagementView from './views/admin/UserManagementView';
+import SystemSettingsView from './views/admin/SystemSettingsView';
 import StudentManagementView from './views/hr/StudentManagementView';
+import StudentRegistrationApprovalView from './views/hr/StudentRegistrationApprovalView';
 import MentorManagementView from './views/hr/MentorManagementView';
 import MentorDashboardView from './views/mentor/MentorDashboardView';
 import StudentDashboardView from './views/student/StudentDashboardView';
 import NotFoundView from './views/common/NotFoundView';
 import InternshipProgramsView from './views/hr/InternshipProgramsView';
+import StudentScheduleView from './views/student/StudentScheduleView';
+import HrInternshipSummaryView from './views/hr/HrInternshipSummaryView';
+import LandingView from './views/common/LandingView';
 
 export const App = () => {
   return (
@@ -50,9 +56,9 @@ export const App = () => {
         <Routes>
           {/* Public Authentication Route */}
           <Route path="/login" element={<LoginView />} />
+          <Route path="/register" element={<StudentRegistrationView />} />
 
-          {/* Root Route: Always navigate to /login on app launch / root visit */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<LandingView />} />
 
           {/* Story 2: Admin Dashboard & Account Management */}
           <Route
@@ -64,12 +70,30 @@ export const App = () => {
             }
           />
 
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                <SystemSettingsView />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Story 3 & 4: HR Student Profile & Mentor Assignment */}
           <Route
             path="/hr/students"
             element={
               <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_HR']}>
                 <StudentManagementView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hr/student-registrations"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_HR']}>
+                <StudentRegistrationApprovalView />
               </ProtectedRoute>
             }
           />
@@ -93,11 +117,20 @@ export const App = () => {
             }
           />
 
+          <Route
+            path="/hr/internship-summary"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_HR', 'ROLE_ADMIN']}>
+                <HrInternshipSummaryView />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Mentor Supervisory View */}
           <Route
             path="/mentor/students"
             element={
-              <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_MENTOR']}>
+              <ProtectedRoute allowedRoles={['ROLE_MENTOR']}>
                 <MentorDashboardView />
               </ProtectedRoute>
             }
@@ -108,8 +141,16 @@ export const App = () => {
           <Route
             path="/student/profile"
             element={
-              <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_STUDENT']}>
+              <ProtectedRoute allowedRoles={['ROLE_STUDENT']}>
                 <StudentDashboardView />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/schedule"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_STUDENT']}>
+                <StudentScheduleView />
               </ProtectedRoute>
             }
           />

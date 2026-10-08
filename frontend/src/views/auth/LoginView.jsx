@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Mail,
@@ -11,7 +11,34 @@ import {
   ShieldCheck,
   CheckCircle2,
   Loader2,
+  UserRound,
+  Crown,
+  UsersRound,
+  BriefcaseBusiness,
+  GraduationCap,
 } from 'lucide-react';
+
+const DEMO_PASSWORD = import.meta.env.DEV ? 'Admin@123' : null;
+const DEMO_ACCOUNTS = import.meta.env.DEV
+  ? [
+      { label: 'Admin', role: 'ROLE_ADMIN', email: 'admin@gmail.com', Icon: Crown },
+      { label: 'HR', role: 'ROLE_HR', email: 'customer.hr@company.com', Icon: UsersRound },
+      { label: 'Mentor', role: 'ROLE_MENTOR', email: 'tung.nk@gmail.com', Icon: BriefcaseBusiness },
+      { label: 'Sinh viên', role: 'ROLE_STUDENT', email: 'hung.nt@gmail.com', Icon: GraduationCap },
+    ]
+  : [];
+
+const ROLE_ACCESS_PATHS = {
+  ROLE_ADMIN: ['/admin/users', '/hr/students', '/hr/mentors', '/hr/programs', '/hr/internship-summary'],
+  ROLE_HR: ['/hr/'],
+  ROLE_MENTOR: ['/mentor/'],
+  ROLE_STUDENT: ['/student/'],
+};
+
+const canRoleAccessPath = (role, path) =>
+  (ROLE_ACCESS_PATHS[role] || []).some((allowedPath) =>
+    allowedPath.endsWith('/') ? path.startsWith(allowedPath) : path === allowedPath || path.startsWith(`${allowedPath}/`)
+  );
 
 export const LoginView = () => {
   const navigate = useNavigate();
@@ -21,7 +48,7 @@ export const LoginView = () => {
   // Reset any cached session on login screen mount for clean state
   useEffect(() => {
     resetSession?.();
-  }, []);
+  }, [resetSession]);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -39,14 +66,9 @@ export const LoginView = () => {
       const from = location.state?.from?.pathname;
       const role = loggedUser?.role;
 
-      // Check if previous redirected route is authorized for this role
-      let canUseFrom = false;
-      if (from && from !== '/login' && from !== '/') {
-        if (role === 'ROLE_ADMIN') canUseFrom = true;
-        else if (role === 'ROLE_HR' && from.startsWith('/hr')) canUseFrom = true;
-        else if (role === 'ROLE_MENTOR' && from.startsWith('/mentor')) canUseFrom = true;
-        else if (role === 'ROLE_STUDENT' && from.startsWith('/student')) canUseFrom = true;
-      }
+      const canUseFrom = Boolean(
+        from && from !== '/login' && from !== '/' && canRoleAccessPath(role, from)
+      );
 
       if (canUseFrom) {
         navigate(from, { replace: true });
@@ -218,7 +240,7 @@ export const LoginView = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email Field */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label htmlFor="login-email" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                 Email
               </label>
               <div className="relative rounded-xl">
@@ -226,7 +248,9 @@ export const LoginView = () => {
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
+                  id="login-email"
                   type="email"
+                  autoComplete="username"
                   value={formData.email}
                   onChange={(e) => {
                     setFormData({ ...formData, email: e.target.value });
@@ -248,26 +272,18 @@ export const LoginView = () => {
             {/* Password Field */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <label htmlFor="login-password" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
                   MẬT KHẨU
                 </label>
-                <a
-                  href="#forgot"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert('Tính năng khôi phục mật khẩu sẽ được hỗ trợ trong Sprint tiếp theo!');
-                  }}
-                  className="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
-                >
-                  Quên mật khẩu?
-                </a>
               </div>
               <div className="relative rounded-xl">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   value={formData.password}
                   onChange={(e) => {
                     setFormData({ ...formData, password: e.target.value });
@@ -282,6 +298,8 @@ export const LoginView = () => {
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
                 >
@@ -312,6 +330,59 @@ export const LoginView = () => {
               )}
             </button>
           </form>
+
+          {/* Chọn nhanh tài khoản mẫu; đăng nhập vẫn xác thực qua API như bình thường */}
+          {import.meta.env.DEV && (
+            <section className="rounded-2xl border border-slate-700/80 bg-slate-950/40 p-3" aria-labelledby="quick-login-title">
+              <div className="flex items-center gap-2">
+                <UserRound className="h-4 w-4 text-indigo-300" />
+                <h3 id="quick-login-title" className="text-sm font-semibold text-slate-200">
+                  Tài Khoản Demo Nhanh
+                </h3>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                Chọn một vai trò để điền thông tin vào biểu mẫu.
+              </p>
+              <div className="mt-2 grid grid-cols-1 gap-1.5 min-[560px]:grid-cols-2">
+                {DEMO_ACCOUNTS.map((account) => (
+                  <button
+                    key={account.email}
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      setFormData((current) => ({
+                        ...current,
+                        email: account.email,
+                        password: DEMO_PASSWORD,
+                      }));
+                      setErrors((current) => ({ ...current, email: null }));
+                      document.getElementById('login-password')?.focus();
+                    }}
+                    aria-label={`Chọn ${account.label}, ${account.role}, ${account.email}`}
+                    className="group flex min-h-[62px] items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/70 px-2.5 py-1.5 text-left transition-all hover:border-indigo-400/70 hover:bg-indigo-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-indigo-400/20 bg-indigo-400/10 text-indigo-200 transition-colors group-hover:bg-indigo-400/20">
+                      <account.Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11px] font-semibold text-slate-100">{account.label}</span>
+                      <span className="mt-0.5 block truncate text-[9px] font-normal text-slate-400" title={account.email}>
+                        {account.email}
+                      </span>
+                      <span className="mt-0.5 inline-flex rounded-md border border-indigo-400/20 bg-indigo-400/10 px-1 py-0.5 text-[8px] font-semibold tracking-wide text-indigo-200">
+                        {account.role}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <p className="text-center text-sm text-slate-400">
+            Bạn chưa có tài khoản?{' '}
+            <Link to="/register" className="font-semibold text-indigo-300 hover:text-white">Đăng ký sinh viên</Link>
+          </p>
 
           {/* Ghi chú bảo mật hệ thống */}
           <div className="pt-6 border-t border-slate-800/80">

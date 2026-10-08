@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import AddMentorModal from '../../components/modals/AddMentorModal';
 import mentorService from '../../services/mentorService';
 import {
   Briefcase,
-  UserCheck,
   UserPlus,
   Search,
   RefreshCw,
@@ -29,11 +28,7 @@ export const MentorManagementView = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchMentors();
-  }, []);
-
-  const fetchMentors = async () => {
+  const fetchMentors = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const data = await mentorService.getMentors();
@@ -45,7 +40,11 @@ export const MentorManagementView = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchMentors();
+  }, [fetchMentors]);
 
   const handleDeleteMentor = async (id, name) => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa hồ sơ Mentor "${name}" khỏi hệ thống?`)) {

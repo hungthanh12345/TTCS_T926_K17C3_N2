@@ -34,20 +34,30 @@ namespace InternshipManagementApi.Services
                 throw new UnauthorizedException("Invalid email or password.");
             }
 
+            bool isPasswordValid = _passwordHasher.Verify(request.Password, user.PasswordHash);
+            if (!isPasswordValid)
+            {
+                throw new UnauthorizedException("Invalid email or password.");
+            }
+
+            if (user.Status == UserStatus.PENDING_APPROVAL)
+            {
+                throw new UnauthorizedException("Your student registration is awaiting HR approval.");
+            }
+
+            if (user.Status == UserStatus.REJECTED)
+            {
+                throw new UnauthorizedException("Your student registration was rejected. Please contact HR.");
+            }
+
             if (user.Status == UserStatus.LOCKED)
             {
                 throw new UnauthorizedException("Account is locked. Please contact the system administrator.");
             }
 
-            if (user.Status == UserStatus.INACTIVE)
+            if (user.Status != UserStatus.ACTIVE)
             {
                 throw new UnauthorizedException("Account is inactive. Please contact the administrator.");
-            }
-
-            bool isPasswordValid = _passwordHasher.Verify(request.Password, user.PasswordHash);
-            if (!isPasswordValid)
-            {
-                throw new UnauthorizedException("Invalid email or password.");
             }
 
             var (token, expiresAt, expiresInSeconds) = _jwtTokenService.GenerateToken(user);

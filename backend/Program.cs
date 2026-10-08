@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using MySqlConnector;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +22,7 @@ if (!string.IsNullOrEmpty(dynamicPort))
 }
 
 // 1. Configure Database Connection (MySQL via Pomelo EF Core)
-var connectionString = ResolveConnectionString(builder.Configuration);
+var connectionString = ResolveConnectionString(builder.Configuration, builder.Environment.IsProduction());
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -45,20 +46,43 @@ builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IStudentRegistrationService, StudentRegistrationService>();
+builder.Services.AddScoped<IMentorTaskService, MentorTaskService>();
+builder.Services.AddScoped<IStudentScheduleService, StudentScheduleService>();
+builder.Services.AddScoped<IWeeklyReportService, WeeklyReportService>();
+builder.Services.AddScoped<IMentorFeedbackService, MentorFeedbackService>();
+builder.Services.AddScoped<IInternshipEvaluationService, InternshipEvaluationService>();
+builder.Services.AddScoped<IHrInternshipSummaryService, HrInternshipSummaryService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // 3. Configure JWT Authentication & Authorization
-var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
-    ?? builder.Configuration["Jwt:Key"]
-    ?? "InternshipManagementSystem_SuperSecretSecureKey_2026_JWT_Production_Key!";
+var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+if (string.IsNullOrWhiteSpace(jwtKey))
+    jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException(
+        "A JWT signing key must be configured with JWT_SECRET_KEY or Jwt:Key.");
+}
+
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException("The JWT signing key must be at least 32 UTF-8 bytes.");
+
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
     ?? builder.Configuration["Jwt:Issuer"]
     ?? "InternshipManagementApi";
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
     ?? builder.Configuration["Jwt:Audience"]
     ?? "InternshipManagementClient";
+
+// Ensure token creation uses exactly the same resolved values as validation.
+builder.Configuration["Jwt:Key"] = jwtKey;
+builder.Configuration["Jwt:Issuer"] = jwtIssuer;
+builder.Configuration["Jwt:Audience"] = jwtAudience;
 
 builder.Services.AddAuthentication(options =>
 {
@@ -129,49 +153,48 @@ builder.Services.AddControllers()
 // 5. Configure CORS (Dynamic production origins from CORS_ALLOWED_ORIGINS)
 var allowedOriginsEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")
     ?? builder.Configuration["CORS_ALLOWED_ORIGINS"];
+var isDevelopmentEnvironment = builder.Environment.IsDevelopment();
 
-var allowedOrigins = new List<string>
-{
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174"
-};
+var allowedOrigins = isDevelopmentEnvironment
+    ? new List<string>
+    {
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174"
+    }
+    : new List<string>();
 
 if (!string.IsNullOrWhiteSpace(allowedOriginsEnv))
 {
     var parsedOrigins = allowedOriginsEnv
         .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    allowedOrigins.AddRange(parsedOrigins);
+    foreach (var origin in parsedOrigins)
+    {
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+            (!isDevelopmentEnvironment && uri.Scheme != Uri.UriSchemeHttps) ||
+            origin.Contains('*', StringComparison.Ordinal) || !string.IsNullOrEmpty(uri.UserInfo) || uri.AbsolutePath != "/" ||
+            !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+        {
+            throw new InvalidOperationException($"Invalid CORS origin '{origin}'. Configure a full origin without a path or wildcard.");
+        }
+
+        allowedOrigins.Add(uri.GetLeftPart(UriPartial.Authority));
+    }
 }
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
     {
-        policy.WithOrigins(allowedOrigins.Distinct().ToArray())
-              .SetIsOriginAllowed(origin =>
-              {
-                  if (string.IsNullOrWhiteSpace(origin)) return false;
-                  if (allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase)) return true;
+        if (allowedOrigins.Count == 0)
+            return;
 
-                  if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
-                  {
-                      // Allow any *.vercel.app domain for Vercel preview & production deployments
-                      if (uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase))
-                          return true;
-
-                      // Allow localhost on any port for local development
-                      if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
-                          uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase))
-                          return true;
-                  }
-                  return false;
-              })
+        policy.WithOrigins(allowedOrigins.Distinct(StringComparer.OrdinalIgnoreCase).ToArray())
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowAnyMethod();
     });
 });
 
@@ -234,19 +257,39 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Health Check Endpoint for Render / Railway / Docker
-app.MapGet("/health", () => Results.Ok(new
+app.MapGet("/health", async (AppDbContext db, CancellationToken cancellationToken) =>
 {
-    status = "Healthy",
-    service = "InternshipManagementApi",
-    timestamp = DateTime.UtcNow
-}));
+    try
+    {
+        var databaseIsAvailable = await db.Database.CanConnectAsync(cancellationToken);
+        var status = databaseIsAvailable ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable;
+        return Results.Json(new
+        {
+            status = databaseIsAvailable ? "Healthy" : "Unhealthy",
+            service = "InternshipManagementApi",
+            database = databaseIsAvailable ? "Available" : "Unavailable",
+            timestamp = DateTime.UtcNow
+        }, statusCode: status);
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogWarning(exception, "Database readiness check failed.");
+        return Results.Json(new
+        {
+            status = "Unhealthy",
+            service = "InternshipManagementApi",
+            database = "Unavailable",
+            timestamp = DateTime.UtcNow
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
 
 app.MapControllers();
 
 app.Run();
 
 // Helper: Connection String Resolver supporting ADO.NET and URI formats
-static string ResolveConnectionString(IConfiguration configuration)
+static string ResolveConnectionString(IConfiguration configuration, bool requireTls)
 {
     var rawConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
         ?? Environment.GetEnvironmentVariable("MYSQL_URL")
@@ -262,6 +305,7 @@ static string ResolveConnectionString(IConfiguration configuration)
         rawConnection.StartsWith("mysqls://", StringComparison.OrdinalIgnoreCase))
     {
         var uri = new Uri(rawConnection);
+        var uriRequiresTls = requireTls || string.Equals(uri.Scheme, "mysqls", StringComparison.OrdinalIgnoreCase);
         var userInfo = uri.UserInfo.Split(':');
         var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
         var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
@@ -269,23 +313,38 @@ static string ResolveConnectionString(IConfiguration configuration)
         var port = uri.Port > 0 ? uri.Port : 3306;
         var database = uri.AbsolutePath.TrimStart('/');
 
-        return $"Server={host};Port={port};Database={database};User={username};Password={password};CharSet=utf8mb4;SslMode=Preferred;AllowPublicKeyRetrieval=True;";
+        var uriBuilder = new MySqlConnectionStringBuilder
+        {
+            Server = host,
+            Port = (uint)port,
+            Database = database,
+            UserID = username,
+            Password = password,
+            CharacterSet = "utf8mb4",
+            SslMode = uriRequiresTls ? MySqlSslMode.Required : MySqlSslMode.Preferred,
+            AllowPublicKeyRetrieval = true
+        };
+        return uriBuilder.ConnectionString;
     }
 
-    // Append cloud-friendly MySQL flags if missing
-    var connBuilder = new StringBuilder(rawConnection.TrimEnd(';'));
-    if (!rawConnection.Contains("CharSet=", StringComparison.OrdinalIgnoreCase))
+    // Normalize MySQL options and require encrypted transport in production.
+    var connBuilder = new MySqlConnectionStringBuilder(rawConnection);
+    if (!connBuilder.ContainsKey("Character Set") && !connBuilder.ContainsKey("CharSet"))
     {
-        connBuilder.Append(";CharSet=utf8mb4");
+        connBuilder.CharacterSet = "utf8mb4";
     }
-    if (!rawConnection.Contains("AllowPublicKeyRetrieval=", StringComparison.OrdinalIgnoreCase))
+    if (!connBuilder.ContainsKey("AllowPublicKeyRetrieval"))
     {
-        connBuilder.Append(";AllowPublicKeyRetrieval=True");
+        connBuilder.AllowPublicKeyRetrieval = true;
     }
-    if (!rawConnection.Contains("SslMode=", StringComparison.OrdinalIgnoreCase))
+    if (requireTls)
     {
-        connBuilder.Append(";SslMode=Preferred");
+        connBuilder.SslMode = MySqlSslMode.Required;
+    }
+    else if (!connBuilder.ContainsKey("SslMode"))
+    {
+        connBuilder.SslMode = MySqlSslMode.Preferred;
     }
 
-    return connBuilder.ToString();
+    return connBuilder.ConnectionString;
 }

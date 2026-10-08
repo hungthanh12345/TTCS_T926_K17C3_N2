@@ -1,213 +1,220 @@
-import React, { useState, useEffect } from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
-import { useAuth } from '../../context/AuthContext';
-import studentService from '../../services/studentService';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  GraduationCap,
-  Building,
-  Phone,
-  School,
+  AlertCircle,
+  Award,
   BookOpen,
-  Calendar,
-  CheckCircle2,
-  Clock,
+  Building2,
+  CalendarDays,
+  FileText,
+  GraduationCap,
+  Mail,
+  Phone,
+  RefreshCw,
+  School,
   ShieldCheck,
+  UserRound,
 } from 'lucide-react';
-import TableSkeleton from '../../components/common/TableSkeleton';
+import DashboardLayout from '../../components/layout/DashboardLayout';
+import WorkspaceTabs from '../../components/common/WorkspaceTabs';
+import Badge from '../../components/common/Badge';
 import StudentDocumentsPanel from '../../components/student/StudentDocumentsPanel';
+import StudentTasksPanel from '../../components/student/StudentTasksPanel';
+import StudentWeeklyReportsPanel from '../../components/student/StudentWeeklyReportsPanel';
+import StudentEvaluationPanel from '../../components/student/StudentEvaluationPanel';
+import studentService from '../../services/studentService';
+import StudentScheduleView from './StudentScheduleView';
+
+const ACCOUNT_STATUS_LABELS = {
+  ACTIVE: 'Đang hoạt động',
+  PENDING_APPROVAL: 'Đang chờ duyệt',
+  INACTIVE: 'Không hoạt động',
+  LOCKED: 'Đã khóa',
+  REJECTED: 'Đã từ chối',
+};
+
+const TABS = [
+  { id: 'overview', label: 'Tổng quan', icon: GraduationCap },
+  { id: 'documents', label: 'Hồ sơ & tài liệu', icon: FileText },
+  { id: 'schedule', label: 'Lịch thực tập', icon: CalendarDays },
+  { id: 'tasks', label: 'Công việc', icon: ShieldCheck },
+  { id: 'reports', label: 'Báo cáo tuần', icon: BookOpen },
+  { id: 'evaluation', label: 'Đánh giá', icon: Award },
+];
+
+const InfoCard = ({ icon: Icon, label, value }) => (
+  <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
+    <span className="mt-0.5 rounded-lg bg-white p-2 text-indigo-600 shadow-sm">
+      <Icon className="h-4 w-4" aria-hidden="true" />
+    </span>
+    <div className="min-w-0">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 break-words text-sm font-medium text-slate-800">{value || 'Chưa cập nhật'}</p>
+    </div>
+  </div>
+);
 
 export const StudentDashboardView = () => {
-  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
   const [profile, setProfile] = useState(null);
+  const [profileError, setProfileError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadStudentData();
-  }, []);
-
-  const loadStudentData = async () => {
-    setIsLoading(true);
+  const loadStudentData = useCallback(async () => {
     try {
-      const allStudents = await studentService.getStudents();
-      const matched =
-        allStudents.find((s) => s.email?.toLowerCase() === user?.email?.toLowerCase()) ||
-        allStudents[0];
-      setProfile(matched);
-    } catch (err) {
-      console.error(err);
+      const studentProfile = await studentService.getMyProfile();
+      setProfile(studentProfile);
+      setProfileError('');
+    } catch (error) {
+      setProfileError(error.message || 'Không thể tải hồ sơ sinh viên của bạn.');
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    void loadStudentData();
+  }, [loadStudentData]);
+
+  const refreshStudentData = () => {
+    setIsLoading(true);
+    setProfileError('');
+    void loadStudentData();
   };
+
+  const accountStatus = profile?.user?.status;
 
   return (
     <DashboardLayout
-      title="Cổng Thông Tin Thực Tập Sinh"
-      subtitle="Theo dõi tiến độ tham gia thực tập, thông tin Mentor phụ trách và lịch trình đào tạo"
+      title="Không gian sinh viên"
+      subtitle="Hồ sơ, lịch thực tập, nhiệm vụ và trao đổi với mentor"
     >
-      <div className="space-y-6">
-        {/* Banner Chào Mừng Sinh Viên */}
-        <div className="rounded-3xl bg-gradient-to-r from-indigo-900 via-slate-900 to-slate-950 p-6 sm:p-8 text-white relative overflow-hidden shadow-xl border border-indigo-500/20">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 max-w-2xl">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-3 backdrop-blur-xs">
-              Ứng Viên Thực Tập • Đang Hoạt Động
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Xin chào, {profile?.fullName || user?.fullName || 'Sinh viên'}!
-            </h2>
-            <p className="text-slate-300 text-sm mt-2 leading-relaxed">
-              Chào mừng bạn tham gia chương trình đào tạo Thực tập sinh. Dưới đây là thông tin chi tiết về hồ sơ học tập và Mentor chuyên môn được phân công đồng hành cùng bạn.
-            </p>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <TableSkeleton rows={2} cols={3} />
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Hồ Sơ Sinh Viên (2 cols) */}
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold text-lg flex items-center justify-center shadow-xs">
-                    <GraduationCap className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">
-                      {profile?.fullName}
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Mã Sinh Viên: <span className="font-mono font-bold text-indigo-600">{profile?.studentCode}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Hồ Sơ Hợp Lệ
-                </span>
-              </div>
-
-              {/* Lưới Thông Tin */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                    Trường Đại Học
-                  </span>
-                  <div className="flex items-start gap-1.5 text-slate-800 font-medium leading-relaxed">
-                    <School className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                    <span>{profile?.university}</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                    Chuyên Ngành Đào Tạo
-                  </span>
-                  <div className="flex items-center gap-1.5 text-slate-800 font-semibold">
-                    <BookOpen className="w-4 h-4 text-indigo-500 shrink-0" />
-                    <span>{profile?.major}</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                    Điện Thoại Liên Hệ
-                  </span>
-                  <div className="flex items-center gap-1.5 text-slate-800 font-medium">
-                    <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span>{profile?.phone}</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                    Kỳ Thực Tập Ghi Nhận
-                  </span>
-                  <div className="flex items-center gap-1.5 text-slate-800 font-medium">
-                    <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span>{profile?.internshipPeriod || 'Kỳ Thu 2026 (09/2026 - 12/2026)'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Thông báo Onboarding */}
-              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wide">
-                    Tiến Độ Onboarding Sprint 1 Hoàn Tất
-                  </h4>
-                  <p className="text-xs text-indigo-800/90 mt-0.5 leading-relaxed">
-                    Hồ sơ của bạn đã được Phòng Nhân sự (HR) đồng bộ và ghép nối Mentor trực tiếp. Vui lòng kết nối với Mentor để nhận lịch họp bàn giao đồ án.
-                  </p>
-                </div>
-              </div>
+      <div className="space-y-5">
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-950 via-indigo-900 to-slate-900 p-5 text-white shadow-lg sm:p-7">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-56 w-56 rounded-full bg-indigo-400/20 blur-3xl" />
+          <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200">Cổng thông tin thực tập</p>
+              <h2 className="mt-2 text-2xl font-bold">Xin chào, {profile?.fullName || 'Sinh viên'}!</h2>
+              <p className="mt-1 text-sm leading-6 text-indigo-100">
+                Theo dõi thông tin hồ sơ và các hoạt động thực tập trong cùng một không gian.
+              </p>
             </div>
+            {profile?.programName && (
+              <div className="max-w-full rounded-xl border border-white/15 bg-white/10 px-3.5 py-2.5 backdrop-blur-sm">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-200">Chương trình</p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-white">{profile.programName}</p>
+              </div>
+            )}
+          </div>
+        </section>
 
-            {/* Thẻ Mentor Phụ Trách (1 col) */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                    Mentor Hướng Dẫn
-                  </h3>
-                  <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                    Chuyên Gia Phụ Trách
-                  </span>
+        <WorkspaceTabs
+          label="Các mục trong không gian sinh viên"
+          tabs={TABS}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
+
+        {activeTab === 'overview' && (
+          <section className="space-y-5" aria-label="Tổng quan hồ sơ sinh viên">
+            {isLoading ? (
+              <div role="status" className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+                <RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-indigo-600" />
+                Đang tải hồ sơ...
+              </div>
+            ) : profileError ? (
+              <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold">Không thể tải hồ sơ</h3>
+                    <p className="mt-1 break-words">{profileError}</p>
+                    <button type="button" onClick={refreshStudentData} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold hover:bg-rose-100">
+                      <RefreshCw className="h-3.5 w-3.5" /> Thử lại
+                    </button>
+                  </div>
                 </div>
-
-                {profile?.assignedMentor ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-bold text-lg flex items-center justify-center shadow-xs">
-                        {profile.assignedMentor.fullName.charAt(0)}
-                      </div>
-                      <div>
-                        <h4 className="text-base font-bold text-slate-900">
-                          {profile.assignedMentor.fullName}
-                        </h4>
-                        <span className="text-xs text-purple-700 font-semibold flex items-center gap-1 mt-0.5">
-                          <Building className="w-3.5 h-3.5 text-purple-500" />
-                          {profile.assignedMentor.department}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-600 space-y-1">
-                      <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                        Trách Nhiệm Của Mentor
+              </div>
+            ) : profile ? (
+              <div className="grid gap-5 xl:grid-cols-[1.45fr_0.85fr]">
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+                        <GraduationCap className="h-5 w-5" />
                       </span>
-                      <p className="leading-relaxed">
-                        Hướng dẫn đồ án thực tế, kiểm duyệt mã nguồn, chấm điểm chuyên cần và đánh giá kết quả thực tập cuối kỳ.
-                      </p>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-bold text-slate-900">{profile.fullName}</h3>
+                        <p className="mt-1 text-xs text-slate-500">Mã sinh viên <span className="font-mono font-bold text-indigo-700">{profile.studentCode || 'Chưa cập nhật'}</span></p>
+                      </div>
                     </div>
+                    {accountStatus && (
+                      <Badge variant={accountStatus} className="shrink-0" dot>
+                        {ACCOUNT_STATUS_LABELS[accountStatus] || accountStatus}
+                      </Badge>
+                    )}
                   </div>
-                ) : (
-                  <div className="py-8 text-center">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-2">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                    <h4 className="text-xs font-bold text-slate-800">
-                      Đang Trong Quy Trình Phân Công
-                    </h4>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      Phòng Nhân sự đang xem xét chuyên ngành của bạn để ghép nối với Mentor phù hợp nhất.
-                    </p>
-                  </div>
-                )}
-              </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 text-center">
-                <span className="text-[11px] text-slate-400">
-                  Cần hỗ trợ? Hãy liên hệ Chuyên viên HR qua Cổng thông tin Quản lý Thực tập sinh.
-                </span>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <InfoCard icon={Mail} label="Email tài khoản" value={profile.email} />
+                    <InfoCard icon={Phone} label="Điện thoại" value={profile.phoneNumber} />
+                    <InfoCard icon={School} label="Trường đại học" value={profile.university} />
+                    <InfoCard icon={BookOpen} label="Chuyên ngành" value={profile.major} />
+                    <InfoCard icon={Building2} label="Chương trình thực tập" value={profile.programName} />
+                  </div>
+                </section>
+
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <span className="rounded-xl bg-violet-50 p-2.5 text-violet-700"><UserRound className="h-5 w-5" /></span>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Mentor hướng dẫn</h3>
+                      <p className="mt-0.5 text-xs text-slate-500">Thông tin được liên kết với hồ sơ hiện tại</p>
+                    </div>
+                  </div>
+                  {profile.assignedMentor ? (
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <p className="text-base font-bold text-slate-900">{profile.assignedMentor.fullName}</p>
+                        <p className="mt-1 text-sm text-slate-600">{profile.assignedMentor.department || profile.assignedMentor.specialization || 'Chưa cập nhật bộ phận'}</p>
+                      </div>
+                      {profile.assignedMentor.phoneNumber && <InfoCard icon={Phone} label="Điện thoại mentor" value={profile.assignedMentor.phoneNumber} />}
+                    </div>
+                  ) : (
+                    <div role="status" className="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-7 text-center">
+                      <UserRound className="mx-auto h-7 w-7 text-slate-300" />
+                      <p className="mt-2 text-sm font-semibold text-slate-700">Chưa có mentor được phân công</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">Thông tin sẽ hiển thị sau khi HR liên kết mentor với hồ sơ của bạn.</p>
+                    </div>
+                  )}
+                </section>
               </div>
+            ) : (
+              <div role="status" className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+                <GraduationCap className="mx-auto h-8 w-8 text-slate-300" />
+                <h3 className="mt-3 text-sm font-bold text-slate-800">Tài khoản chưa có hồ sơ sinh viên</h3>
+                <p className="mt-1 text-sm text-slate-500">Vui lòng liên hệ HR để kiểm tra việc liên kết tài khoản với hồ sơ.</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-4">
+              <div className="flex items-start gap-3">
+                <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-indigo-700" />
+                <p className="text-xs leading-5 text-indigo-900">Xem các mốc chương trình và hạn công việc đã được giao trong lịch cá nhân.</p>
+              </div>
+              <Link to="/student/schedule" className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-100">
+                Mở lịch thực tập
+              </Link>
             </div>
-          </div>
+          </section>
         )}
-        {user?.role === 'ROLE_STUDENT' && <StudentDocumentsPanel />}
+
+        {activeTab === 'documents' && <StudentDocumentsPanel />}
+        {activeTab === 'schedule' && <StudentScheduleView embedded />}
+        {activeTab === 'tasks' && <StudentTasksPanel />}
+        {activeTab === 'reports' && <StudentWeeklyReportsPanel />}
+        {activeTab === 'evaluation' && <StudentEvaluationPanel />}
       </div>
     </DashboardLayout>
   );

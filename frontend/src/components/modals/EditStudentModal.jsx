@@ -1,54 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Modal from '../common/Modal';
-import { Edit3, Hash, User, Phone, School, BookOpen, Mail, Calendar, Loader2 } from 'lucide-react';
+import { Edit3, Hash, User, Phone, School, BookOpen, Loader2 } from 'lucide-react';
 import studentService from '../../services/studentService';
 import toast from 'react-hot-toast';
 
+const createInitialFormData = (student) => ({
+  studentCode: student?.studentCode || '',
+  fullName: student?.fullName || '',
+  phone: student?.phone || student?.phoneNumber || '',
+  university: student?.university || '',
+  major: student?.major || '',
+});
+
 export const EditStudentModal = ({ isOpen, onClose, student, onSuccess }) => {
-  const [formData, setFormData] = useState({
-    studentCode: '',
-    fullName: '',
-    phone: '',
-    email: '',
-    university: '',
-    major: '',
-    internshipPeriod: '',
-  });
+  const [formData, setFormData] = useState(() => createInitialFormData(student));
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (student) {
-      setFormData({
-        studentCode: student.studentCode || '',
-        fullName: student.fullName || '',
-        phone: student.phone || student.phoneNumber || '',
-        email: student.email || student.user?.email || '',
-        university: student.university || 'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-        major: student.major || 'Kỹ thuật Phần mềm',
-        internshipPeriod: student.internshipPeriod || 'Kỳ Thu 2026',
-      });
-      setErrors({});
-    }
-  }, [student]);
-
-  const universities = [
-    'Đại học Công nghệ Thông tin và Truyền thông — ĐHTN',
-    'Đại học Bách Khoa Hà Nội (HUST)',
-    'Đại học Công nghệ — ĐHQGHN (VNU-UET)',
-    'Đại học FPT Hà Nội',
-    'Học viện Công nghệ Bưu chính Viễn thông (PTIT)',
-    'Học viện Kỹ thuật Mật mã (ACT)',
-  ];
-
-  const majors = [
-    'Kỹ thuật Phần mềm',
-    'Khoa học Máy tính',
-    'Hệ thống Thông tin Quản lý',
-    'An toàn Thông tin và An ninh Mạng',
-    'Trí tuệ Nhân tạo và Khoa học Dữ liệu',
-    'Mạng Máy tính và Truyền thông Dữ liệu',
-  ];
 
   const validate = () => {
     const errs = {};
@@ -166,23 +133,6 @@ export const EditStudentModal = ({ isOpen, onClose, student, onSuccess }) => {
             )}
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Hòm Thư Email
-            </label>
-            <div className="relative rounded-xl shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Mail className="w-4 h-4" />
-              </div>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Trường đại học */}
@@ -194,22 +144,23 @@ export const EditStudentModal = ({ isOpen, onClose, student, onSuccess }) => {
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <School className="w-4 h-4" />
             </div>
-            <select
+            <input
+              type="text"
               value={formData.university}
-              onChange={(e) => setFormData({ ...formData, university: e.target.value })}
-              className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
-            >
-              {universities.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
+              onChange={(e) => {
+                setFormData({ ...formData, university: e.target.value });
+                if (errors.university) setErrors({ ...errors, university: null });
+              }}
+              maxLength={150}
+              placeholder="Nhập trường đại học"
+              className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${errors.university ? 'border-rose-300 focus:ring-rose-400 focus:border-rose-400' : 'border-slate-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
+            />
           </div>
+          {errors.university && <p className="mt-1 text-xs font-medium text-rose-500">{errors.university}</p>}
         </div>
 
-        {/* Chuyên ngành & Kỳ thực tập */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Chuyên ngành */}
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
               Chuyên Ngành Đào Tạo <span className="text-rose-500">*</span>
@@ -218,35 +169,19 @@ export const EditStudentModal = ({ isOpen, onClose, student, onSuccess }) => {
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <BookOpen className="w-4 h-4" />
               </div>
-              <select
-                value={formData.major}
-                onChange={(e) => setFormData({ ...formData, major: e.target.value })}
-                className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
-              >
-                {majors.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Kỳ Thực Tập
-            </label>
-            <div className="relative rounded-xl shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Calendar className="w-4 h-4" />
-              </div>
               <input
                 type="text"
-                value={formData.internshipPeriod}
-                onChange={(e) => setFormData({ ...formData, internshipPeriod: e.target.value })}
-                className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800"
+                value={formData.major}
+                onChange={(e) => {
+                  setFormData({ ...formData, major: e.target.value });
+                  if (errors.major) setErrors({ ...errors, major: null });
+                }}
+                maxLength={100}
+                placeholder="Nhập chuyên ngành"
+                className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${errors.major ? 'border-rose-300 focus:ring-rose-400 focus:border-rose-400' : 'border-slate-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
               />
             </div>
+            {errors.major && <p className="mt-1 text-xs font-medium text-rose-500">{errors.major}</p>}
           </div>
         </div>
 

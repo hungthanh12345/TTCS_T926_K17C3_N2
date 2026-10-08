@@ -1,30 +1,28 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 import authService from '../services/authService';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Initialize auth state from this tab's session storage
-  useEffect(() => {
+const readInitialSession = () => {
+  try {
+    const token = authService.getToken();
+    const user = authService.getCurrentUser();
+    return token && user ? { token, user } : { token: null, user: null };
+  } catch {
     try {
-      const storedToken = authService.getToken();
-      const storedUser = authService.getCurrentUser();
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(storedUser);
-      }
-    } catch (err) {
-      console.error('Lỗi khi tải thông tin phiên làm việc', err);
       authService.logout();
-    } finally {
-      setIsLoading(false);
+    } catch {
+      // Browser storage may be unavailable; start unauthenticated in that case.
     }
-  }, []);
+    return { token: null, user: null };
+  }
+};
+
+export const AuthProvider = ({ children }) => {
+  const [session, setSession] = useState(readInitialSession);
+  const { user, token } = session;
+  const [isLoading, setIsLoading] = useState(false);
 
   /**
    * Login handler
@@ -33,8 +31,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       const result = await authService.login(credentials);
-      setUser(result.user);
-      setToken(result.token);
+      setSession({ user: result.user, token: result.token });
       toast.success(`Xin chào, ${result.user.fullName || result.user.email}!`, {
         icon: '👋',
       });
@@ -52,8 +49,7 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = (silent = false) => {
     authService.logout();
-    setUser(null);
-    setToken(null);
+    setSession({ user: null, token: null });
     if (!silent) {
       toast.success('Đã đăng xuất khỏi hệ thống.');
     }
@@ -62,11 +58,10 @@ export const AuthProvider = ({ children }) => {
   /**
    * Clean session reset handler without toast notifications
    */
-  const resetSession = () => {
+  const resetSession = useCallback(() => {
     authService.logout();
-    setUser(null);
-    setToken(null);
-  };
+    setSession({ user: null, token: null });
+  }, []);
 
   /**
    * Quick role checker helper
