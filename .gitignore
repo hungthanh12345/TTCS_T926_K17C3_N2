@@ -3,3 +3,22 @@ target/
 *.iml
 .vscode/
 *.log
+
+TestResults/
+**/TestResults/
+
+# Local AI / Agent tooling caches
+.agent/
+**/.agent/
+.agents/
+**/.agents/
+.claude/
+**/.claude/
+.codex/
+**/.codex/
+.gemini/
+**/.gemini/
+.impeccable/
+**/.impeccable/
+
+apache-maven-3.9.6/
