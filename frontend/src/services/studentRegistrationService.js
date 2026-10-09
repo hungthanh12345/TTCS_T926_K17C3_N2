@@ -72,9 +72,9 @@ const studentRegistrationService = {
     }
   },
 
-  async reject(studentId) {
+  async reject(studentId, rejectionReason = '') {
     try {
-      return unwrap(await api.post(`/hr/student-registrations/${studentId}/reject`));
+      return unwrap(await api.post(`/hr/student-registrations/${studentId}/reject`, { rejectionReason }));
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }
