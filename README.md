@@ -9,8 +9,8 @@ Hệ thống quản lý thực tập full-stack cho học phần Thực tập c�
 * **Product Owner / Mentor**: Nguyễn Khánh Tùng (`tung.nk@gmail.com`)
 * **Admin hệ thống**: Quản trị viên (`admin@gmail.com`)
 * **HR Doanh nghiệp**: Khách hàng đại diện (`customer.hr@company.com`)
-* **Thành viên Thực tập sinh (ICTU)**:
-  1. Nguyễn Thành Hưng (`nguyenthanhhung06072006@gmail.com` - `SV2026001`)
+* **Thành viên Thực tập sinh**:
+  1. Nguyễn Thành Hưng (`nguyenthanhhung06072006@gmail.com` - `DTC2353733873`; Đại học HN)
   2. Dương Minh Hưng (`hung.dm@gmail.com` - `SV2026002`)
   3. Hoàng Thanh Hùng (`hung.ht@gmail.com` - `SV2026003`)
   4. Trương Đình Giang (`giang.td@gmail.com` - `SV2026004`)
