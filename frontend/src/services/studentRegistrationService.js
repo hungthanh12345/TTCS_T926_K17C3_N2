@@ -64,25 +64,6 @@ const studentRegistrationService = {
     }
   },
 
-  async approveRegistrationDocument(studentId, documentId) {
-    try {
-      return unwrap(await api.post(`/hr/student-registrations/${studentId}/documents/${documentId}/approve`));
-    } catch (error) {
-      throw new Error(getErrorMessage(error));
-    }
-  },
-
-  async rejectRegistrationDocument(studentId, documentId, rejectionReason = '') {
-    try {
-      return unwrap(await api.post(
-        `/hr/student-registrations/${studentId}/documents/${documentId}/reject`,
-        { rejectionReason },
-      ));
-    } catch (error) {
-      throw new Error(getErrorMessage(error));
-    }
-  },
-
   async approve(studentId) {
     try {
       return unwrap(await api.post(`/hr/student-registrations/${studentId}/approve`));
