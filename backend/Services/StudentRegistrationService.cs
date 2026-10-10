@@ -15,7 +15,7 @@ namespace InternshipManagementApi.Services
         Task<IReadOnlyList<StudentRegistrationReviewDto>> GetPendingAsync();
         Task<StudentRegistrationReviewDto> GetPendingDetailsAsync(int studentId);
         Task<StudentRegistrationReviewDto> ApproveAsync(int studentId);
-        Task<StudentRegistrationReviewDto> RejectAsync(int studentId);
+        Task<StudentRegistrationReviewDto> RejectAsync(int studentId, string? rejectionReason = null);
     }
 
     public sealed class StudentRegistrationService : IStudentRegistrationService
@@ -24,12 +24,18 @@ namespace InternshipManagementApi.Services
         private readonly AppDbContext _db;
         private readonly IPasswordHasher _passwordHasher;
         private readonly INotificationService _notificationService;
+        private readonly IEmailLogQueue _emailLogQueue;
 
-        public StudentRegistrationService(AppDbContext db, IPasswordHasher passwordHasher, INotificationService notificationService)
+        public StudentRegistrationService(
+            AppDbContext db,
+            IPasswordHasher passwordHasher,
+            INotificationService notificationService,
+            IEmailLogQueue emailLogQueue)
         {
             _db = db;
             _passwordHasher = passwordHasher;
             _notificationService = notificationService;
+            _emailLogQueue = emailLogQueue;
         }
 
         public async Task<StudentRegistrationStatusResponseDto> RegisterAsync(StudentRegistrationRequestDto request)
@@ -224,10 +230,13 @@ namespace InternshipManagementApi.Services
         public Task<StudentRegistrationReviewDto> ApproveAsync(int studentId) =>
             TransitionAsync(studentId, UserStatus.ACTIVE);
 
-        public Task<StudentRegistrationReviewDto> RejectAsync(int studentId) =>
-            TransitionAsync(studentId, UserStatus.REJECTED);
+        public Task<StudentRegistrationReviewDto> RejectAsync(int studentId, string? rejectionReason = null) =>
+            TransitionAsync(studentId, UserStatus.REJECTED, rejectionReason);
 
-        private async Task<StudentRegistrationReviewDto> TransitionAsync(int studentId, UserStatus targetStatus)
+        private async Task<StudentRegistrationReviewDto> TransitionAsync(
+            int studentId,
+            UserStatus targetStatus,
+            string? rejectionReason = null)
         {
             var student = await GetStudentForReviewAsync(studentId);
             if (student.User!.Status != UserStatus.PENDING_APPROVAL)
@@ -244,7 +253,11 @@ namespace InternshipManagementApi.Services
                     throw new ConflictException("This student registration has already been reviewed.");
 
                 student.User.Status = targetStatus;
+                if (targetStatus == UserStatus.REJECTED)
+                    student.RejectionReason = string.IsNullOrWhiteSpace(rejectionReason) ? null : rejectionReason.Trim();
                 await _notificationService.AddRegistrationReviewedAsync(student, targetStatus == UserStatus.ACTIVE);
+                await _emailLogQueue.QueueDecisionEmailAsync(student, targetStatus == UserStatus.ACTIVE);
+                await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch

@@ -23,6 +23,12 @@ namespace InternshipManagementApi.Data.Entities
 
         public int? ProgramId { get; set; }
 
+        public int? ReviewedByUserId { get; set; }
+
+        public DateTime? ReviewedAt { get; set; }
+
+        public string? RejectionReason { get; set; }
+
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }

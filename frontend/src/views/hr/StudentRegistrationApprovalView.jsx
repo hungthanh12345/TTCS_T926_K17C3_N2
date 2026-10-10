@@ -3,9 +3,24 @@ import { Check, ClipboardCheck, Download, FileText, GraduationCap, Loader2, Refr
 import toast from 'react-hot-toast';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Modal from '../../components/common/Modal';
+import { useAuth } from '../../context/AuthContext';
 import studentRegistrationService from '../../services/studentRegistrationService';
 
+const documentStatusLabels = {
+  PENDING: 'Chờ xét duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Đã từ chối',
+};
+
+const documentStatusClasses = {
+  PENDING: 'bg-amber-100 text-amber-800',
+  APPROVED: 'bg-emerald-100 text-emerald-800',
+  REJECTED: 'bg-rose-100 text-rose-800',
+};
+
 export const StudentRegistrationApprovalView = () => {
+  const { user } = useAuth();
+  const canReviewDocuments = user?.role === 'ROLE_HR';
   const [registrations, setRegistrations] = useState([]);
   const [selected, setSelected] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -14,7 +29,10 @@ export const StudentRegistrationApprovalView = () => {
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [documentActionId, setDocumentActionId] = useState(null);
+  const [documentReview, setDocumentReview] = useState(null);
   const [confirmationKind, setConfirmationKind] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const statusLabels = {
     PENDING: 'Đang chờ duyệt',
@@ -92,6 +110,30 @@ export const StudentRegistrationApprovalView = () => {
     }
   };
 
+  const submitDocumentReview = async () => {
+    if (!selected || !documentReview || !canReviewDocuments) return;
+    const { document, kind, reason } = documentReview;
+    setDocumentActionId(document.id);
+    try {
+      const updatedDocument = kind === 'approve'
+        ? await studentRegistrationService.approveRegistrationDocument(selected.studentId, document.id)
+        : await studentRegistrationService.rejectRegistrationDocument(
+          selected.studentId,
+          document.id,
+          reason.trim(),
+        );
+      setDocuments((current) => current.map((item) => (
+        item.id === updatedDocument.id ? updatedDocument : item
+      )));
+      setDocumentReview(null);
+      toast.success(kind === 'approve' ? 'Đã duyệt tài liệu.' : 'Đã từ chối tài liệu.');
+    } catch (error) {
+      toast.error(error.message || 'Không thể cập nhật kết quả tài liệu.');
+    } finally {
+      setDocumentActionId(null);
+    }
+  };
+
   const review = async () => {
     if (!selected) return;
     const kind = confirmationKind;
@@ -99,9 +141,10 @@ export const StudentRegistrationApprovalView = () => {
     setAction(kind);
     try {
       if (kind === 'approve') await studentRegistrationService.approve(selected.studentId);
-      else await studentRegistrationService.reject(selected.studentId);
+      else await studentRegistrationService.reject(selected.studentId, rejectionReason.trim());
       toast.success(kind === 'approve' ? 'Đã duyệt hồ sơ thành công.' : 'Đã từ chối hồ sơ.');
       setConfirmationKind('');
+      setRejectionReason('');
       setSelected(null);
       await loadPending(true);
     } catch {
@@ -179,9 +222,57 @@ export const StudentRegistrationApprovalView = () => {
                 {documentsLoading ? <p role="status" className="mt-3 text-xs text-slate-500">Đang tải danh sách tài liệu...</p> : documents.length === 0 ? <p className="mt-3 text-xs text-slate-500">Hồ sơ chưa có tài liệu đính kèm.</p> : (
                   <ul className="mt-3 space-y-2">
                     {documents.map((document) => (
-                      <li key={document.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5">
-                        <span className="flex min-w-0 items-center gap-2 text-xs text-slate-700"><FileText className="h-4 w-4 shrink-0 text-indigo-500" /><span className="min-w-0"><b className="block">{document.documentType === 'CV' ? 'CV' : 'Đơn xin thực tập'}</b><span className="block truncate text-slate-500">{document.originalFileName}</span></span></span>
-                        <button type="button" disabled={downloadingId === document.id} onClick={() => void downloadDocument(document)} className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"><Download className="h-3.5 w-3.5" />{downloadingId === document.id ? 'Đang tải' : 'Tải xuống'}</button>
+                      <li key={document.id} className="rounded-xl border border-slate-200 px-3 py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 text-xs text-slate-700">
+                            <FileText className="h-4 w-4 shrink-0 text-indigo-500" />
+                            <span className="min-w-0">
+                              <b className="block">{document.documentType === 'CV' ? 'CV' : document.documentType === 'INTERNSHIP_LETTER' ? 'Đơn xin thực tập' : document.documentType}</b>
+                              <span className="block truncate text-slate-500">{document.originalFileName}</span>
+                            </span>
+                          </span>
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${documentStatusClasses[document.reviewStatus] || 'bg-slate-100 text-slate-700'}`}>
+                            {documentStatusLabels[document.reviewStatus] || 'Trạng thái không xác định'}
+                          </span>
+                        </div>
+                        {(document.reviewedAt || document.rejectionReason) && (
+                          <div className="mt-2 space-y-1 text-xs text-slate-500">
+                            {document.reviewedAt && (
+                              <p>
+                                Người xét duyệt: {document.reviewedByEmail || `#${document.reviewedByUserId || '—'}`}
+                                {' · '}{new Date(document.reviewedAt).toLocaleString('vi-VN')}
+                              </p>
+                            )}
+                            {document.reviewStatus === 'REJECTED' && document.rejectionReason && (
+                              <p className="break-words">Lý do từ chối: {document.rejectionReason}</p>
+                            )}
+                          </div>
+                        )}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <button type="button" disabled={downloadingId === document.id} onClick={() => void downloadDocument(document)} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">
+                            <Download className="h-3.5 w-3.5" />{downloadingId === document.id ? 'Đang tải' : 'Tải xuống'}
+                          </button>
+                          {canReviewDocuments && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={documentActionId === document.id}
+                                onClick={() => setDocumentReview({ document, kind: 'approve', reason: '' })}
+                                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                              >
+                                <Check className="h-3.5 w-3.5" />Duyệt tài liệu
+                              </button>
+                              <button
+                                type="button"
+                                disabled={documentActionId === document.id}
+                                onClick={() => setDocumentReview({ document, kind: 'reject', reason: '' })}
+                                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                              >
+                                <X className="h-3.5 w-3.5" />Từ chối tài liệu
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -191,7 +282,7 @@ export const StudentRegistrationApprovalView = () => {
                 <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('approve')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50">
                   {action === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Duyệt hồ sơ
                 </button>
-                <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('reject')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50">
+                <button type="button" disabled={Boolean(action)} onClick={() => { setRejectionReason(''); setConfirmationKind('reject'); }} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50">
                   {action === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />} Từ chối
                 </button>
               </div>
@@ -201,7 +292,7 @@ export const StudentRegistrationApprovalView = () => {
       </div>
       <Modal
         isOpen={Boolean(confirmationKind) && Boolean(selected)}
-        onClose={() => { if (!action) setConfirmationKind(''); }}
+        onClose={() => { if (!action) { setConfirmationKind(''); setRejectionReason(''); } }}
         title={confirmationKind === 'approve' ? 'Xác nhận duyệt hồ sơ' : 'Xác nhận từ chối hồ sơ'}
         subtitle="Vui lòng kiểm tra lại trước khi cập nhật trạng thái đăng ký."
         icon={ClipboardCheck}
@@ -209,11 +300,75 @@ export const StudentRegistrationApprovalView = () => {
         <p className="text-sm leading-6 text-slate-700">
           Bạn có chắc chắn muốn {confirmationKind === 'approve' ? 'duyệt' : 'từ chối'} hồ sơ đăng ký thực tập của <strong>{selected?.fullName}</strong> không?
         </p>
+        {confirmationKind === 'reject' && (
+          <label className="mt-4 block space-y-1.5">
+            <span className="text-sm font-semibold text-slate-700">Lý do từ chối <span className="font-normal text-slate-400">(không bắt buộc)</span></span>
+            <textarea
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value.slice(0, 1000))}
+              rows={4}
+              maxLength={1000}
+              className="w-full resize-y rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              placeholder="Nhập lý do để gửi kèm trong email kết quả xét duyệt"
+            />
+            <span className="block text-right text-xs text-slate-400">{rejectionReason.length}/1000</span>
+          </label>
+        )}
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('')} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Hủy</button>
           <button type="button" disabled={Boolean(action)} onClick={() => void review()} className={`inline-flex min-w-32 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${confirmationKind === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'}`}>
             {action ? <Loader2 className="h-4 w-4 animate-spin" /> : confirmationKind === 'approve' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
             {confirmationKind === 'approve' ? 'Duyệt hồ sơ' : 'Từ chối hồ sơ'}
+          </button>
+        </div>
+      </Modal>
+      <Modal
+        isOpen={Boolean(documentReview)}
+        onClose={() => { if (!documentActionId) setDocumentReview(null); }}
+        title={documentReview?.kind === 'approve' ? 'Xác nhận duyệt tài liệu' : 'Xác nhận từ chối tài liệu'}
+        subtitle="Bạn có thể thay đổi kết quả xét duyệt tài liệu sau này."
+        icon={ClipboardCheck}
+      >
+        <p className="text-sm leading-6 text-slate-700">
+          {documentReview?.document?.reviewStatus !== 'PENDING' && (
+            <span className="mb-2 block rounded-lg bg-amber-50 px-3 py-2 text-amber-800">
+              Tài liệu hiện có trạng thái {documentStatusLabels[documentReview?.document?.reviewStatus] || 'không xác định'}.
+            </span>
+          )}
+          Xác nhận {documentReview?.kind === 'approve' ? 'duyệt' : 'từ chối'} tài liệu{' '}
+          <strong>{documentReview?.document?.originalFileName}</strong>?
+        </p>
+        {documentReview?.kind === 'reject' && (
+          <label className="mt-4 block space-y-1.5">
+            <span className="text-sm font-semibold text-slate-700">
+              Lý do từ chối <span className="font-normal text-slate-400">(không bắt buộc)</span>
+            </span>
+            <textarea
+              value={documentReview.reason}
+              onChange={(event) => setDocumentReview((current) => ({
+                ...current,
+                reason: event.target.value.slice(0, 1000),
+              }))}
+              rows={4}
+              maxLength={1000}
+              className="w-full resize-y rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              placeholder="Nhập lý do (tối đa 1000 ký tự)"
+            />
+            <span className="block text-right text-xs text-slate-400">{documentReview.reason.length}/1000</span>
+          </label>
+        )}
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" disabled={Boolean(documentActionId)} onClick={() => setDocumentReview(null)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            Hủy
+          </button>
+          <button
+            type="button"
+            disabled={Boolean(documentActionId) || !canReviewDocuments}
+            onClick={() => void submitDocumentReview()}
+            className={`inline-flex min-w-36 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${documentReview?.kind === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'}`}
+          >
+            {documentActionId ? <Loader2 className="h-4 w-4 animate-spin" /> : documentReview?.kind === 'approve' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            {documentActionId ? 'Đang lưu...' : documentReview?.kind === 'approve' ? 'Duyệt tài liệu' : 'Từ chối tài liệu'}
           </button>
         </div>
       </Modal>

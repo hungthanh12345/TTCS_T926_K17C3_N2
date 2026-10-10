@@ -21,6 +21,8 @@ namespace InternshipManagementApi.Data
         public DbSet<MentorFeedback> MentorFeedbacks => Set<MentorFeedback>();
         public DbSet<InternshipEvaluation> InternshipEvaluations => Set<InternshipEvaluation>();
         public DbSet<UserNotification> Notifications => Set<UserNotification>();
+        public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+        public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -102,6 +104,9 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.Major).HasColumnName("major").HasMaxLength(100).IsRequired();
                 entity.Property(e => e.MentorId).HasColumnName("mentor_id");
                 entity.Property(e => e.ProgramId).HasColumnName("program_id");
+                entity.Property(e => e.ReviewedByUserId).HasColumnName("reviewed_by_user_id");
+                entity.Property(e => e.ReviewedAt).HasColumnName("reviewed_at").HasColumnType("datetime(6)");
+                entity.Property(e => e.RejectionReason).HasColumnName("rejection_reason").HasColumnType("text");
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAddOrUpdate();
 
@@ -111,6 +116,7 @@ namespace InternshipManagementApi.Data
                 entity.HasIndex(e => e.Major);
                 entity.HasIndex(e => e.MentorId);
                 entity.HasIndex(e => e.ProgramId);
+                entity.HasIndex(e => e.ReviewedByUserId);
 
                 entity.HasOne(e => e.User)
                       .WithOne(u => u.Student)
@@ -125,6 +131,11 @@ namespace InternshipManagementApi.Data
                 entity.HasOne(e => e.Program)
                       .WithMany(program => program.Students)
                       .HasForeignKey(e => e.ProgramId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne<User>()
+                      .WithMany()
+                      .HasForeignKey(e => e.ReviewedByUserId)
                       .OnDelete(DeleteBehavior.SetNull);
             });
 
@@ -173,11 +184,87 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.FileContent).HasColumnName("file_content").HasColumnType("longblob");
                 entity.Property(e => e.UploadedAt).HasColumnName("uploaded_at")
                     .HasColumnType("timestamp").HasDefaultValueSql("CURRENT_TIMESTAMP").ValueGeneratedOnAdd();
+                entity.Property(e => e.ReviewStatus).HasColumnName("review_status").HasMaxLength(20)
+                    .HasDefaultValue("PENDING").IsRequired();
+                entity.Property(e => e.ReviewedByUserId).HasColumnName("reviewed_by_user_id");
+                entity.Property(e => e.ReviewedAt).HasColumnName("reviewed_at").HasColumnType("datetime(6)");
+                entity.Property(e => e.RejectionReason).HasColumnName("rejection_reason").HasColumnType("text");
                 entity.HasIndex(e => new { e.StudentId, e.UploadedAt });
+                entity.HasIndex(e => e.ReviewStatus);
+                entity.HasIndex(e => e.ReviewedByUserId);
                 entity.HasOne(e => e.Student)
                     .WithMany()
                     .HasForeignKey(e => e.StudentId)
                     .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ReviewedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<EmailTemplate>(entity =>
+            {
+                entity.ToTable("email_templates");
+                entity.HasKey(template => template.Id);
+                entity.Property(template => template.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(template => template.Code).HasColumnName("code").HasMaxLength(50).IsRequired();
+                entity.Property(template => template.SubjectTemplate).HasColumnName("subject_template").HasMaxLength(255).IsRequired();
+                entity.Property(template => template.BodyTemplate).HasColumnName("body_template").HasColumnType("text").IsRequired();
+                entity.Property(template => template.IsActive).HasColumnName("is_active").HasDefaultValue(true).IsRequired();
+                entity.Property(template => template.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.Property(template => template.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAddOrUpdate();
+                entity.HasData(
+                    new EmailTemplate
+                    {
+                        Id = 1,
+                        Code = "APP_APPROVED",
+                        SubjectTemplate = "Kết quả xét duyệt hồ sơ thực tập",
+                        BodyTemplate = "Chào {{StudentName}},\n\nHồ sơ đăng ký thực tập của bạn đã được duyệt cho chương trình {{ProgramName}}{{StartDate}}.\n\nBước tiếp theo: {{NextSteps}}\n\nTrân trọng,\nBộ phận Nhân sự",
+                        IsActive = true,
+                        CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                        UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                    },
+                    new EmailTemplate
+                    {
+                        Id = 2,
+                        Code = "APP_REJECTED",
+                        SubjectTemplate = "Kết quả xét duyệt hồ sơ thực tập",
+                        BodyTemplate = "Chào {{StudentName}},\n\nCảm ơn bạn đã đăng ký chương trình {{ProgramName}}. Sau khi xem xét, hồ sơ của bạn chưa được duyệt.\n\nLý do: {{RejectionReason}}\n\nNếu cần hỗ trợ thêm, vui lòng liên hệ bộ phận Nhân sự.\n\nTrân trọng,\nBộ phận Nhân sự",
+                        IsActive = true,
+                        CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                        UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                    });
+            });
+
+            modelBuilder.Entity<EmailLog>(entity =>
+            {
+                entity.ToTable("email_logs");
+                entity.HasKey(log => log.Id);
+                entity.Property(log => log.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(log => log.StudentId).HasColumnName("student_id");
+                entity.Property(log => log.RecipientEmail).HasColumnName("recipient_email").HasMaxLength(150).IsRequired();
+                entity.Property(log => log.TemplateCode).HasColumnName("template_code").HasMaxLength(50).IsRequired();
+                entity.Property(log => log.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("PENDING").IsRequired();
+                entity.Property(log => log.ErrorMessage).HasColumnName("error_message").HasColumnType("text");
+                entity.Property(log => log.RetryCount).HasColumnName("retry_count").HasDefaultValue(0).IsRequired();
+                entity.Property(log => log.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.Property(log => log.SentAt).HasColumnName("sent_at").HasColumnType("datetime(6)");
+                entity.Property(log => log.NextAttemptAt).HasColumnName("next_attempt_at").HasColumnType("datetime(6)")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.HasIndex(log => new { log.Status, log.NextAttemptAt, log.Id });
+                entity.HasIndex(log => new { log.StudentId, log.CreatedAt });
+                entity.HasOne(log => log.Student)
+                    .WithMany()
+                    .HasForeignKey(log => log.StudentId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne(log => log.Template)
+                    .WithMany()
+                    .HasForeignKey(log => log.TemplateCode)
+                    .HasPrincipalKey(template => template.Code)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<InternshipTask>(entity =>
