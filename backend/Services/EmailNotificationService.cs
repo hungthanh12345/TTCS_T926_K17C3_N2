@@ -102,6 +102,8 @@ public sealed class SmtpEmailSender : ISmtpEmailSender
 public sealed class EmailLogProcessor : IEmailLogProcessor
 {
     private const int MaximumRetries = 3;
+    private const int ClaimLeaseSeconds = 180;
+    private static readonly TimeSpan DeliveryTimeout = TimeSpan.FromSeconds(120);
     private readonly AppDbContext _db;
     private readonly ISmtpEmailSender _sender;
     private readonly ILogger<EmailLogProcessor> _logger;
@@ -132,6 +134,17 @@ public sealed class EmailLogProcessor : IEmailLogProcessor
 
     private async Task ProcessOneAsync(int id, CancellationToken cancellationToken)
     {
+        // Atomically lease a due row so multiple application instances cannot send it at once.
+        // The lease uses database UTC time and is longer than the SMTP send timeout.
+        var claimedRows = await _db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE email_logs
+            SET next_attempt_at = TIMESTAMPADD(SECOND, {ClaimLeaseSeconds}, UTC_TIMESTAMP(6))
+            WHERE id = {id}
+              AND status = 'PENDING'
+              AND next_attempt_at <= UTC_TIMESTAMP(6)
+            """, cancellationToken);
+        if (claimedRows != 1) return;
+
         var log = await _db.EmailLogs
             .Include(item => item.Template)
             .Include(item => item.Student!)
@@ -145,7 +158,9 @@ public sealed class EmailLogProcessor : IEmailLogProcessor
                 throw new InvalidOperationException($"Email template '{log.TemplateCode}' is inactive.");
 
             var (subject, body) = Render(log);
-            await _sender.SendAsync(log.RecipientEmail, subject, body, cancellationToken);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(DeliveryTimeout);
+            await _sender.SendAsync(log.RecipientEmail, subject, body, timeout.Token);
             log.Status = "SENT";
             log.SentAt = DateTime.UtcNow;
             log.ErrorMessage = null;
