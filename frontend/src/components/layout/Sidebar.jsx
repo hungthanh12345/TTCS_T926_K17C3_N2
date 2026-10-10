@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   BarChart3,
+  Clock,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
@@ -80,6 +81,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       title: 'Lịch Thực Tập',
       path: '/student/schedule',
       icon: CalendarDays,
+      roles: ['ROLE_STUDENT'],
+      badge: null,
+    },
+    {
+      title: 'Chấm Công & Giờ Làm',
+      path: '/student/attendance',
+      icon: Clock,
       roles: ['ROLE_STUDENT'],
       badge: null,
     },

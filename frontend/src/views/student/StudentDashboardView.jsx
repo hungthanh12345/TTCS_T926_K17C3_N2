@@ -6,6 +6,7 @@ import {
   BookOpen,
   Building2,
   CalendarDays,
+  Clock,
   FileText,
   GraduationCap,
   Mail,
@@ -18,6 +19,7 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import WorkspaceTabs from '../../components/common/WorkspaceTabs';
 import Badge from '../../components/common/Badge';
+import StudentAttendancePanel from '../../components/student/StudentAttendancePanel';
 import StudentDocumentsPanel from '../../components/student/StudentDocumentsPanel';
 import StudentTasksPanel from '../../components/student/StudentTasksPanel';
 import StudentWeeklyReportsPanel from '../../components/student/StudentWeeklyReportsPanel';
@@ -35,6 +37,7 @@ const ACCOUNT_STATUS_LABELS = {
 
 const TABS = [
   { id: 'overview', label: 'Tổng quan', icon: GraduationCap },
+  { id: 'attendance', label: 'Chấm công', icon: Clock },
   { id: 'documents', label: 'Hồ sơ & tài liệu', icon: FileText },
   { id: 'schedule', label: 'Lịch thực tập', icon: CalendarDays },
   { id: 'tasks', label: 'Công việc', icon: ShieldCheck },
@@ -210,6 +213,7 @@ export const StudentDashboardView = () => {
           </section>
         )}
 
+        {activeTab === 'attendance' && <StudentAttendancePanel />}
         {activeTab === 'documents' && <StudentDocumentsPanel />}
         {activeTab === 'schedule' && <StudentScheduleView embedded />}
         {activeTab === 'tasks' && <StudentTasksPanel />}
