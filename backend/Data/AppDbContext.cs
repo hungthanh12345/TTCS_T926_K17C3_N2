@@ -16,6 +16,7 @@ namespace InternshipManagementApi.Data
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<InternshipProgram> InternshipPrograms => Set<InternshipProgram>();
         public DbSet<StudentDocument> StudentDocuments => Set<StudentDocument>();
+        public DbSet<InternshipContract> InternshipContracts => Set<InternshipContract>();
         public DbSet<InternshipTask> Tasks => Set<InternshipTask>();
         public DbSet<WeeklyReport> WeeklyReports => Set<WeeklyReport>();
         public DbSet<MentorFeedback> MentorFeedbacks => Set<MentorFeedback>();
@@ -199,6 +200,49 @@ namespace InternshipManagementApi.Data
                 entity.HasOne<User>()
                     .WithMany()
                     .HasForeignKey(e => e.ReviewedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<InternshipContract>(entity =>
+            {
+                entity.ToTable("internship_contracts", table =>
+                    table.HasCheckConstraint("chk_internship_contracts_status",
+                        "`status` IN ('PENDING_CONFIRMATION', 'CONFIRMED', 'CANCELLED')"));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(e => e.ContractNumber).HasColumnName("contract_number").HasMaxLength(50).IsRequired();
+                entity.Property(e => e.FileName).HasColumnName("file_name").HasMaxLength(255);
+                entity.Property(e => e.ContentType).HasColumnName("content_type").HasMaxLength(150);
+                entity.Property(e => e.SizeBytes).HasColumnName("size_bytes").HasDefaultValue(0L).IsRequired();
+                entity.Property(e => e.FileContent).HasColumnName("file_content").HasColumnType("longblob");
+                entity.Property(e => e.ContentHash).HasColumnName("content_hash").HasMaxLength(64).IsFixedLength();
+                entity.Property(e => e.UploadedByUserId).HasColumnName("uploaded_by_user_id");
+                entity.Property(e => e.FileUploadedAt).HasColumnName("file_uploaded_at").HasColumnType("datetime(6)");
+                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(30)
+                    .HasDefaultValue(ContractStatus.PendingConfirmation).IsRequired();
+                entity.Property(e => e.IssuedAt).HasColumnName("issued_at").HasColumnType("datetime(6)")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.Property(e => e.ConfirmedAt).HasColumnName("confirmed_at").HasColumnType("datetime(6)");
+                entity.Property(e => e.ConfirmedByUserId).HasColumnName("confirmed_by_user_id");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAddOrUpdate();
+                entity.HasIndex(e => e.StudentId).IsUnique();
+                entity.HasIndex(e => e.ContractNumber).IsUnique();
+                entity.HasIndex(e => e.Status);
+                entity.HasOne(e => e.Student)
+                    .WithMany()
+                    .HasForeignKey(e => e.StudentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ConfirmedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(e => e.UploadedByUserId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
