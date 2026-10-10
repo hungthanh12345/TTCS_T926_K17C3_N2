@@ -10,6 +10,7 @@ import {
   LogOut,
   UserCheck,
   CalendarDays,
+  FileSignature,
   ClipboardCheck,
   BarChart3,
 } from 'lucide-react';
@@ -52,6 +53,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       title: 'Chương Trình Thực Tập',
       path: '/hr/programs',
       icon: CalendarDays,
+      roles: ['ROLE_ADMIN', 'ROLE_HR'],
+      badge: null,
+    },
+    {
+      title: 'Hợp Đồng Thực Tập',
+      path: '/hr/contracts',
+      icon: FileSignature,
       roles: ['ROLE_ADMIN', 'ROLE_HR'],
       badge: null,
     },
