@@ -9,8 +9,8 @@ Hệ thống quản lý thực tập full-stack cho học phần Thực tập c�
 * **Product Owner / Mentor**: Nguyễn Khánh Tùng (`tung.nk@gmail.com`)
 * **Admin hệ thống**: Quản trị viên (`admin@gmail.com`)
 * **HR Doanh nghiệp**: Khách hàng đại diện (`customer.hr@company.com`)
-* **Thành viên Thực tập sinh (ICTU)**:
-  1. Nguyễn Thành Hưng (`hung.nt@gmail.com` - `SV2026001`)
+* **Thành viên Thực tập sinh**:
+  1. Nguyễn Thành Hưng (`nguyenthanhhung06072006@gmail.com` - `DTC2353733873`; Đại học HN)
   2. Dương Minh Hưng (`hung.dm@gmail.com` - `SV2026002`)
   3. Hoàng Thanh Hùng (`hung.ht@gmail.com` - `SV2026003`)
   4. Trương Đình Giang (`giang.td@gmail.com` - `SV2026004`)
@@ -373,7 +373,7 @@ For a disposable development database only, load the shared fixture accounts and
 ```sql
 SOURCE backend/seed_data.sql;
 ```
-All accounts in the development seed use the shared password `Admin@123`; the seed currently contains 13 users, including 10 `ROLE_STUDENT` accounts. Passwords are stored as BCrypt hashes and authentication still runs through the API. These credentials are only for local development fixtures; do not seed them into production.
+All accounts in the development seed are local fixtures; the seed contains 13 users, including 10 `ROLE_STUDENT` accounts. Passwords are stored as BCrypt hashes and authentication still runs through the API. Obtain development credentials through the separately provided channel; do not include them in this README or seed them into production.
 
 ### 3. Configure and Run Backend API
 Local database and JWT settings belong in .NET User Secrets, not committed settings files. From `backend/`, set values for your local MySQL account and generate a unique signing key of at least 32 UTF-8 bytes:
