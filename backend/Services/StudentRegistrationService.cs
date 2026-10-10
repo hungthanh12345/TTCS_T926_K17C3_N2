@@ -24,15 +24,18 @@ namespace InternshipManagementApi.Services
         private readonly AppDbContext _db;
         private readonly IPasswordHasher _passwordHasher;
         private readonly INotificationService _notificationService;
+        private readonly IEmailLogQueue _emailLogQueue;
 
         public StudentRegistrationService(
             AppDbContext db,
             IPasswordHasher passwordHasher,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IEmailLogQueue emailLogQueue)
         {
             _db = db;
             _passwordHasher = passwordHasher;
             _notificationService = notificationService;
+            _emailLogQueue = emailLogQueue;
         }
 
         public async Task<StudentRegistrationStatusResponseDto> RegisterAsync(StudentRegistrationRequestDto request)
@@ -253,6 +256,7 @@ namespace InternshipManagementApi.Services
                 if (targetStatus == UserStatus.REJECTED)
                     student.RejectionReason = string.IsNullOrWhiteSpace(rejectionReason) ? null : rejectionReason.Trim();
                 await _notificationService.AddRegistrationReviewedAsync(student, targetStatus == UserStatus.ACTIVE);
+                await _emailLogQueue.QueueDecisionEmailAsync(student, targetStatus == UserStatus.ACTIVE);
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
             }

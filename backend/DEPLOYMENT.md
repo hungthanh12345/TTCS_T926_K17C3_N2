@@ -115,3 +115,27 @@ Vì gói Free của Render chỉ cung cấp PostgreSQL, bạn có thể lựa ch
 ## BƯỚC 4: KIỂM TRA DỊCH VỤ
 
 Sau khi hoàn tất, kiểm tra `/health` và đăng nhập bằng các tài khoản đã được cấp riêng cho production. Không dùng tài khoản, mật khẩu hoặc dữ liệu mẫu từ seed script trên hệ thống công khai.
+
+---
+
+## CẤU HÌNH SMTP CHO US08
+
+Email kết quả xét duyệt được gửi qua SMTP STARTTLS (Gmail dùng cổng 587). Cấu hình các giá trị sau bằng environment variables trên môi trường deploy:
+
+| Environment variable | Nội dung |
+|---|---|
+| `SMTP_HOST` | SMTP host, ví dụ `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP port, thường là `587` |
+| `SMTP_USER` | Tài khoản SMTP |
+| `SMTP_PASS` | SMTP password hoặc Gmail App Password |
+| `MAIL_FROM` | Địa chỉ người gửi đã được SMTP provider xác thực |
+
+Khi chạy local, lưu bí mật bằng .NET User Secrets trong thư mục `backend` (không đưa các giá trị này vào Git):
+
+    dotnet user-secrets set 'Smtp:Host' 'smtp.gmail.com' --project backend\InternshipManagementApi.csproj
+    dotnet user-secrets set 'Smtp:Port' '587' --project backend\InternshipManagementApi.csproj
+    dotnet user-secrets set 'Smtp:User' '<SMTP account>' --project backend\InternshipManagementApi.csproj
+    dotnet user-secrets set 'Smtp:Password' '<SMTP app password>' --project backend\InternshipManagementApi.csproj
+    dotnet user-secrets set 'Mail:From' '<verified sender address>' --project backend\InternshipManagementApi.csproj
+
+The email worker polls `email_logs` in the background. It records the recipient snapshot from `users.email`, marks successful deliveries `SENT`, and retries a failed first send up to three additional times before marking the log `FAILED`.
