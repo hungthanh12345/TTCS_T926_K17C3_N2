@@ -84,5 +84,8 @@ namespace InternshipManagementApi.DTOs.StudentRegistration
         public string? ProgramName { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime SubmittedAt { get; set; }
+        public int? ReviewedByUserId { get; set; }
+        public DateTime? ReviewedAt { get; set; }
+        public string? RejectionReason { get; set; }
     }
 }

@@ -27,6 +27,7 @@ export const StudentRegistrationApprovalView = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [action, setAction] = useState('');
   const [documents, setDocuments] = useState([]);
+  const [documentsError, setDocumentsError] = useState('');
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [documentActionId, setDocumentActionId] = useState(null);
@@ -77,16 +78,24 @@ export const StudentRegistrationApprovalView = () => {
   const showDetails = async (item) => {
     setSelected(item);
     setDocuments([]);
+    setDocumentsError('');
     setDocumentsLoading(true);
     try {
-      const [details, files] = await Promise.all([
+      const [detailsResult, filesResult] = await Promise.allSettled([
         studentRegistrationService.getPendingDetails(item.studentId),
         studentRegistrationService.getRegistrationDocuments(item.studentId),
       ]);
-      setSelected(details);
-      setDocuments(files);
-    } catch (error) {
-      toast.error(error.message || 'Không thể tải chi tiết hồ sơ.');
+      if (detailsResult.status === 'fulfilled') {
+        setSelected(detailsResult.value);
+      } else {
+        toast.error(detailsResult.reason?.message || 'Không thể tải chi tiết hồ sơ.');
+      }
+
+      if (filesResult.status === 'fulfilled') {
+        setDocuments(filesResult.value);
+      } else {
+        setDocumentsError(filesResult.reason?.message || 'Không thể tải danh sách tài liệu.');
+      }
     } finally {
       setDocumentsLoading(false);
     }
@@ -219,7 +228,14 @@ export const StudentRegistrationApprovalView = () => {
               </dl>
               <section className="border-t border-slate-100 py-4">
                 <h3 className="text-sm font-bold text-slate-900">Tài liệu hồ sơ</h3>
-                {documentsLoading ? <p role="status" className="mt-3 text-xs text-slate-500">Đang tải danh sách tài liệu...</p> : documents.length === 0 ? <p className="mt-3 text-xs text-slate-500">Hồ sơ chưa có tài liệu đính kèm.</p> : (
+                {documentsLoading ? <p role="status" className="mt-3 text-xs text-slate-500">Đang tải danh sách tài liệu...</p> : documentsError ? (
+                  <div role="alert" className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+                    <p>{documentsError}</p>
+                    <button type="button" onClick={() => void showDetails(selected)} className="mt-2 font-semibold underline underline-offset-2">
+                      Tải lại danh sách tài liệu
+                    </button>
+                  </div>
+                ) : documents.length === 0 ? <p className="mt-3 text-xs text-slate-500">Hồ sơ chưa có tài liệu đính kèm.</p> : (
                   <ul className="mt-3 space-y-2">
                     {documents.map((document) => (
                       <li key={document.id} className="rounded-xl border border-slate-200 px-3 py-3">
