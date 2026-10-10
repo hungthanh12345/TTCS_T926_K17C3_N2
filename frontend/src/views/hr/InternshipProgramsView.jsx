@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Building2, Plus, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../../components/layout/DashboardLayout';
+import AssignStudentToProgramModal from '../../components/modals/AssignStudentToProgramModal';
 import US11 from '../../services/sprint2/US11';
 import { messageOf } from '../../services/sprint2/common';
 import ProgramDatesEditor from './ProgramDatesEditor';
@@ -18,6 +19,7 @@ export const InternshipProgramsView = () => {
   const [loading, setLoading] = useState(true);
   const [savingDepartment, setSavingDepartment] = useState(false);
   const [savingProgram, setSavingProgram] = useState(false);
+  const [programToAssign, setProgramToAssign] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -156,7 +158,7 @@ export const InternshipProgramsView = () => {
                     <td className="px-6 py-4 font-semibold text-slate-900">{program.name}</td>
                     <td className="px-6 py-4 text-slate-700">{program.departmentName}</td>
                     <td className="px-6 py-4 text-slate-600">{program.description || '—'}</td>
-                    <td className="px-6 py-4"><ProgramDatesEditor key={`${program.id}-${program.startDate || ''}-${program.endDate || ''}`} program={program} onSaved={updateProgramDates} /></td>
+                    <td className="px-6 py-4"><ProgramDatesEditor key={`${program.id}-${program.startDate || ''}-${program.endDate || ''}`} program={program} onSaved={updateProgramDates} onAssign={setProgramToAssign} /></td>
                   </tr>
                 ))}</tbody>
               </table>
@@ -164,6 +166,14 @@ export const InternshipProgramsView = () => {
           )}
         </section>
       </div>
+      {programToAssign && (
+        <AssignStudentToProgramModal
+          key={programToAssign.id}
+          program={programToAssign}
+          isOpen
+          onClose={() => setProgramToAssign(null)}
+        />
+      )}
     </DashboardLayout>
   );
 };
