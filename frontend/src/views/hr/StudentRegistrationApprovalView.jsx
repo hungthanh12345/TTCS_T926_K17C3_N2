@@ -32,6 +32,7 @@ export const StudentRegistrationApprovalView = () => {
   const [documentActionId, setDocumentActionId] = useState(null);
   const [documentReview, setDocumentReview] = useState(null);
   const [confirmationKind, setConfirmationKind] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const statusLabels = {
     PENDING: 'Đang chờ duyệt',
@@ -140,9 +141,10 @@ export const StudentRegistrationApprovalView = () => {
     setAction(kind);
     try {
       if (kind === 'approve') await studentRegistrationService.approve(selected.studentId);
-      else await studentRegistrationService.reject(selected.studentId);
+      else await studentRegistrationService.reject(selected.studentId, rejectionReason.trim());
       toast.success(kind === 'approve' ? 'Đã duyệt hồ sơ thành công.' : 'Đã từ chối hồ sơ.');
       setConfirmationKind('');
+      setRejectionReason('');
       setSelected(null);
       await loadPending(true);
     } catch {
@@ -280,7 +282,7 @@ export const StudentRegistrationApprovalView = () => {
                 <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('approve')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50">
                   {action === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Duyệt hồ sơ
                 </button>
-                <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('reject')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50">
+                <button type="button" disabled={Boolean(action)} onClick={() => { setRejectionReason(''); setConfirmationKind('reject'); }} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50">
                   {action === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />} Từ chối
                 </button>
               </div>
@@ -290,7 +292,7 @@ export const StudentRegistrationApprovalView = () => {
       </div>
       <Modal
         isOpen={Boolean(confirmationKind) && Boolean(selected)}
-        onClose={() => { if (!action) setConfirmationKind(''); }}
+        onClose={() => { if (!action) { setConfirmationKind(''); setRejectionReason(''); } }}
         title={confirmationKind === 'approve' ? 'Xác nhận duyệt hồ sơ' : 'Xác nhận từ chối hồ sơ'}
         subtitle="Vui lòng kiểm tra lại trước khi cập nhật trạng thái đăng ký."
         icon={ClipboardCheck}
@@ -298,6 +300,20 @@ export const StudentRegistrationApprovalView = () => {
         <p className="text-sm leading-6 text-slate-700">
           Bạn có chắc chắn muốn {confirmationKind === 'approve' ? 'duyệt' : 'từ chối'} hồ sơ đăng ký thực tập của <strong>{selected?.fullName}</strong> không?
         </p>
+        {confirmationKind === 'reject' && (
+          <label className="mt-4 block space-y-1.5">
+            <span className="text-sm font-semibold text-slate-700">Lý do từ chối <span className="font-normal text-slate-400">(không bắt buộc)</span></span>
+            <textarea
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value.slice(0, 1000))}
+              rows={4}
+              maxLength={1000}
+              className="w-full resize-y rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              placeholder="Nhập lý do để gửi kèm trong email kết quả xét duyệt"
+            />
+            <span className="block text-right text-xs text-slate-400">{rejectionReason.length}/1000</span>
+          </label>
+        )}
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" disabled={Boolean(action)} onClick={() => setConfirmationKind('')} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Hủy</button>
           <button type="button" disabled={Boolean(action)} onClick={() => void review()} className={`inline-flex min-w-32 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${confirmationKind === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'}`}>

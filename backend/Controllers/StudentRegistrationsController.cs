@@ -3,6 +3,7 @@ using InternshipManagementApi.DTOs.StudentRegistration;
 using InternshipManagementApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace InternshipManagementApi.Controllers
 {
@@ -51,9 +52,11 @@ namespace InternshipManagementApi.Controllers
         [ProducesResponseType(typeof(ApiResponse<StudentRegistrationReviewDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> Reject(int studentId)
+        public async Task<IActionResult> Reject(
+            int studentId,
+            [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RejectStudentRegistrationRequestDto? request)
         {
-            var registration = await _registrationService.RejectAsync(studentId);
+            var registration = await _registrationService.RejectAsync(studentId, request?.RejectionReason);
             return Ok(ApiResponse<StudentRegistrationReviewDto>.Ok(registration, "Student registration rejected."));
         }
     }
