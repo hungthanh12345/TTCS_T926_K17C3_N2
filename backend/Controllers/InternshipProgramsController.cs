@@ -78,7 +78,9 @@ namespace InternshipManagementApi.Controllers
             int studentId,
             [FromBody] InternshipProgramAssignmentRequestDto request)
         {
-            var student = await _db.Students.SingleOrDefaultAsync(item => item.Id == studentId);
+            var student = await _db.Students
+                .Include(item => item.User)
+                .SingleOrDefaultAsync(item => item.Id == studentId);
             if (student == null)
                 return NotFound(ApiResponse.Fail("Student profile was not found."));
 
@@ -87,14 +89,25 @@ namespace InternshipManagementApi.Controllers
             {
                 program = await _db.InternshipPrograms.SingleOrDefaultAsync(item => item.Id == request.ProgramId.Value);
                 if (program == null)
-                    return BadRequest(ApiResponse.Fail("Internship program was not found."));
+                    return NotFound(ApiResponse.Fail("Internship program was not found."));
+
+                if (student.User?.Status is UserStatus.PENDING_APPROVAL or UserStatus.REJECTED)
+                    return Conflict(ApiResponse.Fail("Student registration must be approved before program assignment."));
             }
 
-            student.ProgramId = program?.Id;
-            student.Program = program;
-            await _db.SaveChangesAsync();
+            var requestedProgramId = program?.Id;
+            if (student.ProgramId != requestedProgramId)
+            {
+                var changedRows = await _db.Students
+                    .Where(item => item.Id == studentId && item.ProgramId == student.ProgramId)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(item => item.ProgramId, requestedProgramId));
 
-            var response = new InternshipProgramAssignmentResponseDto(student.Id, student.ProgramId, program?.Name);
+                if (changedRows != 1)
+                    return Conflict(ApiResponse.Fail("The student's program changed during assignment. Refresh and try again."));
+            }
+
+            var response = new InternshipProgramAssignmentResponseDto(student.Id, requestedProgramId, program?.Name);
             return Ok(ApiResponse<InternshipProgramAssignmentResponseDto>.Ok(response, "Student program assignment updated."));
         }
 
