@@ -21,6 +21,7 @@ import WorkspaceTabs from '../../components/common/WorkspaceTabs';
 import Badge from '../../components/common/Badge';
 import StudentAttendancePanel from '../../components/student/StudentAttendancePanel';
 import StudentDocumentsPanel from '../../components/student/StudentDocumentsPanel';
+import StudentContractPanel from '../../components/student/StudentContractPanel';
 import StudentTasksPanel from '../../components/student/StudentTasksPanel';
 import StudentWeeklyReportsPanel from '../../components/student/StudentWeeklyReportsPanel';
 import StudentEvaluationPanel from '../../components/student/StudentEvaluationPanel';
@@ -39,6 +40,7 @@ const TABS = [
   { id: 'overview', label: 'Tổng quan', icon: GraduationCap },
   { id: 'attendance', label: 'Chấm công', icon: Clock },
   { id: 'documents', label: 'Hồ sơ & tài liệu', icon: FileText },
+  { id: 'contract', label: 'Hợp đồng', icon: FileSignature },
   { id: 'schedule', label: 'Lịch thực tập', icon: CalendarDays },
   { id: 'tasks', label: 'Công việc', icon: ShieldCheck },
   { id: 'reports', label: 'Báo cáo tuần', icon: BookOpen },
@@ -215,6 +217,7 @@ export const StudentDashboardView = () => {
 
         {activeTab === 'attendance' && <StudentAttendancePanel />}
         {activeTab === 'documents' && <StudentDocumentsPanel />}
+        {activeTab === 'contract' && <StudentContractPanel />}
         {activeTab === 'schedule' && <StudentScheduleView embedded />}
         {activeTab === 'tasks' && <StudentTasksPanel />}
         {activeTab === 'reports' && <StudentWeeklyReportsPanel />}

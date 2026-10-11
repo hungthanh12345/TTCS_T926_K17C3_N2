@@ -14,8 +14,8 @@ namespace InternshipManagementApi.Services
         Task<StudentRegistrationStatusResponseDto> GetOwnStatusAsync(LoginRequestDto request);
         Task<IReadOnlyList<StudentRegistrationReviewDto>> GetPendingAsync();
         Task<StudentRegistrationReviewDto> GetPendingDetailsAsync(int studentId);
-        Task<StudentRegistrationReviewDto> ApproveAsync(int studentId);
-        Task<StudentRegistrationReviewDto> RejectAsync(int studentId, string? rejectionReason = null);
+        Task<StudentRegistrationReviewDto> ApproveAsync(int studentId, int reviewerUserId);
+        Task<StudentRegistrationReviewDto> RejectAsync(int studentId, int reviewerUserId, string? rejectionReason = null);
     }
 
     public sealed class StudentRegistrationService : IStudentRegistrationService
@@ -227,14 +227,18 @@ namespace InternshipManagementApi.Services
             return ToReviewDto(student);
         }
 
-        public Task<StudentRegistrationReviewDto> ApproveAsync(int studentId) =>
-            TransitionAsync(studentId, UserStatus.ACTIVE);
+        public Task<StudentRegistrationReviewDto> ApproveAsync(int studentId, int reviewerUserId) =>
+            TransitionAsync(studentId, reviewerUserId, UserStatus.ACTIVE);
 
-        public Task<StudentRegistrationReviewDto> RejectAsync(int studentId, string? rejectionReason = null) =>
-            TransitionAsync(studentId, UserStatus.REJECTED, rejectionReason);
+        public Task<StudentRegistrationReviewDto> RejectAsync(
+            int studentId,
+            int reviewerUserId,
+            string? rejectionReason = null) =>
+            TransitionAsync(studentId, reviewerUserId, UserStatus.REJECTED, rejectionReason);
 
         private async Task<StudentRegistrationReviewDto> TransitionAsync(
             int studentId,
+            int reviewerUserId,
             UserStatus targetStatus,
             string? rejectionReason = null)
         {
@@ -253,8 +257,12 @@ namespace InternshipManagementApi.Services
                     throw new ConflictException("This student registration has already been reviewed.");
 
                 student.User.Status = targetStatus;
-                if (targetStatus == UserStatus.REJECTED)
-                    student.RejectionReason = string.IsNullOrWhiteSpace(rejectionReason) ? null : rejectionReason.Trim();
+                student.ReviewedByUserId = reviewerUserId;
+                student.ReviewedAt = DateTime.UtcNow;
+                student.RejectionReason = targetStatus == UserStatus.REJECTED &&
+                    !string.IsNullOrWhiteSpace(rejectionReason)
+                        ? rejectionReason.Trim()
+                        : null;
                 await _notificationService.AddRegistrationReviewedAsync(student, targetStatus == UserStatus.ACTIVE);
                 await _emailLogQueue.QueueDecisionEmailAsync(student, targetStatus == UserStatus.ACTIVE);
                 await _db.SaveChangesAsync();
@@ -322,7 +330,10 @@ namespace InternshipManagementApi.Services
             Major = student.Major,
             ProgramName = student.Program?.Name,
             Status = student.User.Status == UserStatus.ACTIVE ? "APPROVED" : student.User.Status.ToString(),
-            SubmittedAt = student.CreatedAt
+            SubmittedAt = student.CreatedAt,
+            ReviewedByUserId = student.ReviewedByUserId,
+            ReviewedAt = student.ReviewedAt,
+            RejectionReason = student.RejectionReason
         };
     }
 }

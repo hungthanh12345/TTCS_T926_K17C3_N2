@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { messageOf } from '../../services/sprint2/common';
 import US13 from '../../services/sprint2/US13';
 
 const dateFieldClass = 'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100';
 
-const ProgramDatesEditor = ({ program, onSaved }) => {
+const ProgramDatesEditor = ({ program, onSaved, onAssign }) => {
   const [startDate, setStartDate] = useState(program.startDate || '');
   const [endDate, setEndDate] = useState(program.endDate || '');
   const [saving, setSaving] = useState(false);
@@ -58,17 +59,27 @@ const ProgramDatesEditor = ({ program, onSaved }) => {
           />
         </label>
       </div>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className={`text-xs ${dateWarning ? 'text-rose-600' : 'text-slate-500'}`} aria-live="polite">
           {dateWarning || 'Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.'}
         </p>
-        <button
-          type="submit"
-          disabled={!datesValid || saving}
-          className="shrink-0 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {saving ? 'Đang lưu...' : 'Lưu ngày'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="submit"
+            disabled={!datesValid || saving}
+            className="shrink-0 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? 'Đang lưu...' : 'Lưu ngày'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onAssign?.(program)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+          >
+            <UserPlus className="h-4 w-4" />
+            Gán sinh viên
+          </button>
+        </div>
       </div>
     </form>
   );
