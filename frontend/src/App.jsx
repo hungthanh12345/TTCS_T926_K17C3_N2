@@ -21,6 +21,7 @@ import StudentAttendanceView from './views/student/StudentAttendanceView';
 import HrInternshipSummaryView from './views/hr/HrInternshipSummaryView';
 import ContractManagementView from './views/hr/ContractManagementView';
 import LandingView from './views/common/LandingView';
+import AttendanceReportView from './views/hr/AttendanceReportView';
 
 export const App = () => {
   return (
@@ -124,6 +125,15 @@ export const App = () => {
             element={
               <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_HR']}>
                 <ContractManagementView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hr/attendance-reports"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_HR']}>
+                <AttendanceReportView />
               </ProtectedRoute>
             }
           />

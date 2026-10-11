@@ -61,7 +61,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IAttendanceReportService, AttendanceReportService>();
 
 // 3. Configure JWT Authentication & Authorization
 var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
