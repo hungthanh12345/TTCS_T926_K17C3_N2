@@ -40,7 +40,12 @@ const formatSize = (size) => {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const formatDateTime = (value) => (value ? new Date(value).toLocaleString('vi-VN') : '—');
+const parseServerDate = (value) => {
+  const text = String(value);
+  const hasZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(text);
+  return new Date(text.includes('T') && !hasZone ? `${text}Z` : text);
+};
+const formatDateTime = (value) => (value ? parseServerDate(value).toLocaleString('vi-VN') : '—');
 
 export const ContractManagementView = () => {
   const [rows, setRows] = useState([]);
