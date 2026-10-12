@@ -58,13 +58,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       badge: null,
     },
     {
-      title: 'Báo Cáo Chấm Công',
-      path: '/hr/attendance-reports',
-      icon: ClipboardCheck,
-      roles: ['ROLE_ADMIN', 'ROLE_HR'],
-      badge: null,
-    },
-    {
       title: 'Hợp Đồng Thực Tập',
       path: '/hr/contracts',
       icon: FileSignature,
