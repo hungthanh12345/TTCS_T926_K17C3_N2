@@ -24,8 +24,6 @@ namespace InternshipManagementApi.Data
         public DbSet<UserNotification> Notifications => Set<UserNotification>();
         public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
         public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
-        public DbSet<Attendance> Attendances => Set<Attendance>();
-        public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -248,46 +246,6 @@ namespace InternshipManagementApi.Data
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
-            // Configure Attendance entity
-            modelBuilder.Entity<Attendance>(entity =>
-            {
-                entity.ToTable("attendances");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
-                entity.Property(e => e.StudentId).HasColumnName("student_id").IsRequired();
-                entity.Property(e => e.Date).HasColumnName("date").IsRequired();
-                entity.Property(e => e.CheckIn).HasColumnName("check_in").HasColumnType("time");
-                entity.Property(e => e.CheckOut).HasColumnName("check_out").HasColumnType("time");
-                entity.Property(e => e.Status).HasColumnName("status").HasColumnType("enum('PRESENT','LATE','ABSENT')").HasDefaultValue("ABSENT").IsRequired();
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAddOrUpdate();
-
-                entity.HasOne(e => e.Student)
-                      .WithMany()
-                      .HasForeignKey(e => e.StudentId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // Configure LeaveRequest entity
-            modelBuilder.Entity<LeaveRequest>(entity =>
-            {
-                entity.ToTable("leave_requests");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
-                entity.Property(e => e.StudentId).HasColumnName("student_id").IsRequired();
-                entity.Property(e => e.StartDate).HasColumnName("start_date").IsRequired();
-                entity.Property(e => e.EndDate).HasColumnName("end_date").IsRequired();
-                entity.Property(e => e.Reason).HasColumnName("reason").HasColumnType("text").IsRequired();
-                entity.Property(e => e.Status).HasColumnName("status").HasColumnType("enum('PENDING','APPROVED','REJECTED')").HasDefaultValue("PENDING").IsRequired();
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAddOrUpdate();
-
-                entity.HasOne(e => e.Student)
-                      .WithMany()
-                      .HasForeignKey(e => e.StudentId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-
             modelBuilder.Entity<EmailTemplate>(entity =>
             {
                 entity.ToTable("email_templates");
@@ -479,32 +437,6 @@ namespace InternshipManagementApi.Data
                 entity.HasOne(notification => notification.User)
                     .WithMany()
                     .HasForeignKey(notification => notification.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            modelBuilder.Entity<Attendance>(entity =>
-            {
-                entity.ToTable("attendances");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
-                entity.Property(e => e.StudentId).HasColumnName("student_id").IsRequired();
-                entity.Property(e => e.Date).HasColumnName("date").HasColumnType("date").IsRequired();
-                entity.Property(e => e.CheckInTime).HasColumnName("check_in_time").HasColumnType("datetime(6)").IsRequired();
-                entity.Property(e => e.CheckOutTime).HasColumnName("check_out_time").HasColumnType("datetime(6)");
-                entity.Property(e => e.DurationMinutes).HasColumnName("duration_minutes");
-                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("CHECKED_IN").IsRequired();
-                entity.Property(e => e.Notes).HasColumnName("notes").HasMaxLength(500);
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAdd();
-                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)").ValueGeneratedOnAddOrUpdate();
-
-                entity.HasIndex(e => new { e.StudentId, e.Date }).IsUnique();
-                entity.HasIndex(e => e.StudentId);
-                entity.HasIndex(e => e.Date);
-                entity.HasOne(e => e.Student)
-                    .WithMany()
-                    .HasForeignKey(e => e.StudentId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

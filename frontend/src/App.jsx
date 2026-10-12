@@ -17,11 +17,9 @@ import StudentDashboardView from './views/student/StudentDashboardView';
 import NotFoundView from './views/common/NotFoundView';
 import InternshipProgramsView from './views/hr/InternshipProgramsView';
 import StudentScheduleView from './views/student/StudentScheduleView';
-import StudentAttendanceView from './views/student/StudentAttendanceView';
 import HrInternshipSummaryView from './views/hr/HrInternshipSummaryView';
 import ContractManagementView from './views/hr/ContractManagementView';
 import LandingView from './views/common/LandingView';
-import AttendanceReportView from './views/hr/AttendanceReportView';
 
 export const App = () => {
   return (
@@ -130,15 +128,6 @@ export const App = () => {
           />
 
           <Route
-            path="/hr/attendance-reports"
-            element={
-              <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_HR']}>
-                <AttendanceReportView />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/hr/internship-summary"
             element={
               <ProtectedRoute allowedRoles={['ROLE_HR', 'ROLE_ADMIN']}>
@@ -172,14 +161,6 @@ export const App = () => {
             element={
               <ProtectedRoute allowedRoles={['ROLE_STUDENT']}>
                 <StudentScheduleView />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/student/attendance"
-            element={
-              <ProtectedRoute allowedRoles={['ROLE_STUDENT']}>
-                <StudentAttendanceView />
               </ProtectedRoute>
             }
           />

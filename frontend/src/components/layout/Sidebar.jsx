@@ -13,7 +13,6 @@ import {
   FileSignature,
   ClipboardCheck,
   BarChart3,
-  Clock,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
@@ -58,13 +57,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       badge: null,
     },
     {
-      title: 'Báo Cáo Chấm Công',
-      path: '/hr/attendance-reports',
-      icon: ClipboardCheck,
-      roles: ['ROLE_ADMIN', 'ROLE_HR'],
-      badge: null,
-    },
-    {
       title: 'Hợp Đồng Thực Tập',
       path: '/hr/contracts',
       icon: FileSignature,
@@ -96,13 +88,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       title: 'Lịch Thực Tập',
       path: '/student/schedule',
       icon: CalendarDays,
-      roles: ['ROLE_STUDENT'],
-      badge: null,
-    },
-    {
-      title: 'Chấm Công & Giờ Làm',
-      path: '/student/attendance',
-      icon: Clock,
       roles: ['ROLE_STUDENT'],
       badge: null,
     },
