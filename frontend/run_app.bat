@@ -10,7 +10,7 @@ echo        HE THONG SO HOA & QUAN LY THUC TAP SINH (SPRINT 2)
 echo ===============================================================================
 echo.
 echo [1/3] Dang khoi dong Backend ASP.NET Core...
-start "Backend - ASP.NET Core" cmd /k "cd backend && dotnet run --urls=http://localhost:5000"
+start "Backend - ASP.NET Core" powershell -NoExit -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\backend\run_backend.ps1"
 
 echo [2/3] Dang khoi dong Frontend React Vite...
 start "Frontend - React Vite" cmd /k "cd frontend && npm run dev"
@@ -28,8 +28,8 @@ echo ===========================================================================
 echo  * Giao dien Dang nhap (Frontend):   http://localhost:5173/login
 echo  * Tai lieu API (Swagger Docs):       http://localhost:5000/swagger
 echo.
-echo Kiem tra hai terminal Backend va Frontend de xac nhan tien trinh da khoi dong.
-echo Cau hinh MySQL va JWT qua .NET User Secrets truoc khi chay backend.
+echo Backend doc backend/.env (neu da dien) va .NET User Secrets; kiem tra hai terminal de xac nhan tien trinh.
+echo Cau hinh backend/.env hoac .NET User Secrets truoc khi chay backend.
 echo Vui long khong dong cac cua so Backend va Frontend.
 echo Nhan phim bat ky de dong console dieu khien nay...
 pause >nul

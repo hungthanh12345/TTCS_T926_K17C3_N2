@@ -35,10 +35,7 @@ namespace InternshipManagementApi.Controllers
             if (!await _db.Students.AnyAsync(student => student.Id == studentId))
                 return NotFound(ApiResponse.Fail("Student registration was not found."));
 
-            var documents = await QueryDocumentResponses(studentId)
-                .OrderBy(document => document.DocumentType)
-                .ThenByDescending(document => document.UploadedAt)
-                .ToListAsync();
+            var documents = await QueryDocumentResponses(studentId).ToListAsync();
 
             return Ok(ApiResponse<IEnumerable<HrStudentDocumentResponse>>.Ok(documents));
         }
@@ -171,13 +168,14 @@ namespace InternshipManagementApi.Controllers
             return Conflict(ApiResponse.Fail("The document changed during review. Refresh and try again."));
         }
 
-        private IQueryable<HrStudentDocumentResponse> QueryDocumentResponses(int studentId)
+        private IQueryable<HrStudentDocumentResponse> QueryDocumentResponses(int studentId, int? documentId = null)
         {
             return from document in _db.StudentDocuments.AsNoTracking()
                    join reviewer in _db.Users.AsNoTracking()
                        on document.ReviewedByUserId equals (int?)reviewer.Id into reviewers
                    from reviewer in reviewers.DefaultIfEmpty()
-                   where document.StudentId == studentId
+                   where document.StudentId == studentId && (!documentId.HasValue || document.Id == documentId.Value)
+                   orderby document.DocumentType, document.UploadedAt descending
                    select new HrStudentDocumentResponse(
                        document.Id,
                        document.DocumentType,
@@ -194,8 +192,7 @@ namespace InternshipManagementApi.Controllers
 
         private Task<HrStudentDocumentResponse?> FindDocumentResponseAsync(int studentId, int documentId)
         {
-            return QueryDocumentResponses(studentId)
-                .SingleOrDefaultAsync(document => document.Id == documentId);
+            return QueryDocumentResponses(studentId, documentId).SingleOrDefaultAsync();
         }
 
         private static string? NormalizeRejectionReason(string? reason)

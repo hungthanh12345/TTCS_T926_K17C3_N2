@@ -11,25 +11,10 @@ import {
   ShieldCheck,
   CheckCircle2,
   Loader2,
-  UserRound,
-  Crown,
-  UsersRound,
-  BriefcaseBusiness,
-  GraduationCap,
 } from 'lucide-react';
 
-const DEMO_PASSWORD = import.meta.env.DEV ? 'Admin@123' : null;
-const DEMO_ACCOUNTS = import.meta.env.DEV
-  ? [
-      { label: 'Admin', role: 'ROLE_ADMIN', email: 'admin@gmail.com', Icon: Crown },
-      { label: 'HR', role: 'ROLE_HR', email: 'customer.hr@company.com', Icon: UsersRound },
-      { label: 'Mentor', role: 'ROLE_MENTOR', email: 'tung.nk@gmail.com', Icon: BriefcaseBusiness },
-      { label: 'Sinh viên', role: 'ROLE_STUDENT', email: 'hung.nt@gmail.com', Icon: GraduationCap },
-    ]
-  : [];
-
 const ROLE_ACCESS_PATHS = {
-  ROLE_ADMIN: ['/admin/users', '/hr/students', '/hr/mentors', '/hr/programs', '/hr/internship-summary'],
+  ROLE_ADMIN: ['/admin/users', '/hr/students', '/hr/mentors', '/hr/programs', '/hr/internship-summary', '/hr/contracts', '/hr/work-schedules', '/hr/allowances', '/hr/support-requests'],
   ROLE_HR: ['/hr/'],
   ROLE_MENTOR: ['/mentor/'],
   ROLE_STUDENT: ['/student/'],
@@ -109,8 +94,8 @@ export const LoginView = () => {
 
     if (!formData.password) {
       errs.password = 'Vui lòng nhập mật khẩu';
-    } else if (formData.password.length < 4) {
-      errs.password = 'Mật khẩu phải có ít nhất 4 ký tự';
+    } else if (formData.password.length < 6) {
+      errs.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
 
     setErrors(errs);
@@ -330,54 +315,6 @@ export const LoginView = () => {
               )}
             </button>
           </form>
-
-          {/* Chọn nhanh tài khoản mẫu; đăng nhập vẫn xác thực qua API như bình thường */}
-          {import.meta.env.DEV && (
-            <section className="rounded-2xl border border-slate-700/80 bg-slate-950/40 p-3" aria-labelledby="quick-login-title">
-              <div className="flex items-center gap-2">
-                <UserRound className="h-4 w-4 text-indigo-300" />
-                <h3 id="quick-login-title" className="text-sm font-semibold text-slate-200">
-                  Tài Khoản Demo Nhanh
-                </h3>
-              </div>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                Chọn một vai trò để điền thông tin vào biểu mẫu.
-              </p>
-              <div className="mt-2 grid grid-cols-1 gap-1.5 min-[560px]:grid-cols-2">
-                {DEMO_ACCOUNTS.map((account) => (
-                  <button
-                    key={account.email}
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => {
-                      setFormData((current) => ({
-                        ...current,
-                        email: account.email,
-                        password: DEMO_PASSWORD,
-                      }));
-                      setErrors((current) => ({ ...current, email: null }));
-                      document.getElementById('login-password')?.focus();
-                    }}
-                    aria-label={`Chọn ${account.label}, ${account.role}, ${account.email}`}
-                    className="group flex min-h-[62px] items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/70 px-2.5 py-1.5 text-left transition-all hover:border-indigo-400/70 hover:bg-indigo-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-indigo-400/20 bg-indigo-400/10 text-indigo-200 transition-colors group-hover:bg-indigo-400/20">
-                      <account.Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-semibold text-slate-100">{account.label}</span>
-                      <span className="mt-0.5 block truncate text-[9px] font-normal text-slate-400" title={account.email}>
-                        {account.email}
-                      </span>
-                      <span className="mt-0.5 inline-flex rounded-md border border-indigo-400/20 bg-indigo-400/10 px-1 py-0.5 text-[8px] font-semibold tracking-wide text-indigo-200">
-                        {account.role}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
 
           <p className="text-center text-sm text-slate-400">
             Bạn chưa có tài khoản?{' '}

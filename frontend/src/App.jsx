@@ -20,6 +20,15 @@ import StudentScheduleView from './views/student/StudentScheduleView';
 import HrInternshipSummaryView from './views/hr/HrInternshipSummaryView';
 import ContractManagementView from './views/hr/ContractManagementView';
 import LandingView from './views/common/LandingView';
+import StudentAttendanceView from './views/student/StudentAttendanceView';
+import StudentLeaveRequestsView from './views/student/StudentLeaveRequestsView';
+import StudentAllowanceHistoryView from './views/student/StudentAllowanceHistoryView';
+import StudentSupportRequestsView from './views/student/StudentSupportRequestsView';
+import AttendanceReportView from './views/hr/AttendanceReportView';
+import WorkSchedulesView from './views/hr/WorkSchedulesView';
+import LeaveRequestsManagementView from './views/hr/LeaveRequestsManagementView';
+import AllowancesManagementView from './views/hr/AllowancesManagementView';
+import SupportRequestsManagementView from './views/hr/SupportRequestsManagementView';
 
 export const App = () => {
   return (
@@ -136,6 +145,12 @@ export const App = () => {
             }
           />
 
+          <Route path="/hr/attendance-reports" element={<ProtectedRoute allowedRoles={['ROLE_HR']}><AttendanceReportView /></ProtectedRoute>} />
+          <Route path="/hr/work-schedules" element={<ProtectedRoute allowedRoles={['ROLE_HR', 'ROLE_ADMIN']}><WorkSchedulesView /></ProtectedRoute>} />
+          <Route path="/hr/leave-requests" element={<ProtectedRoute allowedRoles={['ROLE_HR']}><LeaveRequestsManagementView /></ProtectedRoute>} />
+          <Route path="/hr/allowances" element={<ProtectedRoute allowedRoles={['ROLE_HR', 'ROLE_ADMIN']}><AllowancesManagementView /></ProtectedRoute>} />
+          <Route path="/hr/support-requests" element={<ProtectedRoute allowedRoles={['ROLE_HR', 'ROLE_ADMIN']}><SupportRequestsManagementView /></ProtectedRoute>} />
+
           {/* Mentor Supervisory View */}
           <Route
             path="/mentor/students"
@@ -164,6 +179,10 @@ export const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['ROLE_STUDENT']}><StudentAttendanceView /></ProtectedRoute>} />
+          <Route path="/student/leave-requests" element={<ProtectedRoute allowedRoles={['ROLE_STUDENT']}><StudentLeaveRequestsView /></ProtectedRoute>} />
+          <Route path="/student/allowance-history" element={<ProtectedRoute allowedRoles={['ROLE_STUDENT']}><StudentAllowanceHistoryView /></ProtectedRoute>} />
+          <Route path="/student/support-requests" element={<ProtectedRoute allowedRoles={['ROLE_STUDENT']}><StudentSupportRequestsView /></ProtectedRoute>} />
           <Route path="/student/dashboard" element={<Navigate to="/student/profile" replace />} />
 
           {/* Fallback 404 Route */}

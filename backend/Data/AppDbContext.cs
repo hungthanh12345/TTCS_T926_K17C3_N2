@@ -24,6 +24,15 @@ namespace InternshipManagementApi.Data
         public DbSet<UserNotification> Notifications => Set<UserNotification>();
         public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
         public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+        public DbSet<Attendance> Attendances => Set<Attendance>();
+        public DbSet<StudentGroup> StudentGroups => Set<StudentGroup>();
+        public DbSet<StudentGroupMembership> StudentGroupMemberships => Set<StudentGroupMembership>();
+        public DbSet<WorkSchedule> WorkSchedules => Set<WorkSchedule>();
+        public DbSet<WorkScheduleDay> WorkScheduleDays => Set<WorkScheduleDay>();
+        public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
+        public DbSet<Allowance> Allowances => Set<Allowance>();
+        public DbSet<AllowancePayment> AllowancePayments => Set<AllowancePayment>();
+        public DbSet<SupportRequest> SupportRequests => Set<SupportRequest>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -206,8 +215,11 @@ namespace InternshipManagementApi.Data
             modelBuilder.Entity<InternshipContract>(entity =>
             {
                 entity.ToTable("internship_contracts", table =>
+                {
+                    table.ExcludeFromMigrations();
                     table.HasCheckConstraint("chk_internship_contracts_status",
-                        "`status` IN ('PENDING_CONFIRMATION', 'CONFIRMED', 'CANCELLED')"));
+                        "`status` IN ('PENDING_CONFIRMATION', 'CONFIRMED', 'CANCELLED')");
+                });
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
                 entity.Property(e => e.StudentId).HasColumnName("student_id").IsRequired();
@@ -235,7 +247,7 @@ namespace InternshipManagementApi.Data
                 entity.HasOne(e => e.Student)
                     .WithMany()
                     .HasForeignKey(e => e.StudentId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne<User>()
                     .WithMany()
                     .HasForeignKey(e => e.ConfirmedByUserId)
@@ -438,6 +450,205 @@ namespace InternshipManagementApi.Data
                     .WithMany()
                     .HasForeignKey(notification => notification.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Attendance>(entity =>
+            {
+                entity.ToTable("attendances", table =>
+                {
+                    table.HasCheckConstraint("ck_attendances_status", "`status` IN ('CHECKED_IN', 'COMPLETED')");
+                    table.HasCheckConstraint("ck_attendances_duration_nonnegative", "`duration_minutes` IS NULL OR `duration_minutes` >= 0");
+                    table.HasCheckConstraint("ck_attendances_checkout_order", "`check_out_time` IS NULL OR `check_out_time` >= `check_in_time`");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(item => item.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(item => item.Date).HasColumnName("date").HasColumnType("date").IsRequired();
+                entity.Property(item => item.CheckInTime).HasColumnName("check_in_time").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(item => item.CheckOutTime).HasColumnName("check_out_time").HasColumnType("datetime(6)");
+                entity.Property(item => item.DurationMinutes).HasColumnName("duration_minutes");
+                entity.Property(item => item.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(item => item.Notes).HasColumnName("notes").HasMaxLength(500);
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(item => new { item.StudentId, item.Date }).IsUnique();
+                entity.HasIndex(item => item.Date);
+                entity.HasOne(item => item.Student).WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<StudentGroup>(entity =>
+            {
+                entity.ToTable("student_groups", table => table.HasCheckConstraint(
+                    "ck_student_groups_status", "`status` IN ('ACTIVE', 'INACTIVE')"));
+                entity.HasKey(group => group.Id);
+                entity.Property(group => group.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(group => group.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(group => group.Description).HasColumnName("description").HasMaxLength(500);
+                entity.Property(group => group.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(group => group.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(group => group.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(group => group.Name).IsUnique();
+                entity.HasIndex(group => group.Status);
+            });
+
+            modelBuilder.Entity<StudentGroupMembership>(entity =>
+            {
+                entity.ToTable("student_group_memberships");
+                entity.HasKey(membership => new { membership.StudentGroupId, membership.StudentId });
+                entity.Property(membership => membership.StudentId).HasColumnName("student_id");
+                entity.Property(membership => membership.StudentGroupId).HasColumnName("student_group_id").IsRequired();
+                entity.Property(membership => membership.JoinedAt).HasColumnName("joined_at").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(membership => membership.StudentGroupId);
+                entity.HasIndex(membership => membership.StudentId);
+                entity.HasOne(membership => membership.Student).WithMany().HasForeignKey(membership => membership.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(membership => membership.Group).WithMany(group => group.Memberships)
+                    .HasForeignKey(membership => membership.StudentGroupId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<WorkSchedule>(entity =>
+            {
+                entity.ToTable("work_schedules", table =>
+                {
+                    table.HasCheckConstraint("ck_work_schedules_target", "(`target_type` = 'STUDENT' AND `student_id` IS NOT NULL AND `student_group_id` IS NULL) OR (`target_type` = 'GROUP' AND `student_id` IS NULL AND `student_group_id` IS NOT NULL)");
+                    table.HasCheckConstraint("ck_work_schedules_status", "`status` IN ('ACTIVE', 'INACTIVE')");
+                });
+                entity.HasKey(schedule => schedule.Id);
+                entity.Property(schedule => schedule.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(schedule => schedule.Name).HasColumnName("name").HasMaxLength(120).IsRequired();
+                entity.Property(schedule => schedule.TargetType).HasColumnName("target_type").HasMaxLength(20).IsRequired();
+                entity.Property(schedule => schedule.StudentGroupId).HasColumnName("student_group_id");
+                entity.Property(schedule => schedule.StudentId).HasColumnName("student_id");
+                entity.Property(schedule => schedule.IsFlexible).HasColumnName("is_flexible").IsRequired();
+                entity.Property(schedule => schedule.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(schedule => schedule.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(schedule => schedule.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(schedule => schedule.StudentGroupId);
+                entity.HasIndex(schedule => schedule.StudentId);
+                entity.HasOne(schedule => schedule.Group).WithMany(group => group.WorkSchedules)
+                    .HasForeignKey(schedule => schedule.StudentGroupId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(schedule => schedule.Student).WithMany().HasForeignKey(schedule => schedule.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<WorkScheduleDay>(entity =>
+            {
+                entity.ToTable("work_schedule_days", table =>
+                {
+                    table.HasCheckConstraint("ck_work_schedule_days_weekday", "`day_of_week` BETWEEN 0 AND 6");
+                    table.HasCheckConstraint("ck_work_schedule_days_time_order", "`start_time` < `end_time`");
+                    table.HasCheckConstraint("ck_work_schedule_days_break_pair", "(`break_start` IS NULL AND `break_end` IS NULL) OR (`break_start` IS NOT NULL AND `break_end` IS NOT NULL AND `break_start` < `break_end` AND `break_start` >= `start_time` AND `break_end` <= `end_time`)");
+                });
+                entity.HasKey(day => day.Id);
+                entity.Property(day => day.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(day => day.WorkScheduleId).HasColumnName("work_schedule_id").IsRequired();
+                entity.Property(day => day.DayOfWeek).HasColumnName("day_of_week").IsRequired();
+                entity.Property(day => day.StartTime).HasColumnName("start_time").HasColumnType("time(6)").IsRequired();
+                entity.Property(day => day.EndTime).HasColumnName("end_time").HasColumnType("time(6)").IsRequired();
+                entity.Property(day => day.BreakStart).HasColumnName("break_start").HasColumnType("time(6)");
+                entity.Property(day => day.BreakEnd).HasColumnName("break_end").HasColumnType("time(6)");
+                entity.HasIndex(day => new { day.WorkScheduleId, day.DayOfWeek }).IsUnique();
+                entity.HasOne(day => day.WorkSchedule).WithMany(schedule => schedule.Days)
+                    .HasForeignKey(day => day.WorkScheduleId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<LeaveRequest>(entity =>
+            {
+                entity.ToTable("leave_requests", table =>
+                {
+                    table.HasCheckConstraint("ck_leave_requests_date_order", "`end_date` >= `start_date`");
+                    table.HasCheckConstraint("ck_leave_requests_status", "`status` IN ('PENDING', 'APPROVED', 'REJECTED')");
+                });
+                entity.HasKey(request => request.Id);
+                entity.Property(request => request.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(request => request.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(request => request.StartDate).HasColumnName("start_date").HasColumnType("date").IsRequired();
+                entity.Property(request => request.EndDate).HasColumnName("end_date").HasColumnType("date").IsRequired();
+                entity.Property(request => request.Reason).HasColumnName("reason").HasMaxLength(2000).IsRequired();
+                entity.Property(request => request.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(request => request.ReviewedByUserId).HasColumnName("reviewed_by_user_id");
+                entity.Property(request => request.ReviewedAt).HasColumnName("reviewed_at").HasColumnType("datetime(6)");
+                entity.Property(request => request.RejectionReason).HasColumnName("rejection_reason").HasMaxLength(1000);
+                entity.Property(request => request.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(request => request.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(request => new { request.StudentId, request.Status, request.StartDate, request.EndDate });
+                entity.HasIndex(request => request.ReviewedByUserId);
+                entity.HasOne(request => request.Student).WithMany().HasForeignKey(request => request.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<User>().WithMany().HasForeignKey(request => request.ReviewedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<Allowance>(entity =>
+            {
+                entity.ToTable("allowances", table =>
+                {
+                    table.HasCheckConstraint("ck_allowances_amount", "`amount` > 0 AND `paid_amount` >= 0 AND `paid_amount` <= `amount`");
+                    table.HasCheckConstraint("ck_allowances_period", "`period_end` >= `period_start`");
+                    table.HasCheckConstraint("ck_allowances_status", "`status` IN ('ACTIVE', 'CANCELLED')");
+                });
+                entity.HasKey(allowance => allowance.Id);
+                entity.Property(allowance => allowance.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(allowance => allowance.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(allowance => allowance.AllowanceType).HasColumnName("allowance_type").HasMaxLength(100).IsRequired();
+                entity.Property(allowance => allowance.Description).HasColumnName("description").HasMaxLength(1000);
+                entity.Property(allowance => allowance.Amount).HasColumnName("amount").HasPrecision(12, 2).IsRequired();
+                entity.Property(allowance => allowance.PaidAmount).HasColumnName("paid_amount").HasPrecision(12, 2).HasDefaultValue(0m).IsRequired();
+                entity.Property(allowance => allowance.PeriodStart).HasColumnName("period_start").HasColumnType("date").IsRequired();
+                entity.Property(allowance => allowance.PeriodEnd).HasColumnName("period_end").HasColumnType("date").IsRequired();
+                entity.Property(allowance => allowance.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(allowance => allowance.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(allowance => allowance.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(allowance => new { allowance.StudentId, allowance.AllowanceType, allowance.PeriodStart, allowance.PeriodEnd }).IsUnique();
+                entity.HasIndex(allowance => new { allowance.StudentId, allowance.PeriodStart, allowance.PeriodEnd });
+                entity.HasOne(allowance => allowance.Student).WithMany().HasForeignKey(allowance => allowance.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<AllowancePayment>(entity =>
+            {
+                entity.ToTable("allowance_payments", table => table.HasCheckConstraint(
+                    "ck_allowance_payments_amount", "`amount` > 0"));
+                entity.HasKey(payment => payment.Id);
+                entity.Property(payment => payment.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(payment => payment.AllowanceId).HasColumnName("allowance_id").IsRequired();
+                entity.Property(payment => payment.Amount).HasColumnName("amount").HasPrecision(12, 2).IsRequired();
+                entity.Property(payment => payment.PaidAt).HasColumnName("paid_at").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(payment => payment.RecordedByUserId).HasColumnName("recorded_by_user_id").IsRequired();
+                entity.Property(payment => payment.Reference).HasColumnName("reference").HasMaxLength(150);
+                entity.Property(payment => payment.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(payment => new { payment.AllowanceId, payment.PaidAt });
+                entity.HasIndex(payment => payment.RecordedByUserId);
+                entity.HasOne(payment => payment.Allowance).WithMany(allowance => allowance.Payments)
+                    .HasForeignKey(payment => payment.AllowanceId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<User>().WithMany().HasForeignKey(payment => payment.RecordedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SupportRequest>(entity =>
+            {
+                entity.ToTable("support_requests", table => table.HasCheckConstraint(
+                    "ck_support_requests_status", "`status` IN ('PENDING', 'IN_PROGRESS', 'RESOLVED')"));
+                entity.HasKey(request => request.Id);
+                entity.Property(request => request.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(request => request.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(request => request.Subject).HasColumnName("subject").HasMaxLength(160).IsRequired();
+                entity.Property(request => request.Description).HasColumnName("description").HasMaxLength(5000).IsRequired();
+                entity.Property(request => request.Category).HasColumnName("category").HasMaxLength(80).IsRequired();
+                entity.Property(request => request.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(request => request.Response).HasColumnName("response").HasMaxLength(4000);
+                entity.Property(request => request.HandledByUserId).HasColumnName("handled_by_user_id");
+                entity.Property(request => request.HandledAt).HasColumnName("handled_at").HasColumnType("datetime(6)");
+                entity.Property(request => request.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
+                entity.Property(request => request.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(request => new { request.Status, request.CreatedAt });
+                entity.HasIndex(request => new { request.StudentId, request.CreatedAt });
+                entity.HasIndex(request => request.HandledByUserId);
+                entity.HasOne(request => request.Student).WithMany().HasForeignKey(request => request.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<User>().WithMany().HasForeignKey(request => request.HandledByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
 

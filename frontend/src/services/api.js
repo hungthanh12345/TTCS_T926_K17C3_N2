@@ -12,6 +12,10 @@ const api = axios.create({
 // Request Interceptor: Attach JWT Bearer token
 api.interceptors.request.use(
   (config) => {
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      config.headers.setContentType(false);
+    }
+
     const token = sessionStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
