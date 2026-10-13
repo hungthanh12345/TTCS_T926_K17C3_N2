@@ -22,6 +22,193 @@ namespace InternshipManagementApi.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.Allowance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AllowanceType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("allowance_type");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<decimal>("PaidAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("paid_amount");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date")
+                        .HasColumnName("period_end");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date")
+                        .HasColumnName("period_start");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId", "PeriodStart", "PeriodEnd");
+
+                    b.HasIndex("StudentId", "AllowanceType", "PeriodStart", "PeriodEnd")
+                        .IsUnique();
+
+                    b.ToTable("allowances", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_allowances_amount", "`amount` > 0 AND `paid_amount` >= 0 AND `paid_amount` <= `amount`");
+
+                            t.HasCheckConstraint("ck_allowances_period", "`period_end` >= `period_start`");
+
+                            t.HasCheckConstraint("ck_allowances_status", "`status` IN ('ACTIVE', 'CANCELLED')");
+                        });
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.AllowancePayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AllowanceId")
+                        .HasColumnType("int")
+                        .HasColumnName("allowance_id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("PaidAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("paid_at");
+
+                    b.Property<int>("RecordedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("recorded_by_user_id");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("reference");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.HasIndex("AllowanceId", "PaidAt");
+
+                    b.ToTable("allowance_payments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_allowance_payments_amount", "`amount` > 0");
+                        });
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.Attendance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CheckInTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("check_in_time");
+
+                    b.Property<DateTime?>("CheckOutTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("check_out_time");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("int")
+                        .HasColumnName("duration_minutes");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date");
+
+                    b.HasIndex("StudentId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("attendances", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_attendances_checkout_order", "`check_out_time` IS NULL OR `check_out_time` >= `check_in_time`");
+
+                            t.HasCheckConstraint("ck_attendances_duration_nonnegative", "`duration_minutes` IS NULL OR `duration_minutes` >= 0");
+
+                            t.HasCheckConstraint("ck_attendances_status", "`status` IN ('CHECKED_IN', 'COMPLETED')");
+                        });
+                });
+
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.Department", b =>
                 {
                     b.Property<int>("Id")
@@ -207,6 +394,117 @@ namespace InternshipManagementApi.Migrations
                         });
                 });
 
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.InternshipContract", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("confirmed_at");
+
+                    b.Property<int?>("ConfirmedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("confirmed_by_user_id");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("char(64)")
+                        .HasColumnName("content_hash")
+                        .IsFixedLength();
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("ContractNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("contract_number");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<byte[]>("FileContent")
+                        .HasColumnType("longblob")
+                        .HasColumnName("file_content");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<DateTime?>("FileUploadedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("file_uploaded_at");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("issued_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<long>("SizeBytes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasDefaultValue("PENDING_CONFIRMATION")
+                        .HasColumnName("status");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlComputedColumn(b.Property<DateTime>("UpdatedAt"));
+
+                    b.Property<int?>("UploadedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("uploaded_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfirmedByUserId");
+
+                    b.HasIndex("ContractNumber")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StudentId")
+                        .IsUnique();
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.ToTable("internship_contracts", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+
+                            t.HasCheckConstraint("chk_internship_contracts_status", "`status` IN ('PENDING_CONFIRMATION', 'CONFIRMED', 'CANCELLED')");
+                        });
+                });
+
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.InternshipEvaluation", b =>
                 {
                     b.Property<int>("Id")
@@ -389,6 +687,74 @@ namespace InternshipManagementApi.Migrations
                     b.HasIndex("MentorId", "StudentId");
 
                     b.ToTable("internship_tasks", (string)null);
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.LeaveRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("StudentId", "Status", "StartDate", "EndDate");
+
+                    b.ToTable("leave_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_leave_requests_date_order", "`end_date` >= `start_date`");
+
+                            t.HasCheckConstraint("ck_leave_requests_status", "`status` IN ('PENDING', 'APPROVED', 'REJECTED')");
+                        });
                 });
 
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.Mentor", b =>
@@ -715,6 +1081,148 @@ namespace InternshipManagementApi.Migrations
                     b.ToTable("student_documents", (string)null);
                 });
 
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.StudentGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("student_groups", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_student_groups_status", "`status` IN ('ACTIVE', 'INACTIVE')");
+                        });
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.StudentGroupMembership", b =>
+                {
+                    b.Property<int>("StudentGroupId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_group_id");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("joined_at");
+
+                    b.HasKey("StudentGroupId", "StudentId");
+
+                    b.HasIndex("StudentGroupId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("student_group_memberships", (string)null);
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.SupportRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("varchar(5000)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime?>("HandledAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("handled_at");
+
+                    b.Property<int?>("HandledByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("handled_by_user_id");
+
+                    b.Property<string>("Response")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)")
+                        .HasColumnName("response");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_id");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)")
+                        .HasColumnName("subject");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HandledByUserId");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("StudentId", "CreatedAt");
+
+                    b.ToTable("support_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_support_requests_status", "`status` IN ('PENDING', 'IN_PROGRESS', 'RESOLVED')");
+                        });
+                });
+
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -895,6 +1403,154 @@ namespace InternshipManagementApi.Migrations
                     b.ToTable("weekly_reports", (string)null);
                 });
 
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.WorkSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsFlexible")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_flexible");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int?>("StudentGroupId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_group_id");
+
+                    b.Property<int?>("StudentId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_id");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("target_type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentGroupId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("work_schedules", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_work_schedules_status", "`status` IN ('ACTIVE', 'INACTIVE')");
+
+                            t.HasCheckConstraint("ck_work_schedules_target", "(`target_type` = 'STUDENT' AND `student_id` IS NOT NULL AND `student_group_id` IS NULL) OR (`target_type` = 'GROUP' AND `student_id` IS NULL AND `student_group_id` IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.WorkScheduleDay", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<TimeSpan?>("BreakEnd")
+                        .HasColumnType("time(6)")
+                        .HasColumnName("break_end");
+
+                    b.Property<TimeSpan?>("BreakStart")
+                        .HasColumnType("time(6)")
+                        .HasColumnName("break_start");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int")
+                        .HasColumnName("day_of_week");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time(6)")
+                        .HasColumnName("end_time");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time(6)")
+                        .HasColumnName("start_time");
+
+                    b.Property<int>("WorkScheduleId")
+                        .HasColumnType("int")
+                        .HasColumnName("work_schedule_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkScheduleId", "DayOfWeek")
+                        .IsUnique();
+
+                    b.ToTable("work_schedule_days", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_work_schedule_days_break_pair", "(`break_start` IS NULL AND `break_end` IS NULL) OR (`break_start` IS NOT NULL AND `break_end` IS NOT NULL AND `break_start` < `break_end` AND `break_start` >= `start_time` AND `break_end` <= `end_time`)");
+
+                            t.HasCheckConstraint("ck_work_schedule_days_time_order", "`start_time` < `end_time`");
+
+                            t.HasCheckConstraint("ck_work_schedule_days_weekday", "`day_of_week` BETWEEN 0 AND 6");
+                        });
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.Allowance", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.AllowancePayment", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.Allowance", "Allowance")
+                        .WithMany("Payments")
+                        .HasForeignKey("AllowanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Allowance");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.Attendance", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.EmailLog", b =>
                 {
                     b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
@@ -912,6 +1568,27 @@ namespace InternshipManagementApi.Migrations
                     b.Navigation("Student");
 
                     b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.InternshipContract", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ConfirmedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.InternshipEvaluation", b =>
@@ -958,6 +1635,22 @@ namespace InternshipManagementApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Mentor");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.LeaveRequest", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Student");
                 });
@@ -1037,6 +1730,41 @@ namespace InternshipManagementApi.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.StudentGroupMembership", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.StudentGroup", "Group")
+                        .WithMany("Memberships")
+                        .HasForeignKey("StudentGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.SupportRequest", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("HandledByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.User", b =>
                 {
                     b.HasOne("InternshipManagementApi.Data.Entities.Role", "Role")
@@ -1070,6 +1798,39 @@ namespace InternshipManagementApi.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.WorkSchedule", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.StudentGroup", "Group")
+                        .WithMany("WorkSchedules")
+                        .HasForeignKey("StudentGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.WorkScheduleDay", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.WorkSchedule", "WorkSchedule")
+                        .WithMany("Days")
+                        .HasForeignKey("WorkScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkSchedule");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.Allowance", b =>
+                {
+                    b.Navigation("Payments");
+                });
+
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.Department", b =>
                 {
                     b.Navigation("Programs");
@@ -1090,6 +1851,13 @@ namespace InternshipManagementApi.Migrations
                     b.Navigation("Users");
                 });
 
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.StudentGroup", b =>
+                {
+                    b.Navigation("Memberships");
+
+                    b.Navigation("WorkSchedules");
+                });
+
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.User", b =>
                 {
                     b.Navigation("Mentor");
@@ -1100,6 +1868,11 @@ namespace InternshipManagementApi.Migrations
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.WeeklyReport", b =>
                 {
                     b.Navigation("MentorFeedback");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.WorkSchedule", b =>
+                {
+                    b.Navigation("Days");
                 });
 #pragma warning restore 612, 618
         }
