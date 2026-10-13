@@ -1,4 +1,4 @@
-START TRANSACTION;
+﻿START TRANSACTION;
 
 CREATE TABLE `allowances` (
     `id` int NOT NULL AUTO_INCREMENT,
@@ -180,3 +180,4 @@ INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
 VALUES ('20261012053013_Sprint4Workforce', '8.0.2');
 
 COMMIT;
+
