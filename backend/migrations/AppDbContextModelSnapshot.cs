@@ -1723,8 +1723,9 @@ namespace InternshipManagementApi.Migrations
                     b.HasOne("InternshipManagementApi.Data.Entities.Mentor", "Mentor")
                         .WithMany()
                         .HasForeignKey("MentorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sprint2_internship_tasks_mentor");
 
                     b.HasOne("InternshipManagementApi.Data.Entities.Student", "Student")
                         .WithMany()
