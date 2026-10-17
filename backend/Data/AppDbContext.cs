@@ -355,7 +355,8 @@ namespace InternshipManagementApi.Data
                 entity.HasOne(task => task.Mentor)
                     .WithMany()
                     .HasForeignKey(task => task.MentorId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("fk_sprint2_internship_tasks_mentor");
                 entity.HasOne(task => task.Student)
                     .WithMany()
                     .HasForeignKey(task => task.StudentId)
