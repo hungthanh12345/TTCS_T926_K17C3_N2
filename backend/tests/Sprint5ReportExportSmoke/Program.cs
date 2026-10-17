@@ -342,7 +342,71 @@ Assert(completionCounts.EligibleCount == 2, "Only approved active/ended records 
 Assert(completionCounts.CompletedCount == 1, "Only eligible HR-confirmed records belong in the numerator.");
 Assert(!ProgramCompletionRules.IsCompletionConfirmed(true, StudentProgramAuditEvent.CompletionRevoked), "A revoked completion must not count.");
 
+Assert(ProgramAssignmentAuditPolicy.GetAffectedProgramIds(7, 7).Count == 0,
+    "An unchanged ProgramId must not reset participation or completion history.");
+Assert(ProgramAssignmentAuditPolicy.GetAffectedProgramIds(7, 9).SequenceEqual(new[] { 7, 9 }),
+    "Changing A to B must reset both the previous and target program histories.");
+
+var assignmentHistory = new Dictionary<int, List<(string EventType, string? Status)>>
+{
+    [7] = new()
+    {
+        (StudentProgramAuditEvent.CompletionConfirmed, null),
+        (StudentProgramAuditEvent.ParticipationStatusChanged, ProgramParticipationStatus.Ended)
+    },
+    [9] = new()
+    {
+        (StudentProgramAuditEvent.CompletionConfirmed, null),
+        (StudentProgramAuditEvent.ParticipationStatusChanged, ProgramParticipationStatus.Active)
+    }
+};
+ApplyProgramAssignmentAuditPolicy(assignmentHistory, 7, 9);
+ApplyProgramAssignmentAuditPolicy(assignmentHistory, 9, 7);
+Assert(GetLatestCompletionAction(assignmentHistory[7]) == StudentProgramAuditEvent.CompletionRevoked,
+    "A to B to A must not reactivate A's earlier completion confirmation.");
+Assert(assignmentHistory[7].Last(item => item.EventType == StudentProgramAuditEvent.ParticipationStatusChanged).Status
+       == ProgramParticipationStatus.Unverified,
+    "Returning to A must require HR to classify participation again.");
+
+Assert(ProgramAssignmentAuditPolicy.GetAffectedProgramIds(null, 7).SequenceEqual(new[] { 7 }),
+    "Assigning a previously unassigned student to A must clear stale A history.");
+var nullToAHistory = new List<(string EventType, string? Status)>
+{
+    (StudentProgramAuditEvent.CompletionConfirmed, null),
+    (StudentProgramAuditEvent.ParticipationStatusChanged, ProgramParticipationStatus.Active)
+};
+ResetProgramAuditHistory(nullToAHistory);
+Assert(GetLatestCompletionAction(nullToAHistory) == StudentProgramAuditEvent.CompletionRevoked,
+    "NULL to A must not revive a stale confirmation already associated with A.");
+Assert(ProgramAssignmentAuditPolicy.GetAffectedProgramIds(7, null).SequenceEqual(new[] { 7 }),
+    "Removing a program assignment must reset its previous program history.");
+
 Console.WriteLine("Sprint 5 report export smoke tests passed.");
+
+static void ApplyProgramAssignmentAuditPolicy(
+    Dictionary<int, List<(string EventType, string? Status)>> history,
+    int? previousProgramId,
+    int? requestedProgramId)
+{
+    foreach (var programId in ProgramAssignmentAuditPolicy.GetAffectedProgramIds(previousProgramId, requestedProgramId))
+    {
+        if (!history.TryGetValue(programId, out var events))
+            history[programId] = events = new List<(string EventType, string? Status)>();
+        ResetProgramAuditHistory(events);
+    }
+}
+
+static void ResetProgramAuditHistory(List<(string EventType, string? Status)> events)
+{
+    if (GetLatestCompletionAction(events) == StudentProgramAuditEvent.CompletionConfirmed)
+        events.Add((StudentProgramAuditEvent.CompletionRevoked, null));
+    events.Add((StudentProgramAuditEvent.ParticipationStatusChanged, ProgramParticipationStatus.Unverified));
+}
+
+static string? GetLatestCompletionAction(List<(string EventType, string? Status)> events) =>
+    events.LastOrDefault(item =>
+        item.EventType is StudentProgramAuditEvent.CompletionConfirmed or StudentProgramAuditEvent.CompletionRevoked)
+        .EventType;
 
 static void Assert(bool condition, string message)
 {
