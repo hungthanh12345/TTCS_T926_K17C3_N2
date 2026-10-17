@@ -38,20 +38,10 @@ public sealed class WorkScheduleService : IWorkScheduleService
     public async Task<WorkScheduleDto> CreateAsync(WorkScheduleRequestDto request, CancellationToken cancellationToken)
     {
         Validate(request);
+        var recurrence = ResolveRecurrence(request, allowLegacy: false)!;
         await EnsureTargetExistsAsync(request, cancellationToken);
         var now = DateTime.UtcNow;
-        var schedule = new WorkSchedule
-        {
-            Name = request.Name.Trim(),
-            TargetType = request.TargetType,
-            StudentGroupId = request.StudentGroupId,
-            StudentId = request.StudentId,
-            IsFlexible = request.IsFlexible,
-            Status = request.Status,
-            CreatedAt = now,
-            UpdatedAt = now,
-            Days = request.Days.Select(ToEntity).ToList()
-        };
+        var schedule = CreateSchedule(request, recurrence, now);
         _db.WorkSchedules.Add(schedule);
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(schedule.Id, cancellationToken);
@@ -64,15 +54,36 @@ public sealed class WorkScheduleService : IWorkScheduleService
         var schedule = await _db.WorkSchedules.Include(item => item.Days)
             .SingleOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new NotFoundException("Work schedule was not found.");
+
+        var requestedRecurrence = ResolveRecurrence(request, allowLegacy: true);
+        var recurrence = requestedRecurrence ?? RecurrenceFrom(schedule);
+        var requestedDays = request.Days.Select(ToEntity).ToList();
+        var changesScheduleRules = ScheduleRulesChanged(schedule, request, requestedDays, recurrence);
+        if (changesScheduleRules && await HasAttendanceHistoryAsync(schedule, cancellationToken))
+        {
+            var tomorrowInVietnam = DateOnly.FromDateTime(VietnamTime.ToLocal(DateTime.UtcNow)).AddDays(1);
+            if (!recurrence.StartDate.HasValue || recurrence.StartDate.Value < tomorrowInVietnam)
+                throw new BadRequestException("Lịch đã có dữ liệu chấm công. Để giữ nguyên lịch sử, cấu hình mới phải bắt đầu từ ngày mai trở đi.");
+
+            var now = DateTime.UtcNow;
+            schedule.Status = "INACTIVE";
+            schedule.UpdatedAt = now;
+            var futureSchedule = CreateSchedule(request, recurrence, now, requestedDays);
+            _db.WorkSchedules.Add(futureSchedule);
+            await _db.SaveChangesAsync(cancellationToken);
+            return await GetAsync(futureSchedule.Id, cancellationToken);
+        }
+
         schedule.Name = request.Name.Trim();
         schedule.TargetType = request.TargetType;
         schedule.StudentGroupId = request.StudentGroupId;
         schedule.StudentId = request.StudentId;
         schedule.IsFlexible = request.IsFlexible;
         schedule.Status = request.Status;
+        ApplyRecurrence(schedule, recurrence);
         schedule.UpdatedAt = DateTime.UtcNow;
         _db.WorkScheduleDays.RemoveRange(schedule.Days);
-        schedule.Days = request.Days.Select(ToEntity).ToList();
+        schedule.Days = requestedDays;
         await _db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -81,8 +92,12 @@ public sealed class WorkScheduleService : IWorkScheduleService
     {
         var schedule = await _db.WorkSchedules.SingleOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new NotFoundException("Work schedule was not found.");
-        _db.WorkSchedules.Remove(schedule); // only owned day rows cascade; student/group history is retained.
-        await _db.SaveChangesAsync(cancellationToken);
+        if (schedule.Status != "INACTIVE")
+        {
+            schedule.Status = "INACTIVE";
+            schedule.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public async Task<IReadOnlyList<StudentGroupDto>> GetGroupsAsync(CancellationToken cancellationToken)
@@ -175,6 +190,90 @@ public sealed class WorkScheduleService : IWorkScheduleService
             throw new NotFoundException("Active student group was not found.");
     }
 
+    private static WorkSchedule CreateSchedule(
+        WorkScheduleRequestDto request,
+        WorkScheduleRecurrenceSettings recurrence,
+        DateTime now,
+        List<WorkScheduleDay>? days = null)
+    {
+        var schedule = new WorkSchedule
+        {
+            Name = request.Name.Trim(),
+            TargetType = request.TargetType,
+            StudentGroupId = request.StudentGroupId,
+            StudentId = request.StudentId,
+            IsFlexible = request.IsFlexible,
+            Status = request.Status,
+            CreatedAt = now,
+            UpdatedAt = now,
+            Days = days ?? request.Days.Select(ToEntity).ToList()
+        };
+        ApplyRecurrence(schedule, recurrence);
+        return schedule;
+    }
+
+    private static void ApplyRecurrence(WorkSchedule schedule, WorkScheduleRecurrenceSettings recurrence)
+    {
+        schedule.EffectiveStartDate = recurrence.StartDate;
+        schedule.RecurrenceType = recurrence.Type;
+        schedule.RecurrenceWeeks = recurrence.Weeks;
+        schedule.EffectiveEndDate = recurrence.EndDate;
+    }
+
+    private static WorkScheduleRecurrenceSettings RecurrenceFrom(WorkSchedule schedule) =>
+        new(schedule.EffectiveStartDate, schedule.RecurrenceType, schedule.RecurrenceWeeks, schedule.EffectiveEndDate);
+
+    private static WorkScheduleRecurrenceSettings? ResolveRecurrence(WorkScheduleRequestDto request, bool allowLegacy)
+    {
+        var noRecurrenceFields = !request.EffectiveStartDate.HasValue &&
+            string.IsNullOrWhiteSpace(request.RecurrenceType) && !request.RecurrenceWeeks.HasValue;
+        if (noRecurrenceFields)
+        {
+            if (allowLegacy) return null;
+            throw new BadRequestException("Vui lòng thiết lập ngày bắt đầu và kiểu lặp của lịch.");
+        }
+
+        if (WorkScheduleRecurrence.TryResolve(request.EffectiveStartDate, request.RecurrenceType,
+            request.RecurrenceWeeks, out var recurrence, out var error))
+            return recurrence;
+        throw new BadRequestException(error ?? "Thiết lập lặp lịch không hợp lệ.");
+    }
+
+    private static bool ScheduleRulesChanged(
+        WorkSchedule current,
+        WorkScheduleRequestDto request,
+        IReadOnlyList<WorkScheduleDay> requestedDays,
+        WorkScheduleRecurrenceSettings recurrence) =>
+        current.TargetType != request.TargetType || current.StudentId != request.StudentId ||
+        current.StudentGroupId != request.StudentGroupId || current.IsFlexible != request.IsFlexible ||
+        current.EffectiveStartDate != recurrence.StartDate || current.RecurrenceType != recurrence.Type ||
+        current.RecurrenceWeeks != recurrence.Weeks || current.EffectiveEndDate != recurrence.EndDate ||
+        !SameDays(current.Days, requestedDays);
+
+    private static bool SameDays(IEnumerable<WorkScheduleDay> current, IEnumerable<WorkScheduleDay> requested)
+    {
+        var existingDays = current.OrderBy(day => day.DayOfWeek).ToArray();
+        var requestedDays = requested.OrderBy(day => day.DayOfWeek).ToArray();
+        if (existingDays.Length != requestedDays.Length) return false;
+        return existingDays.Zip(requestedDays).All(pair =>
+            pair.First.DayOfWeek == pair.Second.DayOfWeek && pair.First.StartTime == pair.Second.StartTime &&
+            pair.First.EndTime == pair.Second.EndTime && pair.First.BreakStart == pair.Second.BreakStart &&
+            pair.First.BreakEnd == pair.Second.BreakEnd);
+    }
+
+    private async Task<bool> HasAttendanceHistoryAsync(WorkSchedule schedule, CancellationToken cancellationToken)
+    {
+        if (schedule.TargetType == WorkScheduleTargetType.Student && schedule.StudentId.HasValue)
+            return await _db.Attendances.AnyAsync(item => item.StudentId == schedule.StudentId.Value, cancellationToken);
+        if (schedule.TargetType == WorkScheduleTargetType.Group)
+        {
+            // Attendance rows do not reference a schedule, and removed memberships are not retained as history.
+            // Use a conservative version for group schedules once any attendance exists rather than risk rewriting history.
+            return await _db.Attendances.AnyAsync(cancellationToken);
+        }
+        return false;
+    }
+
     private static void Validate(WorkScheduleRequestDto request)
     {
         if (!string.Equals(request.TargetType, WorkScheduleTargetType.Student, StringComparison.Ordinal) &&
@@ -220,6 +319,10 @@ public sealed class WorkScheduleService : IWorkScheduleService
         Status = schedule.Status,
         CreatedAt = DateTime.SpecifyKind(schedule.CreatedAt, DateTimeKind.Utc),
         UpdatedAt = DateTime.SpecifyKind(schedule.UpdatedAt, DateTimeKind.Utc),
+        EffectiveStartDate = schedule.EffectiveStartDate,
+        RecurrenceType = schedule.RecurrenceType,
+        RecurrenceWeeks = schedule.RecurrenceWeeks,
+        EffectiveEndDate = schedule.EffectiveEndDate,
         Days = schedule.Days.OrderBy(day => day.DayOfWeek).Select(day => new WorkScheduleDayRequestDto
         {
             DayOfWeek = day.DayOfWeek, StartTime = day.StartTime, EndTime = day.EndTime,

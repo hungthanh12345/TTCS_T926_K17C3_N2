@@ -1416,6 +1416,14 @@ namespace InternshipManagementApi.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
+                    b.Property<DateOnly?>("EffectiveEndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_end_date");
+
+                    b.Property<DateOnly?>("EffectiveStartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_start_date");
+
                     b.Property<bool>("IsFlexible")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_flexible");
@@ -1425,6 +1433,15 @@ namespace InternshipManagementApi.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)")
                         .HasColumnName("name");
+
+                    b.Property<string>("RecurrenceType")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("recurrence_type");
+
+                    b.Property<int?>("RecurrenceWeeks")
+                        .HasColumnType("int")
+                        .HasColumnName("recurrence_weeks");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1458,6 +1475,8 @@ namespace InternshipManagementApi.Migrations
 
                     b.ToTable("work_schedules", null, t =>
                         {
+                            t.HasCheckConstraint("ck_work_schedules_recurrence", "(`effective_start_date` IS NULL AND `recurrence_type` IS NULL AND `recurrence_weeks` IS NULL AND `effective_end_date` IS NULL) OR (`effective_start_date` IS NOT NULL AND `recurrence_type` IS NOT NULL AND ((`recurrence_type` = 'NONE' AND `recurrence_weeks` IS NOT NULL AND `recurrence_weeks` = 1 AND `effective_end_date` IS NOT NULL AND `effective_end_date` >= `effective_start_date`) OR (`recurrence_type` = 'WEEKLY' AND ((`recurrence_weeks` IS NULL AND `effective_end_date` IS NULL) OR (`recurrence_weeks` IS NOT NULL AND `recurrence_weeks` BETWEEN 1 AND 52 AND `effective_end_date` IS NOT NULL AND `effective_end_date` >= `effective_start_date`)))))");
+
                             t.HasCheckConstraint("ck_work_schedules_status", "`status` IN ('ACTIVE', 'INACTIVE')");
 
                             t.HasCheckConstraint("ck_work_schedules_target", "(`target_type` = 'STUDENT' AND `student_id` IS NOT NULL AND `student_group_id` IS NULL) OR (`target_type` = 'GROUP' AND `student_id` IS NULL AND `student_group_id` IS NOT NULL)");
