@@ -11,6 +11,7 @@ namespace InternshipManagementApi.DTOs.Student
         public string? PhoneNumber { get; set; }
         public string University { get; set; } = string.Empty;
         public string Major { get; set; } = string.Empty;
+        public string? ApplicationStatus { get; set; }
         public int? MentorId { get; set; }
         public int? ProgramId { get; set; }
         public string? ProgramName { get; set; }

@@ -65,6 +65,7 @@ builder.Services.AddScoped<IWeeklyReportService, WeeklyReportService>();
 builder.Services.AddScoped<IMentorFeedbackService, MentorFeedbackService>();
 builder.Services.AddScoped<IInternshipEvaluationService, InternshipEvaluationService>();
 builder.Services.AddScoped<IHrInternshipSummaryService, HrInternshipSummaryService>();
+builder.Services.AddScoped<IStudentDemographicsService, StudentDemographicsService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IStudentService, StudentService>();

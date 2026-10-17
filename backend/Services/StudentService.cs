@@ -90,7 +90,8 @@ namespace InternshipManagementApi.Services
                 University = request.University.Trim(),
                 Major = request.Major.Trim(),
                 UserId = request.UserId,
-                MentorId = request.MentorId
+                MentorId = request.MentorId,
+                ApplicationStatus = StudentApplicationStatus.PendingApproval
             };
 
             await _studentRepository.AddAsync(student);
@@ -268,6 +269,7 @@ namespace InternshipManagementApi.Services
                 PhoneNumber = student.PhoneNumber,
                 University = student.University,
                 Major = student.Major,
+                ApplicationStatus = student.ApplicationStatus,
                 MentorId = student.MentorId,
                 ProgramId = student.ProgramId,
                 ProgramName = student.Program?.Name,
