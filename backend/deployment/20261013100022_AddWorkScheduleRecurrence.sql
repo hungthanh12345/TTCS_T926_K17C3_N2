@@ -14,4 +14,3 @@ INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
 VALUES ('20261013100022_AddWorkScheduleRecurrence', '8.0.2');
 
 COMMIT;
-
