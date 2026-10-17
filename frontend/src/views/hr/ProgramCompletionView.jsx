@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Check, FileSpreadsheet, FileText, History, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
+import { Check, History, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import programCompletionService from '../../services/programCompletionService';
-import reportExportService from '../../services/reportExportService';
 
 const participationLabels = {
   UNVERIFIED: 'Chưa được HR xác minh',
@@ -35,8 +34,6 @@ const ProgramCompletionView = () => {
   const [historyTitle, setHistoryTitle] = useState('');
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
-  const [exporting, setExporting] = useState('');
-  const [exportError, setExportError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -121,28 +118,6 @@ const ProgramCompletionView = () => {
     }
   };
 
-  const handleExport = async (format) => {
-    if (!dashboard || loading || exporting) return;
-    setExporting(format);
-    setExportError('');
-    try {
-      const blob = await reportExportService.download(format, {
-        programId: effectiveProgramId ? Number(effectiveProgramId) : undefined,
-      });
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = objectUrl;
-      link.download = `bao-cao-thuc-tap-${new Date().toISOString().replaceAll(':', '-')}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-    } catch (exportFailure) {
-      setExportError(exportFailure.message || 'Không thể xuất báo cáo. Vui lòng thử lại sau.');
-    } finally {
-      setExporting('');
-    }
-  };
 
   return (
     <DashboardLayout
@@ -189,15 +164,6 @@ const ProgramCompletionView = () => {
                   <SummaryCard label="Đã được HR xác nhận" value={selectedSummary.completedCount} />
                   <SummaryCard label="Tỷ lệ hoàn thành" value={formatRate(selectedSummary.completionRate)} />
                 </section>
-                <div className="flex flex-wrap justify-end gap-2">
-                  <button type="button" onClick={() => void handleExport('excel')} disabled={Boolean(exporting)} className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-                    <FileSpreadsheet className="h-4 w-4" /> {exporting === 'excel' ? 'Đang xuất...' : 'Xuất báo cáo Excel'}
-                  </button>
-                  <button type="button" onClick={() => void handleExport('pdf')} disabled={Boolean(exporting)} className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-                    <FileText className="h-4 w-4" /> {exporting === 'pdf' ? 'Đang xuất...' : 'Xuất báo cáo PDF'}
-                  </button>
-                </div>
-                {exportError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{exportError}</p>}
               </>
             )}
 
