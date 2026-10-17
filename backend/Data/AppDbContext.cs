@@ -513,6 +513,7 @@ namespace InternshipManagementApi.Data
                 {
                     table.HasCheckConstraint("ck_work_schedules_target", "(`target_type` = 'STUDENT' AND `student_id` IS NOT NULL AND `student_group_id` IS NULL) OR (`target_type` = 'GROUP' AND `student_id` IS NULL AND `student_group_id` IS NOT NULL)");
                     table.HasCheckConstraint("ck_work_schedules_status", "`status` IN ('ACTIVE', 'INACTIVE')");
+                    table.HasCheckConstraint("ck_work_schedules_recurrence", "(`effective_start_date` IS NULL AND `recurrence_type` IS NULL AND `recurrence_weeks` IS NULL AND `effective_end_date` IS NULL) OR (`effective_start_date` IS NOT NULL AND `recurrence_type` IS NOT NULL AND ((`recurrence_type` = 'NONE' AND `recurrence_weeks` IS NOT NULL AND `recurrence_weeks` = 1 AND `effective_end_date` IS NOT NULL AND `effective_end_date` >= `effective_start_date`) OR (`recurrence_type` = 'WEEKLY' AND ((`recurrence_weeks` IS NULL AND `effective_end_date` IS NULL) OR (`recurrence_weeks` IS NOT NULL AND `recurrence_weeks` BETWEEN 1 AND 52 AND `effective_end_date` IS NOT NULL AND `effective_end_date` >= `effective_start_date`)))))");
                 });
                 entity.HasKey(schedule => schedule.Id);
                 entity.Property(schedule => schedule.Id).HasColumnName("id").ValueGeneratedOnAdd();
@@ -522,6 +523,10 @@ namespace InternshipManagementApi.Data
                 entity.Property(schedule => schedule.StudentId).HasColumnName("student_id");
                 entity.Property(schedule => schedule.IsFlexible).HasColumnName("is_flexible").IsRequired();
                 entity.Property(schedule => schedule.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(schedule => schedule.EffectiveStartDate).HasColumnName("effective_start_date").HasColumnType("date");
+                entity.Property(schedule => schedule.RecurrenceType).HasColumnName("recurrence_type").HasMaxLength(20);
+                entity.Property(schedule => schedule.RecurrenceWeeks).HasColumnName("recurrence_weeks");
+                entity.Property(schedule => schedule.EffectiveEndDate).HasColumnName("effective_end_date").HasColumnType("date");
                 entity.Property(schedule => schedule.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(6)").IsRequired();
                 entity.Property(schedule => schedule.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(6)").IsRequired();
                 entity.HasIndex(schedule => schedule.StudentGroupId);

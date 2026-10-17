@@ -6,7 +6,54 @@ import hrWorkforceService from '../../services/hrWorkforceService';
 
 const WEEKDAYS = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 const newDay = (dayOfWeek = 1) => ({ dayOfWeek, startTime: '08:30', endTime: '17:30', breakStart: '12:00', breakEnd: '13:00' });
-const emptySchedule = () => ({ name: '', targetType: 'STUDENT', studentId: '', studentGroupId: '', isFlexible: false, status: 'ACTIVE', days: [newDay()] });
+const getVietnamToday = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const value = (type) => parts.find((part) => part.type === type)?.value || '';
+  return value('year') + '-' + value('month') + '-' + value('day');
+};
+const calculateEndDate = (startDate, weeks) => {
+  if (!startDate || weeks == null) return null;
+  const parts = startDate.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+  const daysToSunday = (7 - date.getUTCDay()) % 7;
+  date.setUTCDate(date.getUTCDate() + daysToSunday + (Number(weeks) - 1) * 7);
+  return date.toISOString().slice(0, 10);
+};
+const formatDateVi = (value) => {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return value || '—';
+  const parts = value.split('-');
+  return parts[2] + '/' + parts[1] + '/' + parts[0];
+};
+const selectedWeeks = (value) => {
+  if (value.recurrenceType === 'NONE') return 1;
+  if (value.recurrenceWeeksChoice === 'UNLIMITED') return null;
+  const weeks = value.recurrenceWeeksChoice === 'CUSTOM' ? Number(value.customWeeks) : Number(value.recurrenceWeeksChoice);
+  return Number.isInteger(weeks) ? weeks : NaN;
+};
+const recurrenceValidationError = (value, allowLegacy) => {
+  if (value.recurrenceType === 'LEGACY') return allowLegacy ? '' : 'Vui lòng chọn kiểu lặp cho lịch mới.';
+  if (!value.effectiveStartDate) return 'Vui lòng chọn ngày bắt đầu áp dụng.';
+  if (!['NONE', 'WEEKLY'].includes(value.recurrenceType)) return 'Vui lòng chọn kiểu lặp lịch.';
+  if (value.recurrenceType === 'WEEKLY' && value.recurrenceWeeksChoice !== 'UNLIMITED') {
+    const weeks = selectedWeeks(value);
+    if (!Number.isInteger(weeks) || weeks < 1 || weeks > 52) return 'Số tuần lặp phải từ 1 đến 52.';
+  }
+  return '';
+};
+const recurrenceSummary = (type, startDate, weeks, days, endDate) => {
+  if (!type || type === 'LEGACY') return 'Lịch cũ: tiếp tục theo cấu hình trước đây; thời hạn chưa được lưu.';
+  if (!startDate) return 'Chọn ngày bắt đầu để xem tóm tắt lịch.';
+  const dayNames = (days || []).slice().sort((a, b) => a.dayOfWeek - b.dayOfWeek).map((day) => WEEKDAYS[day.dayOfWeek]).join(', ');
+  if (type === 'NONE') {
+    const end = endDate || calculateEndDate(startDate, 1);
+    return 'Lịch được áp dụng từ ' + formatDateVi(startDate) + ' đến ' + formatDateVi(end) + ', không lặp lại trong tuần này vào ' + dayNames + '.';
+  }
+  if (weeks == null) return 'Lịch lặp hằng tuần từ ' + formatDateVi(startDate) + ', chưa đặt ngày kết thúc, vào ' + dayNames + '.';
+  const end = endDate || calculateEndDate(startDate, weeks);
+  return 'Lịch được áp dụng từ ' + formatDateVi(startDate) + ' đến ' + formatDateVi(end) + ', lặp hằng tuần trong ' + weeks + ' tuần vào ' + dayNames + '.';
+};
+const emptySchedule = () => ({ name: '', targetType: 'STUDENT', studentId: '', studentGroupId: '', isFlexible: false, status: 'ACTIVE', effectiveStartDate: getVietnamToday(), recurrenceType: '', recurrenceWeeksChoice: '4', customWeeks: '4', days: [newDay()] });
 const timeString = (value) => value ? (value.length === 5 ? `${value}:00` : value) : null;
 const statusLabel = (value) => value === 'ACTIVE' ? 'Đang áp dụng' : value === 'INACTIVE' ? 'Tạm dừng' : 'Chưa xác định';
 
@@ -103,12 +150,21 @@ export const WorkSchedulesView = () => {
       setSending(false);
     }
   };
-
   const saveSchedule = async (event) => {
     event.preventDefault();
+    const scheduleError = recurrenceValidationError(schedule, Boolean(editingId));
+    if (scheduleError) {
+      setError(scheduleError);
+      return;
+    }
     setSending(true);
+    const weeks = selectedWeeks(schedule);
+    const scheduleFields = Object.fromEntries(Object.entries(schedule).filter(([key]) => key !== 'recurrenceWeeksChoice' && key !== 'customWeeks'));
     const payload = {
-      ...schedule,
+      ...scheduleFields,
+      effectiveStartDate: schedule.recurrenceType === 'LEGACY' ? null : schedule.effectiveStartDate,
+      recurrenceType: schedule.recurrenceType === 'LEGACY' ? null : schedule.recurrenceType,
+      recurrenceWeeks: schedule.recurrenceType === 'LEGACY' ? null : weeks,
       studentId: schedule.targetType === 'STUDENT' ? Number(schedule.studentId) : null,
       studentGroupId: schedule.targetType === 'GROUP' ? Number(schedule.studentGroupId) : null,
       days: schedule.days.map((day) => ({
@@ -138,6 +194,10 @@ export const WorkSchedulesView = () => {
   };
 
   const beginEdit = (item) => {
+    const legacy = !item.recurrenceType;
+    const quickWeeks = ['1', '2', '4', '8', '12'];
+    const storedWeeks = item.recurrenceWeeks == null ? null : String(item.recurrenceWeeks);
+    const quickChoice = storedWeeks && quickWeeks.includes(storedWeeks);
     setEditingId(item.id);
     setSchedule({
       name: item.name,
@@ -146,6 +206,12 @@ export const WorkSchedulesView = () => {
       studentGroupId: item.studentGroupId || '',
       isFlexible: item.isFlexible,
       status: item.status,
+      effectiveStartDate: item.effectiveStartDate || '',
+      recurrenceType: legacy ? 'LEGACY' : item.recurrenceType,
+      recurrenceWeeksChoice: item.recurrenceType === 'WEEKLY'
+        ? storedWeeks == null ? 'UNLIMITED' : quickChoice ? storedWeeks : 'CUSTOM'
+        : '4',
+      customWeeks: storedWeeks && !quickChoice ? storedWeeks : '4',
       days: (item.days || []).map((day) => ({
         dayOfWeek: day.dayOfWeek,
         startTime: String(day.startTime || '').slice(0, 5),
@@ -178,7 +244,6 @@ export const WorkSchedulesView = () => {
       setSending(false);
     }
   };
-
   const changeDay = (index, name, value) => setSchedule((current) => ({
     ...current,
     days: current.days.map((day, dayIndex) => dayIndex === index ? { ...day, [name]: value } : day),
@@ -244,6 +309,59 @@ export const WorkSchedulesView = () => {
               <input type="checkbox" checked={schedule.isFlexible} onChange={(event) => setSchedule({ ...schedule, isFlexible: event.target.checked })} /> Lịch linh hoạt
             </label>
 
+            <section className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+              <div className="mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wide text-indigo-900">Thiết lập lặp lịch</h3>
+                <p className="mt-1 text-xs text-slate-600">Tuần được tính từ thứ Hai đến Chủ nhật theo giờ Việt Nam. Nếu ngày bắt đầu ở giữa tuần, các ngày đã qua sẽ không được áp dụng.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <label className="text-xs font-semibold text-slate-600">Ngày bắt đầu áp dụng
+                  <input type="date" required={schedule.recurrenceType !== 'LEGACY'} disabled={schedule.recurrenceType === 'LEGACY'} value={schedule.effectiveStartDate || ''} onChange={(event) => setSchedule({ ...schedule, effectiveStartDate: event.target.value })} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100" />
+                </label>
+                <label className="text-xs font-semibold text-slate-600">Kiểu lặp
+                  <select required value={schedule.recurrenceType} onChange={(event) => setSchedule((current) => ({ ...current, recurrenceType: event.target.value, effectiveStartDate: event.target.value === 'LEGACY' ? '' : current.effectiveStartDate || getVietnamToday() }))} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                    <option value="">Chọn kiểu lặp</option>
+                    <option value="NONE">Không lặp (một tuần)</option>
+                    <option value="WEEKLY">Hằng tuần</option>
+                    {schedule.recurrenceType === 'LEGACY' && <option value="LEGACY">Theo cấu hình cũ</option>}
+                  </select>
+                </label>
+                {schedule.recurrenceType === 'WEEKLY' && (
+                  <label className="text-xs font-semibold text-slate-600">Số tuần lặp
+                    <select value={schedule.recurrenceWeeksChoice} onChange={(event) => setSchedule({ ...schedule, recurrenceWeeksChoice: event.target.value })} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                      <option value="1">1 tuần</option><option value="2">2 tuần</option><option value="4">4 tuần</option>
+                      <option value="8">8 tuần</option><option value="12">12 tuần</option>
+                      <option value="CUSTOM">Tùy chỉnh số tuần</option><option value="UNLIMITED">Không thời hạn</option>
+                    </select>
+                  </label>
+                )}
+                {schedule.recurrenceType === 'WEEKLY' && schedule.recurrenceWeeksChoice === 'CUSTOM' && (
+                  <label className="text-xs font-semibold text-slate-600">Số tuần tùy chỉnh (1–52)
+                    <input type="number" min="1" max="52" step="1" required value={schedule.customWeeks} onChange={(event) => setSchedule({ ...schedule, customWeeks: event.target.value })} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+                  </label>
+                )}
+                <div className="text-xs text-slate-600">
+                  <span className="font-semibold">Ngày kết thúc dự kiến</span>
+                  <p className="mt-1 rounded-lg bg-white px-3 py-2 text-sm">
+                    {schedule.recurrenceType === 'LEGACY' ? 'Theo cấu hình cũ'
+                      : schedule.recurrenceType === 'WEEKLY' && selectedWeeks(schedule) == null ? 'Không giới hạn'
+                        : formatDateVi(calculateEndDate(schedule.effectiveStartDate, schedule.recurrenceType === 'NONE' ? 1 : selectedWeeks(schedule)))}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 rounded-lg bg-white p-3 text-xs leading-5 text-slate-700">
+                <span className="font-semibold">Tóm tắt:</span> {recurrenceSummary(
+                  schedule.recurrenceType,
+                  schedule.effectiveStartDate,
+                  schedule.recurrenceType === 'NONE' ? 1 : selectedWeeks(schedule),
+                  schedule.days
+                )}
+              </p>
+              {recurrenceValidationError(schedule, Boolean(editingId)) && schedule.recurrenceType !== '' && schedule.recurrenceType !== 'LEGACY' && (
+                <p role="alert" className="mt-2 text-xs font-medium text-rose-700">{recurrenceValidationError(schedule, Boolean(editingId))}</p>
+              )}
+            </section>
+
             <div className="space-y-3">
               {schedule.days.map((day, index) => (
                 <div key={`${index}-${day.dayOfWeek}`} className="grid gap-3 rounded-xl border border-slate-200 p-3 sm:grid-cols-2 lg:grid-cols-6">
@@ -291,7 +409,8 @@ export const WorkSchedulesView = () => {
 
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 p-5"><div><h2 className="text-sm font-bold text-slate-900">Lịch đã tạo</h2><p className="mt-1 text-xs text-slate-500">Giờ nghỉ nằm trong khung giờ làm việc; lịch qua nửa đêm chưa được hỗ trợ.</p></div><button type="button" disabled={loading} onClick={() => void load()} className="rounded-lg border p-2 disabled:opacity-50" aria-label="Tải lại lịch"><RefreshCw className="h-4 w-4" /></button></div>
-          {loading ? <div role="status" className="flex items-center justify-center gap-2 p-8 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Đang tải...</div> : error ? null : schedules?.length === 0 ? <p role="status" className="p-8 text-center text-sm text-slate-500">Chưa có lịch làm việc.</p> : schedules && <div className="divide-y divide-slate-100">{schedules.map((item) => <article key={item.id} className="flex flex-col justify-between gap-3 p-4 md:flex-row md:items-center"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-bold text-slate-900">{item.name}</h3><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold">{statusLabel(item.status)}</span></div><p className="mt-1 text-xs text-slate-500">{item.targetType === 'GROUP' ? `Nhóm: ${item.studentGroupName || item.studentGroupId}` : `Sinh viên: ${item.studentName || item.studentId}`}{item.isFlexible ? ' · Linh hoạt' : ''}</p><p className="mt-2 text-xs text-slate-700">{(item.days || []).map((day) => `${WEEKDAYS[day.dayOfWeek]} ${String(day.startTime).slice(0, 5)}–${String(day.endTime).slice(0, 5)}`).join(' · ')}</p></div><div className="flex gap-2"><button type="button" onClick={() => beginEdit(item)} className="rounded-lg border px-3 py-2 text-xs font-semibold">Sửa</button><button type="button" disabled={sending} onClick={() => void removeSchedule(item)} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-50"><Trash2 className="h-4 w-4" /> Xóa</button></div></article>)}</div>}
+          {loading ? <div role="status" className="flex items-center justify-center gap-2 p-8 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Đang tải...</div> : error ? null : schedules?.length === 0 ? <p role="status" className="p-8 text-center text-sm text-slate-500">Chưa có lịch làm việc.</p> : schedules && <div className="divide-y divide-slate-100">{schedules.map((item) => <article key={item.id} className="flex flex-col justify-between gap-3 p-4 md:flex-row md:items-center"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-bold text-slate-900">{item.name}</h3><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold">{statusLabel(item.status)}</span></div><p className="mt-1 text-xs text-slate-500">{item.targetType === 'GROUP' ? `Nhóm: ${item.studentGroupName || item.studentGroupId}` : `Sinh viên: ${item.studentName || item.studentId}`}{item.isFlexible ? ' · Linh hoạt' : ''}</p><p className="mt-2 text-xs text-slate-700">{(item.days || []).map((day) => `${WEEKDAYS[day.dayOfWeek]} ${String(day.startTime).slice(0, 5)}–${String(day.endTime).slice(0, 5)}`).join(' · ')}</p>
+<p className="mt-2 text-xs text-indigo-800">{recurrenceSummary(item.recurrenceType, item.effectiveStartDate, item.recurrenceWeeks, item.days, item.effectiveEndDate)}</p></div><div className="flex gap-2"><button type="button" onClick={() => beginEdit(item)} className="rounded-lg border px-3 py-2 text-xs font-semibold">Sửa</button><button type="button" disabled={sending || item.status !== 'ACTIVE'} onClick={() => void removeSchedule(item)} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-50"><Trash2 className="h-4 w-4" /> Xóa</button></div></article>)}</div>}
         </section>
       </div>
     </DashboardLayout>
