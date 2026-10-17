@@ -15,6 +15,10 @@ public sealed class WorkSchedule
     public int? StudentId { get; set; }
     public bool IsFlexible { get; set; }
     public string Status { get; set; } = "ACTIVE";
+    public DateOnly? EffectiveStartDate { get; set; }
+    public string? RecurrenceType { get; set; }
+    public int? RecurrenceWeeks { get; set; }
+    public DateOnly? EffectiveEndDate { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public StudentGroup? Group { get; set; }

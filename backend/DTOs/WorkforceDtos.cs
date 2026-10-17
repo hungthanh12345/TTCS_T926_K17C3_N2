@@ -49,6 +49,11 @@ public sealed class WorkScheduleDayRequestDto
 
 public sealed class WorkScheduleRequestDto
 {
+    public DateOnly? EffectiveStartDate { get; set; }
+    [StringLength(20)]
+    public string? RecurrenceType { get; set; }
+    [Range(1, 52)]
+    public int? RecurrenceWeeks { get; set; }
     [Required, StringLength(120, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
     [Required]
@@ -64,6 +69,10 @@ public sealed class WorkScheduleRequestDto
 
 public sealed class WorkScheduleDto
 {
+    public DateOnly? EffectiveStartDate { get; set; }
+    public string? RecurrenceType { get; set; }
+    public int? RecurrenceWeeks { get; set; }
+    public DateOnly? EffectiveEndDate { get; set; }
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string TargetType { get; set; } = string.Empty;

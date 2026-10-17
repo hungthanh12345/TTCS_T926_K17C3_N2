@@ -14,8 +14,11 @@ internal static class VietnamTime
         }
     });
 
+    public static DateTime ToLocal(DateTime utcNow) =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcNow, DateTimeKind.Utc), Zone.Value);
+
     public static DateOnly Today(DateTime utcNow) =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcNow, DateTimeKind.Utc), Zone.Value));
+        DateOnly.FromDateTime(ToLocal(utcNow));
 
     public static DateTime ToUtc(DateOnly date, TimeOnly time)
     {
