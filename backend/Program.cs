@@ -65,6 +65,8 @@ builder.Services.AddScoped<IWeeklyReportService, WeeklyReportService>();
 builder.Services.AddScoped<IMentorFeedbackService, MentorFeedbackService>();
 builder.Services.AddScoped<IInternshipEvaluationService, InternshipEvaluationService>();
 builder.Services.AddScoped<IHrInternshipSummaryService, HrInternshipSummaryService>();
+builder.Services.AddScoped<IProgramCompletionService, ProgramCompletionService>();
+builder.Services.AddScoped<InternshipManagementApi.Services.Reports.ISprint5ReportExportService, InternshipManagementApi.Services.Reports.Sprint5ReportExportService>();
 builder.Services.AddScoped<IStudentDemographicsService, StudentDemographicsService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMentorService, MentorService>();

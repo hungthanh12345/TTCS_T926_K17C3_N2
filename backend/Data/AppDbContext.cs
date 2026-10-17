@@ -33,6 +33,7 @@ namespace InternshipManagementApi.Data
         public DbSet<Allowance> Allowances => Set<Allowance>();
         public DbSet<AllowancePayment> AllowancePayments => Set<AllowancePayment>();
         public DbSet<SupportRequest> SupportRequests => Set<SupportRequest>();
+        public DbSet<StudentProgramAuditEvent> StudentProgramAuditEvents => Set<StudentProgramAuditEvent>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -117,7 +118,7 @@ namespace InternshipManagementApi.Data
                     .HasColumnType("varchar(20)")
                     .HasMaxLength(20)
                     .UseCollation("utf8mb4_unicode_ci")
-                    .HasDefaultValue(StudentApplicationStatus.Approved)
+                    .HasDefaultValue(StudentApplicationStatus.PendingApproval)
                     .IsRequired();
                 entity.Property(e => e.MentorId).HasColumnName("mentor_id");
                 entity.Property(e => e.ProgramId).HasColumnName("program_id");
@@ -662,10 +663,62 @@ namespace InternshipManagementApi.Data
                 entity.HasOne<User>().WithMany().HasForeignKey(request => request.HandledByUserId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
+
+            modelBuilder.Entity<StudentProgramAuditEvent>(entity =>
+            {
+                entity.ToTable("student_program_audit_events", table =>
+                {
+                    table.HasCheckConstraint(
+                        "ck_student_program_audit_events_type",
+                        "`event_type` IN ('PARTICIPATION_STATUS_CHANGED', 'COMPLETION_CONFIRMED', 'COMPLETION_REVOKED')");
+                    table.HasCheckConstraint(
+                        "ck_student_program_audit_events_status",
+                        "(`event_type` = 'PARTICIPATION_STATUS_CHANGED' AND `new_status` IS NOT NULL AND `new_status` IN ('UNVERIFIED', 'ACTIVE', 'ENDED', 'CANCELLED') AND (`previous_status` IS NULL OR `previous_status` IN ('UNVERIFIED', 'ACTIVE', 'ENDED', 'CANCELLED'))) OR (`event_type` IN ('COMPLETION_CONFIRMED', 'COMPLETION_REVOKED') AND `previous_status` IS NULL AND `new_status` IS NULL)");
+                });
+                entity.UseCollation("utf8mb4_unicode_ci");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(item => item.StudentId).HasColumnName("student_id").IsRequired();
+                entity.Property(item => item.ProgramId).HasColumnName("program_id").IsRequired();
+                entity.Property(item => item.ActorUserId).HasColumnName("actor_user_id").IsRequired();
+                entity.Property(item => item.EventType).HasColumnName("event_type").HasMaxLength(40).HasColumnType("varchar(40)").IsRequired().UseCollation("utf8mb4_unicode_ci");
+                entity.Property(item => item.PreviousStatus).HasColumnName("previous_status").HasMaxLength(16).HasColumnType("varchar(16)").UseCollation("utf8mb4_unicode_ci");
+                entity.Property(item => item.NewStatus).HasColumnName("new_status").HasMaxLength(16).HasColumnType("varchar(16)").UseCollation("utf8mb4_unicode_ci");
+                entity.Property(item => item.Reason).HasColumnName("reason").HasMaxLength(500).HasColumnType("varchar(500)").UseCollation("utf8mb4_unicode_ci");
+                entity.Property(item => item.OccurredAtUtc).HasColumnName("occurred_at_utc").HasColumnType("datetime(6)").IsRequired();
+                entity.HasIndex(item => new { item.StudentId, item.ProgramId, item.Id })
+                    .HasDatabaseName("ix_student_program_audit_events_student_program_id");
+                entity.HasIndex(item => new { item.ProgramId, item.Id })
+                    .HasDatabaseName("ix_student_program_audit_events_program_id");
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<InternshipProgram>().WithMany().HasForeignKey(item => item.ProgramId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<User>().WithMany().HasForeignKey(item => item.ActorUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+
+        public override int SaveChanges() => SaveChanges(acceptAllChangesOnSuccess: true);
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            EnsureStudentProgramAuditEventsAppendOnly();
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            EnsureStudentProgramAuditEventsAppendOnly();
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
+            EnsureStudentProgramAuditEventsAppendOnly();
+
             var entries = ChangeTracker.Entries()
                 .Where(e => e.Entity is Role or User or Mentor or Student or Department or InternshipProgram &&
                            (e.State == EntityState.Added || e.State == EntityState.Modified));
@@ -690,6 +743,15 @@ namespace InternshipManagementApi.Data
             }
 
             return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private void EnsureStudentProgramAuditEventsAppendOnly()
+        {
+            if (ChangeTracker.Entries<StudentProgramAuditEvent>()
+                .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            {
+                throw new InvalidOperationException("Student program audit events are append-only.");
+            }
         }
     }
 }
