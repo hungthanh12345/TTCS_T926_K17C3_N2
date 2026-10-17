@@ -18,6 +18,7 @@ import NotFoundView from './views/common/NotFoundView';
 import InternshipProgramsView from './views/hr/InternshipProgramsView';
 import StudentScheduleView from './views/student/StudentScheduleView';
 import HrInternshipSummaryView from './views/hr/HrInternshipSummaryView';
+import StudentDemographicsView from './views/hr/StudentDemographicsView';
 import ContractManagementView from './views/hr/ContractManagementView';
 import LandingView from './views/common/LandingView';
 import StudentAttendanceView from './views/student/StudentAttendanceView';
@@ -145,6 +146,7 @@ export const App = () => {
             }
           />
 
+          <Route path="/hr/student-statistics" element={<ProtectedRoute allowedRoles={['ROLE_HR']}><StudentDemographicsView /></ProtectedRoute>} />
           <Route path="/hr/attendance-reports" element={<ProtectedRoute allowedRoles={['ROLE_HR']}><AttendanceReportView /></ProtectedRoute>} />
           <Route path="/hr/work-schedules" element={<ProtectedRoute allowedRoles={['ROLE_HR', 'ROLE_ADMIN']}><WorkSchedulesView /></ProtectedRoute>} />
           <Route path="/hr/leave-requests" element={<ProtectedRoute allowedRoles={['ROLE_HR']}><LeaveRequestsManagementView /></ProtectedRoute>} />
