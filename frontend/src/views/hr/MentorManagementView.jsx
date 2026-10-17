@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import TableSkeleton from '../../components/common/TableSkeleton';
 import AddMentorModal from '../../components/modals/AddMentorModal';
@@ -20,6 +21,8 @@ import {
 import toast from 'react-hot-toast';
 
 export const MentorManagementView = () => {
+  const { user } = useAuth();
+  const canCreateMentor = user?.role === 'ROLE_HR';
   const [mentors, setMentors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -210,7 +213,7 @@ export const MentorManagementView = () => {
               />
             </button>
 
-            {/* Nút Thêm Mới Mentor */}
+            {canCreateMentor && (
             <button
               type="button"
               onClick={() => setIsAddModalOpen(true)}
@@ -219,6 +222,7 @@ export const MentorManagementView = () => {
               <UserPlus className="w-4 h-4" />
               <span>Thêm Mentor</span>
             </button>
+            )}
           </div>
         </div>
 
@@ -234,7 +238,7 @@ export const MentorManagementView = () => {
             <p className="text-xs text-slate-500 mt-1">
               {searchQuery || selectedDepartment !== 'ALL'
                 ? 'Thử xóa từ khóa tìm kiếm hoặc đặt lại bộ lọc phòng ban.'
-                : 'Nhấn "Thêm Mentor" để ghi nhận chuyên gia đầu tiên.'}
+                : canCreateMentor ? 'Nhấn "Thêm Mentor" để ghi nhận chuyên gia đầu tiên.' : 'Chưa có hồ sơ Mentor trong danh bạ.'}
             </p>
           </div>
         ) : viewMode === 'grid' ? (
@@ -385,11 +389,13 @@ export const MentorManagementView = () => {
       </div>
 
       {/* Modal Thêm Mentor */}
+      {canCreateMentor && (
       <AddMentorModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={fetchMentors}
       />
+      )}
     </DashboardLayout>
   );
 };
