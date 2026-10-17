@@ -911,6 +911,15 @@ namespace InternshipManagementApi.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ApplicationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("PENDING_APPROVAL")
+                        .HasColumnName("application_status")
+                        .UseCollation("utf8mb4_unicode_ci");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp")
@@ -1149,6 +1158,76 @@ namespace InternshipManagementApi.Migrations
                     b.HasIndex("StudentId");
 
                     b.ToTable("student_group_memberships", (string)null);
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.StudentProgramAuditEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ActorUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("event_type")
+                        .UseCollation("utf8mb4_unicode_ci");
+
+                    b.Property<string>("NewStatus")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("new_status")
+                        .UseCollation("utf8mb4_unicode_ci");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("previous_status")
+                        .UseCollation("utf8mb4_unicode_ci");
+
+                    b.Property<int>("ProgramId")
+                        .HasColumnType("int")
+                        .HasColumnName("program_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reason")
+                        .UseCollation("utf8mb4_unicode_ci");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int")
+                        .HasColumnName("student_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("ProgramId", "Id")
+                        .HasDatabaseName("ix_student_program_audit_events_program_id");
+
+                    b.HasIndex("StudentId", "ProgramId", "Id")
+                        .HasDatabaseName("ix_student_program_audit_events_student_program_id");
+
+                    b.ToTable("student_program_audit_events", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_student_program_audit_events_status", "(`event_type` = 'PARTICIPATION_STATUS_CHANGED' AND `new_status` IS NOT NULL AND `new_status` IN ('UNVERIFIED', 'ACTIVE', 'ENDED', 'CANCELLED') AND (`previous_status` IS NULL OR `previous_status` IN ('UNVERIFIED', 'ACTIVE', 'ENDED', 'CANCELLED'))) OR (`event_type` IN ('COMPLETION_CONFIRMED', 'COMPLETION_REVOKED') AND `previous_status` IS NULL AND `new_status` IS NULL)");
+
+                            t.HasCheckConstraint("ck_student_program_audit_events_type", "`event_type` IN ('PARTICIPATION_STATUS_CHANGED', 'COMPLETION_CONFIRMED', 'COMPLETION_REVOKED')");
+                        });
+
+                    MySqlEntityTypeBuilderExtensions.UseCollation(b, "utf8mb4_unicode_ci");
                 });
 
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.SupportRequest", b =>
@@ -1766,6 +1845,27 @@ namespace InternshipManagementApi.Migrations
                     b.Navigation("Group");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InternshipManagementApi.Data.Entities.StudentProgramAuditEvent", b =>
+                {
+                    b.HasOne("InternshipManagementApi.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.InternshipProgram", null)
+                        .WithMany()
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InternshipManagementApi.Data.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("InternshipManagementApi.Data.Entities.SupportRequest", b =>
