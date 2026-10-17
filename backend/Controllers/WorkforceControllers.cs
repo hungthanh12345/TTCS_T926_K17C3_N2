@@ -302,7 +302,7 @@ public sealed class StudentSupportRequestsController : WorkforceControllerBase
 
 [ApiController]
 [Route("api/hr/support-requests")]
-[Authorize(Roles = "ROLE_HR,ROLE_ADMIN")]
+[Authorize(Roles = "ROLE_HR")]
 public sealed class HrSupportRequestsController : WorkforceControllerBase
 {
     private readonly ISupportRequestService _support;
