@@ -19,6 +19,8 @@ namespace InternshipManagementApi.Data.Entities
 
         public string Major { get; set; } = string.Empty;
 
+        public string ApplicationStatus { get; set; } = StudentApplicationStatus.PendingApproval;
+
         public int? MentorId { get; set; }
 
         public int? ProgramId { get; set; }

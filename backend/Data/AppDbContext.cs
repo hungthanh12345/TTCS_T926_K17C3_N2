@@ -112,6 +112,13 @@ namespace InternshipManagementApi.Data
                 entity.Property(e => e.PhoneNumber).HasColumnName("phone_number").HasMaxLength(20);
                 entity.Property(e => e.University).HasColumnName("university").HasMaxLength(150).IsRequired();
                 entity.Property(e => e.Major).HasColumnName("major").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.ApplicationStatus)
+                    .HasColumnName("application_status")
+                    .HasColumnType("varchar(20)")
+                    .HasMaxLength(20)
+                    .UseCollation("utf8mb4_unicode_ci")
+                    .HasDefaultValue(StudentApplicationStatus.Approved)
+                    .IsRequired();
                 entity.Property(e => e.MentorId).HasColumnName("mentor_id");
                 entity.Property(e => e.ProgramId).HasColumnName("program_id");
                 entity.Property(e => e.ReviewedByUserId).HasColumnName("reviewed_by_user_id");

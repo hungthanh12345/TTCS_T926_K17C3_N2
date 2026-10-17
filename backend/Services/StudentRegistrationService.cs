@@ -74,7 +74,8 @@ namespace InternshipManagementApi.Services
                     FullName = request.FullName.Trim(),
                     PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim(),
                     University = request.University.Trim(),
-                    Major = request.Major.Trim()
+                    Major = request.Major.Trim(),
+                    ApplicationStatus = StudentApplicationStatus.PendingApproval
                 }
             };
 
@@ -118,7 +119,8 @@ namespace InternshipManagementApi.Services
                 University = request.University.Trim(),
                 Major = request.Major.Trim(),
                 ProgramId = program.Id,
-                Program = program
+                Program = program,
+                ApplicationStatus = StudentApplicationStatus.PendingApproval
             };
             var user = new User
             {
@@ -211,7 +213,7 @@ namespace InternshipManagementApi.Services
                 .Include(student => student.Program)
                 .Where(student => student.User != null &&
                                   student.User.Role.Name == StudentRoleName &&
-                                  student.User.Status == UserStatus.PENDING_APPROVAL)
+                                  student.ApplicationStatus == StudentApplicationStatus.PendingApproval)
                 .OrderBy(student => student.CreatedAt)
                 .ToListAsync();
 
@@ -221,7 +223,7 @@ namespace InternshipManagementApi.Services
         public async Task<StudentRegistrationReviewDto> GetPendingDetailsAsync(int studentId)
         {
             var student = await GetStudentForReviewAsync(studentId);
-            if (student.User!.Status != UserStatus.PENDING_APPROVAL)
+            if (student.ApplicationStatus != StudentApplicationStatus.PendingApproval)
                 throw new ConflictException("This student registration is no longer awaiting approval.");
 
             return ToReviewDto(student);
@@ -243,26 +245,48 @@ namespace InternshipManagementApi.Services
             string? rejectionReason = null)
         {
             var student = await GetStudentForReviewAsync(studentId);
-            if (student.User!.Status != UserStatus.PENDING_APPROVAL)
+            if (student.ApplicationStatus != StudentApplicationStatus.PendingApproval)
                 throw new ConflictException("This student registration is no longer awaiting approval.");
+            var studentUser = student.User!;
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
             try
             {
-                var changed = await _db.Users
-                    .Where(user => user.Id == student.UserId && user.Status == UserStatus.PENDING_APPROVAL)
-                    .ExecuteUpdateAsync(update => update.SetProperty(user => user.Status, targetStatus));
+                var applicationStatus = targetStatus == UserStatus.ACTIVE
+                    ? StudentApplicationStatus.Approved
+                    : StudentApplicationStatus.Rejected;
+                var reviewedAtUtc = DateTime.UtcNow;
+                var normalizedRejectionReason = targetStatus == UserStatus.REJECTED &&
+                    !string.IsNullOrWhiteSpace(rejectionReason)
+                        ? rejectionReason.Trim()
+                        : null;
+
+                var changed = await _db.Students
+                    .Where(item => item.Id == studentId &&
+                                   item.ApplicationStatus == StudentApplicationStatus.PendingApproval)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(item => item.ApplicationStatus, applicationStatus)
+                        .SetProperty(item => item.ReviewedByUserId, (int?)reviewerUserId)
+                        .SetProperty(item => item.ReviewedAt, (DateTime?)reviewedAtUtc)
+                        .SetProperty(item => item.RejectionReason, normalizedRejectionReason));
 
                 if (changed != 1)
                     throw new ConflictException("This student registration has already been reviewed.");
 
-                student.User.Status = targetStatus;
+                // Keep account access state synchronized for the normal pending-account flow,
+                // but do not unlock or reactivate accounts changed independently by admins.
+                var accountStatusChanged = await _db.Users
+                    .Where(user => user.Id == student.UserId && user.Status == UserStatus.PENDING_APPROVAL)
+                    .ExecuteUpdateAsync(update => update.SetProperty(user => user.Status, targetStatus));
+                if (accountStatusChanged == 1)
+                    studentUser.Status = targetStatus;
+                else
+                    await _db.Entry(studentUser).ReloadAsync();
+
+                student.ApplicationStatus = applicationStatus;
                 student.ReviewedByUserId = reviewerUserId;
-                student.ReviewedAt = DateTime.UtcNow;
-                student.RejectionReason = targetStatus == UserStatus.REJECTED &&
-                    !string.IsNullOrWhiteSpace(rejectionReason)
-                        ? rejectionReason.Trim()
-                        : null;
+                student.ReviewedAt = reviewedAtUtc;
+                student.RejectionReason = normalizedRejectionReason;
                 await _notificationService.AddRegistrationReviewedAsync(student, targetStatus == UserStatus.ACTIVE);
                 await _emailLogQueue.QueueDecisionEmailAsync(student, targetStatus == UserStatus.ACTIVE);
                 await _db.SaveChangesAsync();
@@ -293,13 +317,7 @@ namespace InternshipManagementApi.Services
 
         private static StudentRegistrationStatusResponseDto ToStatusResponse(User user, Student student)
         {
-            var status = user.Status switch
-            {
-                UserStatus.ACTIVE => "APPROVED",
-                UserStatus.PENDING_APPROVAL => "PENDING_APPROVAL",
-                UserStatus.REJECTED => "REJECTED",
-                _ => user.Status.ToString()
-            };
+            var status = student.ApplicationStatus ?? StudentApplicationStatus.Unknown;
 
             var message = status switch
             {
@@ -329,7 +347,7 @@ namespace InternshipManagementApi.Services
             University = student.University,
             Major = student.Major,
             ProgramName = student.Program?.Name,
-            Status = student.User.Status == UserStatus.ACTIVE ? "APPROVED" : student.User.Status.ToString(),
+            Status = student.ApplicationStatus ?? StudentApplicationStatus.Unknown,
             SubmittedAt = student.CreatedAt,
             ReviewedByUserId = student.ReviewedByUserId,
             ReviewedAt = student.ReviewedAt,
