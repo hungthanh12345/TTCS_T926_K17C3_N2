@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../backend/InternshipManagementApi.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="known-source-gaps.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures/20261017_internship_sprint5_dev_check_differences.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -25,3 +25,6 @@ apache-maven-3.9.6/
 backend/.env
 /tests/MentorDeletePolicySmoke/bin/
 /tests/MentorDeletePolicySmoke/obj/
+
+/tools/DatabaseSchemaChecker/bin/
+/tools/DatabaseSchemaChecker/obj/
