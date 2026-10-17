@@ -172,11 +172,12 @@ namespace InternshipManagementApi.Controllers
 
         /// <summary>
         /// Create a new mentor profile in the mentors table.
-        /// Requires ROLE_HR or ROLE_ADMIN.
+        /// Requires ROLE_HR.
         /// </summary>
         /// <param name="request">Mentor profile creation data</param>
         /// <returns>Created mentor profile</returns>
         [HttpPost("mentors")]
+        [Authorize(Roles = "ROLE_HR")]
         [ProducesResponseType(typeof(ApiResponse<MentorResponseDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]

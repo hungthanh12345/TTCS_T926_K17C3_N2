@@ -86,7 +86,30 @@ public sealed class SupportRequestService : ISupportRequestService
         var item = await _db.SupportRequests.Include(record => record.Student)
             .SingleOrDefaultAsync(record => record.Id == id, cancellationToken)
             ?? throw new NotFoundException("Support request was not found.");
-        if (item.Status == request.Status) return ToDto(item);
+        if (item.Status == request.Status)
+        {
+            if (item.Status != SupportRequestStatus.InProgress || string.IsNullOrWhiteSpace(request.Response))
+                return ToDto(item);
+
+            var responseText = request.Response.Trim();
+            if (string.Equals(item.Response, responseText, StringComparison.Ordinal))
+                return ToDto(item);
+
+            var responseUpdatedAt = DateTime.UtcNow;
+            var responseUpdated = await _db.SupportRequests
+                .Where(record => record.Id == id &&
+                                 record.Status == SupportRequestStatus.InProgress &&
+                                 record.Response == item.Response)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(record => record.Response, responseText)
+                    .SetProperty(record => record.HandledByUserId, handlerUserId)
+                    .SetProperty(record => record.HandledAt, responseUpdatedAt)
+                    .SetProperty(record => record.UpdatedAt, responseUpdatedAt), cancellationToken);
+            if (responseUpdated != 1)
+                throw new ConflictException("The support request changed concurrently. Reload and try again.");
+
+            return await GetByIdAsync(id, cancellationToken);
+        }
         var allowed = item.Status == SupportRequestStatus.Pending && request.Status == SupportRequestStatus.InProgress ||
                       item.Status == SupportRequestStatus.InProgress && request.Status == SupportRequestStatus.Resolved;
         if (!allowed)

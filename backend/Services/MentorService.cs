@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Text;
 using InternshipManagementApi.Common.Exceptions;
+using InternshipManagementApi.Data;
 using InternshipManagementApi.Data.Entities;
 using InternshipManagementApi.DTOs.Mentor;
 using InternshipManagementApi.Repositories;
@@ -21,20 +22,39 @@ namespace InternshipManagementApi.Services
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly AppDbContext _db;
 
         public MentorService(
             IMentorRepository mentorRepository,
             IUserRepository userRepository,
             IRoleRepository roleRepository,
-            IPasswordHasher passwordHasher)
+            IPasswordHasher passwordHasher,
+            AppDbContext db)
         {
             _mentorRepository = mentorRepository;
             _userRepository = userRepository;
             _roleRepository = roleRepository;
             _passwordHasher = passwordHasher;
+            _db = db;
         }
 
         public async Task<MentorResponseDto> CreateMentorAsync(CreateMentorRequestDto request)
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var result = await CreateMentorWithinTransactionAsync(request);
+                await transaction.CommitAsync();
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        private async Task<MentorResponseDto> CreateMentorWithinTransactionAsync(CreateMentorRequestDto request)
         {
             User? user = null;
 
@@ -74,6 +94,11 @@ namespace InternshipManagementApi.Services
                 user = await _userRepository.GetByEmailAsync(email);
                 if (user != null)
                 {
+                    if (user.Role == null || !string.Equals(user.Role.Name, "ROLE_MENTOR", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new ConflictException("The email is already associated with a non-Mentor account.");
+                    }
+
                     bool mentorExists = await _mentorRepository.ExistsByUserIdAsync(user.Id);
                     if (mentorExists)
                     {
