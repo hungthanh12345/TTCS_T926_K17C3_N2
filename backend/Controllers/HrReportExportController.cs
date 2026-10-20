@@ -1,4 +1,3 @@
-using InternshipManagementApi.DTOs;
 using InternshipManagementApi.DTOs.Mentor;
 using InternshipManagementApi.DTOs.Reports;
 using InternshipManagementApi.Services;
@@ -33,24 +32,15 @@ public sealed class HrReportExportController : ControllerBase
     [HttpGet("excel")]
     [Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ExportExcel(
         [FromQuery] string? university,
         [FromQuery] string? major,
         [FromQuery] int? programId,
-        [FromQuery] string? reportType,
         CancellationToken cancellationToken)
     {
-        if (!TryResolveReportKind(reportType, university, major, programId, out var reportKind, out var error))
-            return BadRequest(InternshipManagementApi.Common.Models.ApiResponse.Fail(error));
-
-        var report = await BuildReportAsync(university, major, programId, reportKind, cancellationToken);
-        if (!report.HasData)
-            return NoContent();
-
+        var report = await BuildReportAsync(university, major, programId, cancellationToken);
         var file = _exportService.CreateExcel(report);
         return File(file.Content, file.ContentType, file.FileName);
     }
@@ -58,25 +48,15 @@ public sealed class HrReportExportController : ControllerBase
     [HttpGet("pdf")]
     [Produces("application/pdf")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> ExportPdf(
         [FromQuery] string? university,
         [FromQuery] string? major,
         [FromQuery] int? programId,
-        [FromQuery] string? reportType,
         CancellationToken cancellationToken)
     {
-        if (!TryResolveReportKind(reportType, university, major, programId, out var reportKind, out var error))
-            return BadRequest(InternshipManagementApi.Common.Models.ApiResponse.Fail(error));
-
-        var report = await BuildReportAsync(university, major, programId, reportKind, cancellationToken);
-        if (!report.HasData)
-            return NoContent();
-
+        var report = await BuildReportAsync(university, major, programId, cancellationToken);
         try
         {
             var file = _exportService.CreatePdf(report);
@@ -95,20 +75,13 @@ public sealed class HrReportExportController : ControllerBase
         string? university,
         string? major,
         int? programId,
-        Sprint5ReportKind reportKind,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var mentors = reportKind.Includes(Sprint5ReportKind.MentorWorkload)
-            ? await _mentorService.GetAllMentorsAsync()
-            : Array.Empty<MentorResponseDto>();
-        var demographics = reportKind.Includes(Sprint5ReportKind.StudentDemographics)
-            ? await _demographicsService.GetAsync(cancellationToken)
-            : new StudentDemographicsResponseDto();
-        var completion = reportKind.Includes(Sprint5ReportKind.ProgramCompletion)
-            ? await _programCompletionService.GetDashboardAsync(programId, cancellationToken)
-            : new ProgramCompletionDashboardDto();
+        var mentors = await _mentorService.GetAllMentorsAsync();
+        var demographics = await _demographicsService.GetAsync(cancellationToken);
+        var completion = await _programCompletionService.GetDashboardAsync(programId, cancellationToken);
         var selectedProgram = programId.HasValue
             ? completion.Programs.Single(program => program.ProgramId == programId.Value)
             : null;
@@ -116,7 +89,6 @@ public sealed class HrReportExportController : ControllerBase
         return new Sprint5AggregateReportDto
         {
             GeneratedAtUtc = DateTimeOffset.UtcNow,
-            ReportKind = reportKind,
             ProgramFilter = selectedProgram?.ProgramName,
             MentorWorkloads = mentors.Select(mentor => new MentorWorkloadReportRowDto
             {
@@ -131,7 +103,7 @@ public sealed class HrReportExportController : ControllerBase
                     (string.IsNullOrWhiteSpace(university) || string.Equals(row.University, university.Trim(), StringComparison.Ordinal)) &&
                     (string.IsNullOrWhiteSpace(major) || string.Equals(row.Major, major.Trim(), StringComparison.Ordinal)))
                 .ToArray(),
-            CompletionDataAvailable = reportKind.Includes(Sprint5ReportKind.ProgramCompletion),
+            CompletionDataAvailable = true,
             ProgramCompletions = completion.Programs
                 .Where(program => !programId.HasValue || program.ProgramId == programId.Value)
                 .Select(program => new ProgramCompletionReportRowDto
@@ -142,36 +114,5 @@ public sealed class HrReportExportController : ControllerBase
                 })
                 .ToArray()
         };
-    }
-
-    private static bool TryResolveReportKind(
-        string? reportType,
-        string? university,
-        string? major,
-        int? programId,
-        out Sprint5ReportKind reportKind,
-        out string error)
-    {
-        if (!Sprint5ReportKinds.TryParse(reportType, out reportKind))
-        {
-            error = "Loại báo cáo không hợp lệ.";
-            return false;
-        }
-
-        if (programId.HasValue && !reportKind.Includes(Sprint5ReportKind.ProgramCompletion))
-        {
-            error = "Bộ lọc chương trình chỉ áp dụng cho báo cáo tỷ lệ hoàn thành.";
-            return false;
-        }
-
-        if ((!string.IsNullOrWhiteSpace(university) || !string.IsNullOrWhiteSpace(major)) &&
-            !reportKind.Includes(Sprint5ReportKind.StudentDemographics))
-        {
-            error = "Bộ lọc trường/ngành chỉ áp dụng cho báo cáo thống kê theo trường/ngành.";
-            return false;
-        }
-
-        error = string.Empty;
-        return true;
     }
 }

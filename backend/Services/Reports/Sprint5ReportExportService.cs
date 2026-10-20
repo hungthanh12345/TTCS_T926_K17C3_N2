@@ -109,7 +109,7 @@ public sealed class Sprint5ReportExportService : ISprint5ReportExportService
 
                 page.Header().Column(header =>
                 {
-                    header.Item().Text(report.ReportKind.GetTitle())
+                    header.Item().Text("Báo cáo thống kê thực tập")
                         .FontSize(18)
                         .Bold()
                         .FontColor(QuestColors.Blue.Darken2);
@@ -121,12 +121,9 @@ public sealed class Sprint5ReportExportService : ISprint5ReportExportService
                 page.Content().Column(contentColumn =>
                 {
                     contentColumn.Spacing(12);
-                    if (report.ReportKind.Includes(Sprint5ReportKind.MentorWorkload))
-                        AddMentorSection(contentColumn, report);
-                    if (report.ReportKind.Includes(Sprint5ReportKind.StudentDemographics))
-                        AddDemographicSection(contentColumn, report);
-                    if (report.ReportKind.Includes(Sprint5ReportKind.ProgramCompletion))
-                        AddCompletionSection(contentColumn, report);
+                    AddMentorSection(contentColumn, report);
+                    AddDemographicSection(contentColumn, report);
+                    AddCompletionSection(contentColumn, report);
                 });
 
                 page.Footer().AlignRight().Text(text =>
@@ -152,11 +149,6 @@ public sealed class Sprint5ReportExportService : ISprint5ReportExportService
         if (report.GeneratedAtUtc == default)
         {
             throw new ArgumentException("A report generation timestamp is required.", nameof(report));
-        }
-
-        if (!Enum.IsDefined(report.ReportKind))
-        {
-            throw new ArgumentException("The report type is invalid.", nameof(report));
         }
 
         if (report.FromDate.HasValue &&
@@ -241,7 +233,7 @@ public sealed class Sprint5ReportExportService : ISprint5ReportExportService
     private static void WriteReportRows(SheetData sheetData, Sprint5AggregateReportDto report)
     {
         uint rowNumber = 1;
-        AppendTextRow(sheetData, rowNumber++, report.ReportKind.GetTitle(), styleIndex: 2);
+        AppendTextRow(sheetData, rowNumber++, "Báo cáo thống kê thực tập", styleIndex: 2);
         AppendTextRow(sheetData, rowNumber++, new[] { "Thời điểm xuất (UTC)", report.GeneratedAtUtc.UtcDateTime.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture) });
         AppendTextRow(sheetData, rowNumber++, new[] { "Chương trình", string.IsNullOrWhiteSpace(report.ProgramFilter) ? "Tất cả chương trình" : report.ProgramFilter });
         AppendTextRow(sheetData, rowNumber++, new[] { "Trường", string.IsNullOrWhiteSpace(report.UniversityFilter) ? "Tất cả trường" : report.UniversityFilter });
@@ -249,90 +241,80 @@ public sealed class Sprint5ReportExportService : ISprint5ReportExportService
         AppendTextRow(sheetData, rowNumber++, new[] { "Khoảng thời gian", FormatDateRange(report) });
         rowNumber++;
 
-        if (report.ReportKind.Includes(Sprint5ReportKind.MentorWorkload))
+        AppendTextRow(sheetData, rowNumber++, "Thực tập sinh theo Mentor", styleIndex: 2);
+        AppendTextRow(sheetData, rowNumber++, new[] { "Mentor", "Phòng ban", "Số thực tập sinh" }, 1);
+        if (report.MentorWorkloads.Count == 0)
         {
-            AppendTextRow(sheetData, rowNumber++, "Thực tập sinh theo Mentor", styleIndex: 2);
-            AppendTextRow(sheetData, rowNumber++, new[] { "Mentor", "Phòng ban", "Số thực tập sinh" }, 1);
-            if (report.MentorWorkloads.Count == 0)
-            {
-                AppendTextRow(sheetData, rowNumber++, "Không có dữ liệu");
-            }
-            else
-            {
-                foreach (var item in report.MentorWorkloads)
-                {
-                    AppendTextRow(
-                        sheetData,
-                        rowNumber++,
-                        new[] { item.MentorName, item.Department, item.AssignedStudentCount.ToString(CultureInfo.InvariantCulture) });
-                }
-            }
-            rowNumber++;
+            AppendTextRow(sheetData, rowNumber++, "Không có dữ liệu");
         }
-
-        if (report.ReportKind.Includes(Sprint5ReportKind.StudentDemographics))
+        else
         {
-            var universityStats = AggregateDemographics(report.Demographics, row => row.University);
-            AppendTextRow(sheetData, rowNumber++, "Số lượng theo trường", styleIndex: 2);
-            AppendTextRow(sheetData, rowNumber++, new[] { "Trường", "Số sinh viên" }, 1);
-            if (universityStats.Count == 0)
+            foreach (var item in report.MentorWorkloads)
             {
-                AppendTextRow(sheetData, rowNumber++, "Không có dữ liệu");
-            }
-            else
-            {
-                foreach (var item in universityStats)
-                {
-                    AppendTextRow(sheetData, rowNumber++, new[] { item.Name, item.StudentCount.ToString(CultureInfo.InvariantCulture) });
-                }
-            }
-
-            rowNumber++;
-            var majorStats = AggregateDemographics(report.Demographics, row => row.Major);
-            AppendTextRow(sheetData, rowNumber++, "Số lượng theo ngành", styleIndex: 2);
-            AppendTextRow(sheetData, rowNumber++, new[] { "Ngành", "Số sinh viên" }, 1);
-            if (majorStats.Count == 0)
-            {
-                AppendTextRow(sheetData, rowNumber++, "Không có dữ liệu");
-            }
-            else
-            {
-                foreach (var item in majorStats)
-                {
-                    AppendTextRow(sheetData, rowNumber++, new[] { item.Name, item.StudentCount.ToString(CultureInfo.InvariantCulture) });
-                }
-            }
-
-            rowNumber++;
-        }
-
-        if (report.ReportKind.Includes(Sprint5ReportKind.ProgramCompletion))
-        {
-            AppendTextRow(sheetData, rowNumber++, "Tỷ lệ hoàn thành chương trình", styleIndex: 2);
-            if (!report.CompletionDataAvailable)
-            {
-                AppendTextRow(
-                    sheetData,
-                    rowNumber,
-                    $"Chưa có dữ liệu hoàn thành đã được xác minh. {report.CompletionUnavailableReason}".Trim());
-                return;
-            }
-
-            AppendTextRow(sheetData, rowNumber++, new[] { "Chương trình", "Tổng hợp lệ", "Đã xác nhận", "Tỷ lệ (%)" }, 1);
-            if (report.ProgramCompletions.Count == 0)
-            {
-                AppendTextRow(sheetData, rowNumber, "Không có dữ liệu");
-                return;
-            }
-
-            foreach (var item in report.ProgramCompletions)
-            {
-                var rate = ProgramCompletionRate.CalculatePercent(item.EligibleCount, item.CompletedCount);
                 AppendTextRow(
                     sheetData,
                     rowNumber++,
-                    new[] { item.ProgramName, item.EligibleCount.ToString(CultureInfo.InvariantCulture), item.CompletedCount.ToString(CultureInfo.InvariantCulture), rate?.ToString("0.##", CultureInfo.InvariantCulture) ?? "Không có dữ liệu" });
+                    new[] { item.MentorName, item.Department, item.AssignedStudentCount.ToString(CultureInfo.InvariantCulture) });
             }
+        }
+
+        rowNumber++;
+        var universityStats = AggregateDemographics(report.Demographics, row => row.University);
+        AppendTextRow(sheetData, rowNumber++, "Số lượng theo trường", styleIndex: 2);
+        AppendTextRow(sheetData, rowNumber++, new[] { "Trường", "Số sinh viên" }, 1);
+        if (universityStats.Count == 0)
+        {
+            AppendTextRow(sheetData, rowNumber++, "Không có dữ liệu");
+        }
+        else
+        {
+            foreach (var item in universityStats)
+            {
+                AppendTextRow(sheetData, rowNumber++, new[] { item.Name, item.StudentCount.ToString(CultureInfo.InvariantCulture) });
+            }
+        }
+
+        rowNumber++;
+        var majorStats = AggregateDemographics(report.Demographics, row => row.Major);
+        AppendTextRow(sheetData, rowNumber++, "Số lượng theo ngành", styleIndex: 2);
+        AppendTextRow(sheetData, rowNumber++, new[] { "Ngành", "Số sinh viên" }, 1);
+        if (majorStats.Count == 0)
+        {
+            AppendTextRow(sheetData, rowNumber++, "Không có dữ liệu");
+        }
+        else
+        {
+            foreach (var item in majorStats)
+            {
+                AppendTextRow(sheetData, rowNumber++, new[] { item.Name, item.StudentCount.ToString(CultureInfo.InvariantCulture) });
+            }
+        }
+
+        rowNumber++;
+        AppendTextRow(sheetData, rowNumber++, "Tỷ lệ hoàn thành chương trình", styleIndex: 2);
+        if (!report.CompletionDataAvailable)
+        {
+            AppendTextRow(
+                sheetData,
+                rowNumber,
+                $"Chưa có dữ liệu hoàn thành đã được xác minh. {report.CompletionUnavailableReason}".Trim());
+            return;
+        }
+
+        AppendTextRow(sheetData, rowNumber++, new[] { "Chương trình", "Tổng hợp lệ", "Đã xác nhận", "Tỷ lệ (%)" }, 1);
+        if (report.ProgramCompletions.Count == 0)
+        {
+            AppendTextRow(sheetData, rowNumber, "Không có dữ liệu");
+            return;
+        }
+
+        foreach (var item in report.ProgramCompletions)
+        {
+            var rate = ProgramCompletionRate.CalculatePercent(item.EligibleCount, item.CompletedCount);
+            AppendTextRow(
+                sheetData,
+                rowNumber++,
+                new[] { item.ProgramName, item.EligibleCount.ToString(CultureInfo.InvariantCulture), item.CompletedCount.ToString(CultureInfo.InvariantCulture), rate?.ToString("0.##", CultureInfo.InvariantCulture) ?? "Không có dữ liệu" });
         }
     }
 
