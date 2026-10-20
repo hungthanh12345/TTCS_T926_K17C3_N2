@@ -10,8 +10,15 @@ import {
   LogOut,
   UserCheck,
   CalendarDays,
+  FileSignature,
   ClipboardCheck,
   BarChart3,
+  ClipboardList,
+  CalendarClock,
+  CalendarOff,
+  Wallet,
+  LifeBuoy,
+  Check,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
@@ -56,6 +63,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       badge: null,
     },
     {
+      title: 'Hợp Đồng Thực Tập',
+      path: '/hr/contracts',
+      icon: FileSignature,
+      roles: ['ROLE_ADMIN', 'ROLE_HR'],
+      badge: null,
+    },
+    {
       title: 'Tổng Hợp Kết Quả Thực Tập',
       path: '/hr/internship-summary',
       icon: BarChart3,
@@ -83,6 +97,17 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       roles: ['ROLE_STUDENT'],
       badge: null,
     },
+    { title: 'Thống kê trường/ngành', path: '/hr/student-statistics', icon: BarChart3, roles: ['ROLE_HR'], badge: null },
+    { title: 'Tỷ lệ hoàn thành', path: '/hr/program-completion', icon: Check, roles: ['ROLE_HR'], badge: null },
+    { title: 'Báo cáo chấm công', path: '/hr/attendance-reports', icon: ClipboardList, roles: ['ROLE_HR'], badge: null },
+    { title: 'Lịch làm việc', path: '/hr/work-schedules', icon: CalendarClock, roles: ['ROLE_ADMIN', 'ROLE_HR'], badge: null },
+    { title: 'Đơn xin nghỉ phép', path: '/hr/leave-requests', icon: CalendarOff, roles: ['ROLE_HR'], badge: null },
+    { title: 'Quản lý phụ cấp', path: '/hr/allowances', icon: Wallet, roles: ['ROLE_ADMIN', 'ROLE_HR'], badge: null },
+    { title: 'Xử lý yêu cầu hỗ trợ', path: '/hr/support-requests', icon: LifeBuoy, roles: ['ROLE_ADMIN', 'ROLE_HR'], badge: null },
+    { title: 'Chấm công của tôi', path: '/student/attendance', icon: ClipboardList, roles: ['ROLE_STUDENT'], badge: null },
+    { title: 'Đơn xin nghỉ phép', path: '/student/leave-requests', icon: CalendarOff, roles: ['ROLE_STUDENT'], badge: null },
+    { title: 'Lịch sử nhận phụ cấp', path: '/student/allowance-history', icon: Wallet, roles: ['ROLE_STUDENT'], badge: null },
+    { title: 'Yêu cầu hỗ trợ', path: '/student/support-requests', icon: LifeBuoy, roles: ['ROLE_STUDENT'], badge: null },
   ];
 
   const visibleNavItems = navItems.filter(

@@ -1,7 +1,10 @@
+using System.Data;
+using System.Security.Claims;
 using InternshipManagementApi.Common.Models;
 using InternshipManagementApi.Data;
 using InternshipManagementApi.Data.Entities;
 using InternshipManagementApi.DTOs.Sprint2;
+using InternshipManagementApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +17,15 @@ namespace InternshipManagementApi.Controllers
     public sealed class InternshipProgramsController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly IProgramCompletionService _programCompletionService;
 
-        public InternshipProgramsController(AppDbContext db) => _db = db;
+        public InternshipProgramsController(
+            AppDbContext db,
+            IProgramCompletionService programCompletionService)
+        {
+            _db = db;
+            _programCompletionService = programCompletionService;
+        }
 
         [HttpGet("departments")]
         public async Task<IActionResult> GetDepartments()
@@ -76,26 +86,90 @@ namespace InternshipManagementApi.Controllers
         [HttpPut("students/{studentId:int}/program")]
         public async Task<IActionResult> AssignStudentProgram(
             int studentId,
-            [FromBody] InternshipProgramAssignmentRequestDto request)
+            [FromBody] InternshipProgramAssignmentRequestDto request,
+            CancellationToken cancellationToken)
         {
-            var student = await _db.Students.SingleOrDefaultAsync(item => item.Id == studentId);
-            if (student == null)
-                return NotFound(ApiResponse.Fail("Student profile was not found."));
+            var actorValue = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("userId");
+            if (!int.TryParse(actorValue, out var actorUserId))
+                return Unauthorized(ApiResponse.Fail("Invalid user identity."));
 
             InternshipProgram? program = null;
             if (request.ProgramId.HasValue)
             {
-                program = await _db.InternshipPrograms.SingleOrDefaultAsync(item => item.Id == request.ProgramId.Value);
+                program = await _db.InternshipPrograms.SingleOrDefaultAsync(
+                    item => item.Id == request.ProgramId.Value,
+                    cancellationToken);
                 if (program == null)
-                    return BadRequest(ApiResponse.Fail("Internship program was not found."));
+                    return NotFound(ApiResponse.Fail("Internship program was not found."));
             }
 
-            student.ProgramId = program?.Id;
-            student.Program = program;
-            await _db.SaveChangesAsync();
+            await using var transaction = await _db.Database.BeginTransactionAsync(
+                IsolationLevel.ReadCommitted,
+                cancellationToken);
+            try
+            {
+                var student = await _db.Students
+                    .FromSqlInterpolated($"SELECT * FROM students WHERE id = {studentId} FOR UPDATE")
+                    .SingleOrDefaultAsync(cancellationToken);
+                if (student == null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return NotFound(ApiResponse.Fail("Student profile was not found."));
+                }
 
-            var response = new InternshipProgramAssignmentResponseDto(student.Id, student.ProgramId, program?.Name);
-            return Ok(ApiResponse<InternshipProgramAssignmentResponseDto>.Ok(response, "Student program assignment updated."));
+                var requestedProgramId = program?.Id;
+                if (requestedProgramId.HasValue && student.UserId.HasValue)
+                {
+                    var user = await _db.Users.AsNoTracking()
+                        .SingleOrDefaultAsync(item => item.Id == student.UserId.Value, cancellationToken);
+                    if (user?.Status is UserStatus.PENDING_APPROVAL or UserStatus.REJECTED)
+                    {
+                        await transaction.RollbackAsync(cancellationToken);
+                        return Conflict(ApiResponse.Fail("Student registration must be approved before program assignment."));
+                    }
+                }
+
+                var previousProgramId = student.ProgramId;
+                if (previousProgramId == requestedProgramId)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                    return Ok(ApiResponse<InternshipProgramAssignmentResponseDto>.Ok(
+                        new InternshipProgramAssignmentResponseDto(student.Id, requestedProgramId, program?.Name),
+                        "Student program assignment updated."));
+                }
+
+                foreach (var affectedProgramId in ProgramAssignmentAuditPolicy.GetAffectedProgramIds(
+                             previousProgramId,
+                             requestedProgramId))
+                {
+                    await _programCompletionService.ResetParticipationForProgramAssignmentAsync(
+                        studentId,
+                        affectedProgramId,
+                        actorUserId,
+                        cancellationToken);
+                }
+
+                var changedRows = await _db.Students
+                    .Where(item => item.Id == studentId && item.ProgramId == previousProgramId)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(item => item.ProgramId, requestedProgramId),
+                        cancellationToken);
+
+                if (changedRows != 1)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return Conflict(ApiResponse.Fail("The student's program changed during assignment. Refresh and try again."));
+                }
+
+                await transaction.CommitAsync(cancellationToken);
+                var response = new InternshipProgramAssignmentResponseDto(student.Id, requestedProgramId, program?.Name);
+                return Ok(ApiResponse<InternshipProgramAssignmentResponseDto>.Ok(response, "Student program assignment updated."));
+            }
+            catch
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                throw;
+            }
         }
 
         [HttpPost("programs")]

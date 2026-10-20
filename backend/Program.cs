@@ -22,7 +22,10 @@ if (!string.IsNullOrEmpty(dynamicPort))
 }
 
 // 1. Configure Database Connection (MySQL via Pomelo EF Core)
-var connectionString = ResolveConnectionString(builder.Configuration, builder.Environment.IsProduction());
+var isTestEnvironment = builder.Environment.IsEnvironment("Test");
+var connectionString = isTestEnvironment
+    ? ResolveTestConnectionString(builder.Configuration)
+    : ResolveConnectionString(builder.Configuration, builder.Environment.IsProduction());
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -47,20 +50,40 @@ builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IStudentRegistrationService, StudentRegistrationService>();
+builder.Services.AddScoped<IEmailLogQueue, EmailLogQueue>();
+builder.Services.AddScoped<IEmailLogProcessor, EmailLogProcessor>();
+builder.Services.AddScoped<ISmtpEmailSender, SmtpEmailSender>();
+var emailWorkerEnabled = !builder.Environment.IsEnvironment("Test") &&
+    (builder.Configuration.GetValue<bool?>("EmailWorker:Enabled") ?? true);
+if (emailWorkerEnabled)
+{
+    builder.Services.AddHostedService<EmailNotificationWorker>();
+}
 builder.Services.AddScoped<IMentorTaskService, MentorTaskService>();
 builder.Services.AddScoped<IStudentScheduleService, StudentScheduleService>();
 builder.Services.AddScoped<IWeeklyReportService, WeeklyReportService>();
 builder.Services.AddScoped<IMentorFeedbackService, MentorFeedbackService>();
 builder.Services.AddScoped<IInternshipEvaluationService, InternshipEvaluationService>();
 builder.Services.AddScoped<IHrInternshipSummaryService, HrInternshipSummaryService>();
+builder.Services.AddScoped<IProgramCompletionService, ProgramCompletionService>();
+builder.Services.AddScoped<InternshipManagementApi.Services.Reports.ISprint5ReportExportService, InternshipManagementApi.Services.Reports.Sprint5ReportExportService>();
+builder.Services.AddScoped<IStudentDemographicsService, StudentDemographicsService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IAttendanceReportService, AttendanceReportService>();
+builder.Services.AddScoped<IWorkScheduleService, WorkScheduleService>();
+builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
+builder.Services.AddScoped<IAllowanceService, AllowanceService>();
+builder.Services.AddScoped<ISupportRequestService, SupportRequestService>();
 
 // 3. Configure JWT Authentication & Authorization
-var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
-if (string.IsNullOrWhiteSpace(jwtKey))
+var jwtKey = isTestEnvironment
+    ? Environment.GetEnvironmentVariable("TTCS_TEST_JWT_KEY") ?? builder.Configuration["Jwt:TestKey"]
+    : Environment.GetEnvironmentVariable("JWT_KEY") ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+if (!isTestEnvironment && string.IsNullOrWhiteSpace(jwtKey))
     jwtKey = builder.Configuration["Jwt:Key"];
 
 if (string.IsNullOrWhiteSpace(jwtKey))
@@ -289,15 +312,84 @@ app.MapControllers();
 app.Run();
 
 // Helper: Connection String Resolver supporting ADO.NET and URI formats
+static string ResolveTestConnectionString(IConfiguration configuration)
+{
+    var rawConnection = configuration.GetConnectionString("TestConnection");
+    if (string.IsNullOrWhiteSpace(rawConnection))
+    {
+        throw new InvalidOperationException(
+            "Test requires ConnectionStrings:TestConnection; generic project connection settings are not used.");
+    }
+
+    var connection = new MySqlConnectionStringBuilder(rawConnection);
+    var database = connection.Database?.Trim();
+    var host = connection.Server?.Trim().Trim('[', ']');
+    var isLoopbackHost = string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
+
+    if (!string.Equals(database, "ttcs_sprint4_test", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("Test connection must target the ttcs_sprint4_test database.");
+    }
+
+    if (!isLoopbackHost)
+    {
+        throw new InvalidOperationException("Test connection must target a loopback MySQL host.");
+    }
+
+    if (string.IsNullOrWhiteSpace(connection.UserID)
+        || string.Equals(connection.UserID, "root", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("Test connection must use a dedicated non-root MySQL account.");
+    }
+
+    connection.CharacterSet = "utf8mb4";
+    return connection.ConnectionString;
+}
+
 static string ResolveConnectionString(IConfiguration configuration, bool requireTls)
 {
     var rawConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
-        ?? Environment.GetEnvironmentVariable("MYSQL_URL")
-        ?? configuration.GetConnectionString("DefaultConnection");
+        ?? Environment.GetEnvironmentVariable("MYSQL_URL");
 
     if (string.IsNullOrWhiteSpace(rawConnection))
     {
-        throw new InvalidOperationException("Database connection string is not configured. Set 'ConnectionStrings:DefaultConnection' or 'DATABASE_URL'.");
+        var mysqlHost = Environment.GetEnvironmentVariable("MYSQL_HOST");
+        var mysqlPassword = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
+        if (!string.IsNullOrWhiteSpace(mysqlHost) && !string.IsNullOrWhiteSpace(mysqlPassword))
+        {
+            var mysqlDatabase = Environment.GetEnvironmentVariable("MYSQL_DATABASE");
+            var mysqlUser = Environment.GetEnvironmentVariable("MYSQL_USER");
+            var mysqlPortText = Environment.GetEnvironmentVariable("MYSQL_PORT");
+            if (string.IsNullOrWhiteSpace(mysqlDatabase) || string.IsNullOrWhiteSpace(mysqlUser))
+                throw new InvalidOperationException("MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER and MYSQL_PASSWORD must be configured together.");
+
+            uint mysqlPort = 3306;
+            if (!string.IsNullOrWhiteSpace(mysqlPortText) &&
+                (!uint.TryParse(mysqlPortText, out mysqlPort) || mysqlPort == 0))
+                throw new InvalidOperationException("MYSQL_PORT must be a valid TCP port.");
+
+            var mysqlBuilder = new MySqlConnectionStringBuilder
+            {
+                Server = mysqlHost.Trim(),
+                Port = mysqlPort,
+                Database = mysqlDatabase.Trim(),
+                UserID = mysqlUser.Trim(),
+                Password = mysqlPassword,
+                CharacterSet = "utf8mb4",
+                SslMode = requireTls ? MySqlSslMode.Required : MySqlSslMode.Preferred,
+                AllowPublicKeyRetrieval = true
+            };
+            return mysqlBuilder.ConnectionString;
+        }
+
+        rawConnection = configuration.GetConnectionString("DefaultConnection");
+    }
+
+    if (string.IsNullOrWhiteSpace(rawConnection))
+    {
+        throw new InvalidOperationException("Database connection string is not configured. Set MYSQL_* values, 'ConnectionStrings:DefaultConnection' or 'DATABASE_URL'.");
     }
 
     // Handle URI format: mysql://user:pass@host:port/database

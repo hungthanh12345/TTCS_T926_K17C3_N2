@@ -18,6 +18,12 @@ namespace InternshipManagementApi.DTOs.Student
         public IFormFile? File { get; set; }
     }
 
+    public sealed class ReviewStudentDocumentRequest
+    {
+        [StringLength(1000)]
+        public string? RejectionReason { get; set; }
+    }
+
     public sealed record StudentDocumentResponse(
         int Id,
         string DocumentType,
@@ -25,4 +31,17 @@ namespace InternshipManagementApi.DTOs.Student
         string ContentType,
         long SizeBytes,
         DateTime UploadedAt);
+
+    public sealed record HrStudentDocumentResponse(
+        int Id,
+        string DocumentType,
+        string OriginalFileName,
+        string ContentType,
+        long SizeBytes,
+        DateTime UploadedAt,
+        string ReviewStatus,
+        int? ReviewedByUserId,
+        string? ReviewedByEmail,
+        DateTime? ReviewedAt,
+        string? RejectionReason);
 }

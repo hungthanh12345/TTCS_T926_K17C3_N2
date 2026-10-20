@@ -366,8 +366,11 @@ SOURCE backend/migrations/20261004_part08_weekly_reports_and_mentor_feedback.sql
 SOURCE backend/migrations/20261004_part09_internship_evaluations.sql;
 SOURCE backend/migrations/20261004_part10_demo_account_passwords.sql;
 SOURCE backend/migrations/20261004_part11_student_program_link.sql;
+SOURCE backend/migrations/20261017091954_RestrictMentorTaskDelete.sql;
 ```
 Part 09 adds one final evaluation per student profile. Part 10 updates `password_hash` for every existing row in `users` without inserting or deleting accounts. Part 11 adds nullable `students.program_id` and a foreign key; existing students remain unchanged and HR can assign them to a program. New public registrations select a program and save the User, linked Student, CV, and internship letter in one transaction. Student schedule and HR summary use that relationship.
+
+The raw-bootstrap forward script `backend/migrations/20261017091954_RestrictMentorTaskDelete.sql` changes only `internship_tasks.mentor_id` to `ON DELETE RESTRICT` while preserving `ON UPDATE CASCADE`. Keep the historical Part 05 script unchanged. For an existing database, verify the exact FK name and current rule first; do not replay the bootstrap sequence. EF-managed deployments have a separate generated script at `backend/deployment/20261017091954_RestrictMentorTaskDelete.sql` with the standard migration-history insert. Use one deployment path and never run both. EF APPLY remains blocked by the unresolved source for migration `20261008065402_AddRegistrationReceivedEmailTemplate`; both SQL files are review artifacts until reconciliation is approved.
 
 For a disposable development database only, load the shared fixture accounts and data:
 ```sql

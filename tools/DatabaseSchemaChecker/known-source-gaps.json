@@ -1,0 +1,6 @@
+[
+  {
+    "migrationId": "20261008065402_AddRegistrationReceivedEmailTemplate",
+    "reason": "The migration ID is present in owner-provided Test history evidence, but its original source has not been recovered. Do not recreate or mark it manually."
+  }
+]

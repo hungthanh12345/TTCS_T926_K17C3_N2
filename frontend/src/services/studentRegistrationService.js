@@ -2,6 +2,11 @@ import api from './api';
 
 const unwrap = (response) => response.data?.data ?? response.data;
 const getErrorMessage = (error) => error.response?.data?.message || error.message || 'Yêu cầu không thành công.';
+const getRegistrationErrorMessage = (error) => (
+  error.response?.status === 415
+    ? 'Máy chủ chưa nhận đúng định dạng hồ sơ có tệp đính kèm. Hồ sơ chưa được gửi; tệp bạn chọn vẫn được giữ lại để thử lại.'
+    : getErrorMessage(error)
+);
 
 const studentRegistrationService = {
   async getPrograms() {
@@ -20,7 +25,7 @@ const studentRegistrationService = {
       form.append('internshipLetter', documents.internshipLetter);
       return unwrap(await api.post('/auth/register-application', form, { timeout: 60000 }));
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(getRegistrationErrorMessage(error));
     }
   },
 
@@ -64,6 +69,25 @@ const studentRegistrationService = {
     }
   },
 
+  async approveRegistrationDocument(studentId, documentId) {
+    try {
+      return unwrap(await api.post(`/hr/student-registrations/${studentId}/documents/${documentId}/approve`));
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  async rejectRegistrationDocument(studentId, documentId, rejectionReason = '') {
+    try {
+      return unwrap(await api.post(
+        `/hr/student-registrations/${studentId}/documents/${documentId}/reject`,
+        { rejectionReason },
+      ));
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
   async approve(studentId) {
     try {
       return unwrap(await api.post(`/hr/student-registrations/${studentId}/approve`));
@@ -72,9 +96,9 @@ const studentRegistrationService = {
     }
   },
 
-  async reject(studentId) {
+  async reject(studentId, rejectionReason = '') {
     try {
-      return unwrap(await api.post(`/hr/student-registrations/${studentId}/reject`));
+      return unwrap(await api.post(`/hr/student-registrations/${studentId}/reject`, { rejectionReason }));
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }

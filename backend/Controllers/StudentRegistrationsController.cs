@@ -3,6 +3,8 @@ using InternshipManagementApi.DTOs.StudentRegistration;
 using InternshipManagementApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System.Security.Claims;
 
 namespace InternshipManagementApi.Controllers
 {
@@ -43,7 +45,10 @@ namespace InternshipManagementApi.Controllers
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
         public async Task<IActionResult> Approve(int studentId)
         {
-            var registration = await _registrationService.ApproveAsync(studentId);
+            if (!TryGetReviewerId(out var reviewerUserId))
+                return Unauthorized(ApiResponse.Fail("Invalid reviewer identity."));
+
+            var registration = await _registrationService.ApproveAsync(studentId, reviewerUserId);
             return Ok(ApiResponse<StudentRegistrationReviewDto>.Ok(registration, "Student registration approved."));
         }
 
@@ -51,10 +56,24 @@ namespace InternshipManagementApi.Controllers
         [ProducesResponseType(typeof(ApiResponse<StudentRegistrationReviewDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> Reject(int studentId)
+        public async Task<IActionResult> Reject(
+            int studentId,
+            [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RejectStudentRegistrationRequestDto? request)
         {
-            var registration = await _registrationService.RejectAsync(studentId);
+            if (!TryGetReviewerId(out var reviewerUserId))
+                return Unauthorized(ApiResponse.Fail("Invalid reviewer identity."));
+
+            var registration = await _registrationService.RejectAsync(
+                studentId,
+                reviewerUserId,
+                request?.RejectionReason);
             return Ok(ApiResponse<StudentRegistrationReviewDto>.Ok(registration, "Student registration rejected."));
+        }
+
+        private bool TryGetReviewerId(out int reviewerUserId)
+        {
+            var value = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("userId");
+            return int.TryParse(value, out reviewerUserId);
         }
     }
 }
