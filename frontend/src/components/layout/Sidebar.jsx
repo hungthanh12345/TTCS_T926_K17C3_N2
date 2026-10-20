@@ -19,6 +19,7 @@ import {
   Wallet,
   LifeBuoy,
   Check,
+  FileDown,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
@@ -76,6 +77,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       roles: ['ROLE_ADMIN', 'ROLE_HR'],
       badge: null,
     },
+    { title: 'Tỷ lệ hoàn thành', path: '/hr/program-completion', icon: Check, roles: ['ROLE_HR'], badge: null },
+    { title: 'Xuất báo cáo', path: '/hr/report-export', icon: FileDown, roles: ['ROLE_HR'], badge: null },
+    { title: 'Thống kê trường/ngành', path: '/hr/student-statistics', icon: BarChart3, roles: ['ROLE_HR'], badge: null },
     {
       title: 'Sinh Viên Hướng Dẫn',
       path: '/mentor/students',
@@ -97,8 +101,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isDesktopOpen }) => {
       roles: ['ROLE_STUDENT'],
       badge: null,
     },
-    { title: 'Thống kê trường/ngành', path: '/hr/student-statistics', icon: BarChart3, roles: ['ROLE_HR'], badge: null },
-    { title: 'Tỷ lệ hoàn thành', path: '/hr/program-completion', icon: Check, roles: ['ROLE_HR'], badge: null },
     { title: 'Báo cáo chấm công', path: '/hr/attendance-reports', icon: ClipboardList, roles: ['ROLE_HR'], badge: null },
     { title: 'Lịch làm việc', path: '/hr/work-schedules', icon: CalendarClock, roles: ['ROLE_ADMIN', 'ROLE_HR'], badge: null },
     { title: 'Đơn xin nghỉ phép', path: '/hr/leave-requests', icon: CalendarOff, roles: ['ROLE_HR'], badge: null },

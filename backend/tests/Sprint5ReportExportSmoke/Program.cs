@@ -1,11 +1,17 @@
 using System.IO.Compression;
+using System.Reflection;
 using System.Text;
+using InternshipManagementApi.Controllers;
 using DocumentFormat.OpenXml.Packaging;
 using InternshipManagementApi.Data;
 using InternshipManagementApi.Data.Entities;
+using InternshipManagementApi.DTOs;
+using InternshipManagementApi.DTOs.Mentor;
 using InternshipManagementApi.DTOs.Reports;
 using InternshipManagementApi.Services;
 using InternshipManagementApi.Services.Reports;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -342,6 +348,92 @@ Assert(completionCounts.EligibleCount == 2, "Only approved active/ended records 
 Assert(completionCounts.CompletedCount == 1, "Only eligible HR-confirmed records belong in the numerator.");
 Assert(!ProgramCompletionRules.IsCompletionConfirmed(true, StudentProgramAuditEvent.CompletionRevoked), "A revoked completion must not count.");
 
+Assert(Sprint5ReportKinds.TryParse("program-completion", out var parsedCompletionKind) &&
+       parsedCompletionKind == Sprint5ReportKind.ProgramCompletion,
+    "The API report type value must map to the completion report.");
+Assert(!Sprint5ReportKinds.TryParse("unknown", out _), "Unknown report types must be rejected.");
+var completionOnlyReport = new Sprint5AggregateReportDto
+{
+    GeneratedAtUtc = report.GeneratedAtUtc,
+    ReportKind = Sprint5ReportKind.ProgramCompletion,
+    CompletionDataAvailable = true,
+    ProgramCompletions = report.ProgramCompletions
+};
+using (var workbook = SpreadsheetDocument.Open(new MemoryStream(service.CreateExcel(completionOnlyReport).Content), false))
+{
+    var content = workbook.WorkbookPart!.WorksheetParts.Single().Worksheet!.InnerText;
+    Assert(content.Contains("Tỷ lệ hoàn thành chương trình", StringComparison.Ordinal),
+        "A completion report must contain the completion section.");
+    Assert(!content.Contains("Mentor Mẫu", StringComparison.Ordinal) &&
+           !content.Contains("Đại học kiểm thử", StringComparison.Ordinal),
+        "A completion report must omit unrelated sections.");
+}
+Assert(!new Sprint5AggregateReportDto
+{
+    GeneratedAtUtc = report.GeneratedAtUtc,
+    ReportKind = Sprint5ReportKind.ProgramCompletion,
+    CompletionDataAvailable = true,
+    ProgramCompletions = [new ProgramCompletionReportRowDto { ProgramName = "Chương trình rỗng" }]
+}.HasData, "A completion report with no eligible participants must be treated as no data.");
+
+var exportController = new HrReportExportController(
+    new SmokeMentorService(),
+    new SmokeDemographicsService(report.Demographics),
+    new SmokeProgramCompletionService(report.ProgramCompletions),
+    service);
+var demographicApiResult = await exportController.ExportExcel(
+    null, "Khoa học dữ liệu", null, "student-demographics", CancellationToken.None);
+Assert(demographicApiResult is FileContentResult demographicFile &&
+       demographicFile.ContentType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" &&
+       demographicFile.FileDownloadName.EndsWith(".xlsx", StringComparison.Ordinal),
+    "The export API must return a downloadable Excel file.");
+using (var workbook = SpreadsheetDocument.Open(new MemoryStream(((FileContentResult)demographicApiResult).FileContents), false))
+{
+    var content = workbook.WorkbookPart!.WorksheetParts.Single().Worksheet!.InnerText;
+    Assert(content.Contains("Khoa học dữ liệu", StringComparison.Ordinal), "The API must keep matching demographic rows.");
+    Assert(!content.Contains("Kỹ thuật phần mềm", StringComparison.Ordinal), "The API must remove demographic rows outside the selected filter.");
+    Assert(!content.Contains("Mentor Mẫu", StringComparison.Ordinal) &&
+           !content.Contains("Tỷ lệ hoàn thành chương trình", StringComparison.Ordinal),
+        "The API must export only the selected report type.");
+}
+var completionApiResult = await exportController.ExportExcel(
+    null, null, 3, "program-completion", CancellationToken.None);
+Assert(completionApiResult is FileContentResult completionFile &&
+       completionFile.ContentType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "A selected completion report must return an Excel file.");
+using (var workbook = SpreadsheetDocument.Open(new MemoryStream(((FileContentResult)completionApiResult).FileContents), false))
+{
+    var content = workbook.WorkbookPart!.WorksheetParts.Single().Worksheet!.InnerText;
+    Assert(content.Contains("Chương trình kiểm thử", StringComparison.Ordinal), "The selected program must appear in the completion report.");
+    Assert(!content.Contains("Chưa có lượt hợp lệ", StringComparison.Ordinal), "The API must remove completion rows outside the selected program.");
+    Assert(!content.Contains("Mentor Mẫu", StringComparison.Ordinal), "A completion report must omit mentor workload.");
+}
+var pdfApiResult = await exportController.ExportPdf(
+    null, null, 3, "program-completion", CancellationToken.None);
+Assert(pdfApiResult is FileContentResult pdfFile &&
+       pdfFile.ContentType == "application/pdf" &&
+       pdfFile.FileDownloadName.EndsWith(".pdf", StringComparison.Ordinal),
+    "The export API must return a downloadable PDF file when a test license is configured.");
+var noDataApiResult = await exportController.ExportExcel(
+    "Không có trường", null, null, "student-demographics", CancellationToken.None);
+Assert(noDataApiResult is NoContentResult, "The export API must return no content when the selected filters have no data.");
+var invalidTypeApiResult = await exportController.ExportExcel(
+    null, null, null, "unknown", CancellationToken.None);
+Assert(invalidTypeApiResult is BadRequestObjectResult, "The export API must reject an unknown report type.");
+var incompatibleFilterApiResult = await exportController.ExportExcel(
+    "Đại học kiểm thử", null, null, "program-completion", CancellationToken.None);
+Assert(incompatibleFilterApiResult is BadRequestObjectResult,
+    "The export API must reject filters that do not apply to the selected report type.");
+
+Assert(typeof(HrProgramCompletionController).GetCustomAttribute<AuthorizeAttribute>()?.Roles == "ROLE_HR",
+    "Program completion endpoints must be restricted to HR.");
+Assert(typeof(HrReportExportController).GetCustomAttribute<AuthorizeAttribute>()?.Roles == "ROLE_HR",
+    "Report export endpoints must be restricted to HR.");
+Assert(typeof(HrProgramCompletionController).GetCustomAttribute<RouteAttribute>()?.Template == "api/hr/program-completion",
+    "The completion API route must remain stable.");
+Assert(typeof(HrReportExportController).GetCustomAttribute<RouteAttribute>()?.Template == "api/hr/reports/export",
+    "The report export API route must remain stable.");
+
 Assert(ProgramAssignmentAuditPolicy.GetAffectedProgramIds(7, 7).Count == 0,
     "An unchanged ProgramId must not reset participation or completion history.");
 Assert(ProgramAssignmentAuditPolicy.GetAffectedProgramIds(7, 9).SequenceEqual(new[] { 7, 9 }),
@@ -436,4 +528,52 @@ sealed class SmokeTestHostEnvironment : IHostEnvironment
     public string ApplicationName { get; set; } = "Sprint5ReportExportSmoke";
     public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
     public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+}
+
+sealed class SmokeMentorService : IMentorService
+{
+    public Task<IEnumerable<MentorResponseDto>> GetAllMentorsAsync() => Task.FromResult<IEnumerable<MentorResponseDto>>(
+        [new MentorResponseDto { FullName = "Mentor Mẫu", Department = "Phòng Thực tập", AssignedStudentsCount = 2 }]);
+
+    public Task<MentorResponseDto> CreateMentorAsync(CreateMentorRequestDto request) => throw new NotSupportedException();
+    public Task<MentorResponseDto?> GetMentorByIdAsync(int id) => throw new NotSupportedException();
+    public Task DeleteMentorAsync(int id) => throw new NotSupportedException();
+}
+
+sealed class SmokeDemographicsService(IReadOnlyList<StudentDemographicPairDto> items) : IStudentDemographicsService
+{
+    public Task<StudentDemographicsResponseDto> GetAsync(CancellationToken cancellationToken)
+    {
+        var rows = items.ToArray();
+        return Task.FromResult(new StudentDemographicsResponseDto
+        {
+            TotalApprovedStudents = rows.Sum(item => item.StudentCount),
+            Items = rows,
+            Universities = rows.Select(item => item.University).Distinct().ToArray(),
+            Majors = rows.Select(item => item.Major).Distinct().ToArray()
+        });
+    }
+}
+
+sealed class SmokeProgramCompletionService(IReadOnlyList<ProgramCompletionReportRowDto> rows) : IProgramCompletionService
+{
+    public Task<ProgramCompletionDashboardDto> GetDashboardAsync(int? programId, CancellationToken cancellationToken) =>
+        Task.FromResult(new ProgramCompletionDashboardDto
+        {
+            SelectedProgramId = programId ?? 3,
+            Programs = rows.Select((row, index) => new ProgramCompletionSummaryDto
+            {
+                ProgramId = index + 3,
+                ProgramName = row.ProgramName,
+                EligibleCount = row.EligibleCount,
+                CompletedCount = row.CompletedCount,
+                CompletionRate = ProgramCompletionRate.CalculatePercent(row.EligibleCount, row.CompletedCount)
+            }).ToArray()
+        });
+
+    public Task<IReadOnlyList<StudentProgramAuditEventDto>> GetHistoryAsync(int studentId, int programId, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task UpdateParticipationAsync(int studentId, UpdateProgramParticipationRequestDto request, int actorUserId, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task ConfirmCompletionAsync(int studentId, int programId, string? reason, int actorUserId, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task RevokeCompletionAsync(int studentId, int programId, string? reason, int actorUserId, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task ResetParticipationForProgramAssignmentAsync(int studentId, int programId, int actorUserId, CancellationToken cancellationToken) => throw new NotSupportedException();
 }

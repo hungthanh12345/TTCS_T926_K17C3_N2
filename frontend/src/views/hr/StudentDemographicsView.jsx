@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileSpreadsheet, FileText, Loader2, RefreshCw } from 'lucide-react';
+import { FileDown, Loader2, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import studentDemographicsService from '../../services/studentDemographicsService';
-import reportExportService from '../../services/reportExportService';
 
 const groupCounts = (items, field) => {
   const counts = new Map();
@@ -55,8 +55,6 @@ export const StudentDemographicsView = () => {
   const [selectedMajor, setSelectedMajor] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [exporting, setExporting] = useState('');
-  const [exportError, setExportError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,34 +71,18 @@ export const StudentDemographicsView = () => {
 
   useEffect(() => { void load(); }, [load]);
 
-  const handleExport = async (format) => {
-    if (!report || loading || exporting) return;
-
-    setExporting(format);
-    setExportError('');
-    try {
-      const blob = await reportExportService.download(format, { university: selectedUniversity || undefined, major: selectedMajor || undefined });
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = objectUrl;
-      link.download = 'bao-cao-thuc-tap-' + new Date().toISOString().replaceAll(':', '-') + '.' + (format === 'excel' ? 'xlsx' : 'pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-    } catch (exportFailure) {
-      setExportError(exportFailure.message || 'Không thể xuất báo cáo. Vui lòng thử lại sau.');
-    } finally {
-      setExporting('');
-    }
-  };
-
   const filteredItems = useMemo(() => (report?.items || []).filter((item) =>
     (!selectedUniversity || item.university === selectedUniversity) &&
     (!selectedMajor || item.major === selectedMajor)), [report, selectedUniversity, selectedMajor]);
   const universityStats = useMemo(() => groupCounts(filteredItems, 'university'), [filteredItems]);
   const majorStats = useMemo(() => groupCounts(filteredItems, 'major'), [filteredItems]);
   const filteredTotal = filteredItems.reduce((sum, item) => sum + item.studentCount, 0);
+  const exportHref = useMemo(() => {
+    const params = new URLSearchParams({ reportType: 'student-demographics' });
+    if (selectedUniversity) params.set('university', selectedUniversity);
+    if (selectedMajor) params.set('major', selectedMajor);
+    return `/hr/report-export?${params.toString()}`;
+  }, [selectedUniversity, selectedMajor]);
 
   return (
     <DashboardLayout title="Thống kê thực tập sinh theo trường/ngành" subtitle="Chỉ tính hồ sơ đã được HR duyệt; thông tin còn trống được gom vào nhóm Chưa cập nhật.">
@@ -113,7 +95,6 @@ export const StudentDemographicsView = () => {
             </button>
           </div>
         )}
-        {exportError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{exportError}</p>}
         {loading ? (
           <div role="status" className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
             <Loader2 className="h-5 w-5 animate-spin" /> Đang tải thống kê...
@@ -136,14 +117,9 @@ export const StudentDemographicsView = () => {
                 </select>
               </label>
               <p className="rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-800">Tổng hồ sơ trong bộ lọc: {filteredTotal}</p>
-              <div className="ml-auto flex flex-wrap gap-2">
-                <button type="button" onClick={() => void handleExport('excel')} disabled={!report || loading || Boolean(exporting)} className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-                  <FileSpreadsheet className="h-4 w-4" /> {exporting === 'excel' ? 'Đang xuất...' : 'Xuất Excel'}
-                </button>
-                <button type="button" onClick={() => void handleExport('pdf')} disabled={!report || loading || Boolean(exporting)} className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-                  <FileText className="h-4 w-4" /> {exporting === 'pdf' ? 'Đang xuất...' : 'Xuất PDF'}
-                </button>
-              </div>
+              <Link to={exportHref} className="ml-auto inline-flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white">
+                <FileDown className="h-4 w-4" /> Tùy chọn xuất báo cáo
+              </Link>
             </section>
             {report?.items?.length === 0 ? (
               <p role="status" className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Chưa có hồ sơ thực tập sinh đã được duyệt để thống kê.</p>
