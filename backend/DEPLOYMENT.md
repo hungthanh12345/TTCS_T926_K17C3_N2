@@ -118,6 +118,10 @@ Sau khi hoàn tất, kiểm tra `/health` và đăng nhập bằng các tài kho
 
 ---
 
+## XUẤT PDF US34
+
+Development và Test đang cấu hình `Reports:QuestPdfLicense=Community` để chạy thử. Production không dùng hai cấu hình này và chủ động từ chối `Community`/`Evaluation`. Owner cần chọn loại giấy phép QuestPDF phù hợp cho môi trường production rồi đặt biến `Reports__QuestPdfLicense` trên dịch vụ backend. Nếu chưa cấu hình, endpoint PDF trả HTTP 503 với thông báo tiếng Việt; xuất Excel không phụ thuộc thiết lập này.
+
 ## CẤU HÌNH SMTP CHO US08
 
 Email kết quả xét duyệt được gửi qua SMTP STARTTLS (Gmail dùng cổng 587). Cấu hình các giá trị sau bằng environment variables trên môi trường deploy:
